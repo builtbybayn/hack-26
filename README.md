@@ -14,6 +14,11 @@ IndexedDB storage ← learning path ← graph validation ← Gemini
 
 This remains one Next.js 16 application: interactive UI in `src/features`, typed API routes in `src/app/api`, browser-safe clients in `src/lib/api`, and server-only parsing/provider logic in `src/lib`. The server is stateless: parsed documents, analyses, and mastery are stored in the browser (IndexedDB, `src/lib/browser-store.ts`) and sent with each request. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for contracts and module boundaries.
 
+## Team work tracks
+
+Parallel work is split into three tracks: analysis (prerequisites and contradictions), paper
+recommendations, and voice. Start with [docs/tracks/README.md](docs/tracks/README.md).
+
 ## Install and run
 
 Requires Node.js 22 or newer.
