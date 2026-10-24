@@ -1,0 +1,85 @@
+{
+  "id": "https://openalex.org/W2012107521",
+  "display_name": "Book Review: Vector Calculus",
+  "type": "book-review",
+  "publication_year": 1922,
+  "authorships": [
+    {
+      "author_position": "first",
+      "author": {
+        "id": "https://openalex.org/A5109271610",
+        "display_name": "Jason Shaw",
+        "orcid": null,
+        "observed_orcids": []
+      },
+      "institutions": [],
+      "countries": [],
+      "is_corresponding": true,
+      "raw_author_name": "J. B. Shaw",
+      "raw_affiliation_strings": [],
+      "raw_orcid": null,
+      "affiliations": []
+    }
+  ],
+  "cited_by_count": 0,
+  "doi": "https://doi.org/10.1090/s0002-9904-1922-03613-0",
+  "primary_location": {
+    "id": "doi:10.1090/s0002-9904-1922-03613-0",
+    "doi": "https://doi.org/10.1090/s0002-9904-1922-03613-0",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1090/s0002-9904-1922-03613-0",
+    "pdf_url": "https://www.ams.org/journals/bull/1922-28-08/S0002-9904-1922-03613-0/S0002-9904-1922-03613-0.pdf",
+    "source": {
+      "id": "https://openalex.org/S71584477",
+      "display_name": "Bulletin of the American Mathematical Society",
+      "issn_l": "0002-9904",
+      "issn": ["0002-9904", "0273-0979", "1088-9485", "1936-881X"],
+      "is_oa": true,
+      "is_in_doaj": false,
+      "is_core": true,
+      "listed_in": ["cwts-core", "jufo-2", "norway-2"],
+      "host_organization": "https://openalex.org/P4310315719",
+      "host_organization_name": "American Mathematical Society",
+      "host_organization_lineage": ["https://openalex.org/P4310315719"],
+      "host_organization_lineage_names": ["American Mathematical Society"],
+      "type": "journal"
+    },
+    "license": null,
+    "license_id": null,
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Bulletin of the American Mathematical Society",
+    "raw_type": "journal-article"
+  },
+  "best_oa_location": {
+    "id": "doi:10.1090/s0002-9904-1922-03613-0",
+    "doi": "https://doi.org/10.1090/s0002-9904-1922-03613-0",
+    "is_oa": true,
+    "landing_page_url": "https://doi.org/10.1090/s0002-9904-1922-03613-0",
+    "pdf_url": "https://www.ams.org/journals/bull/1922-28-08/S0002-9904-1922-03613-0/S0002-9904-1922-03613-0.pdf",
+    "source": {
+      "id": "https://openalex.org/S71584477",
+      "display_name": "Bulletin of the American Mathematical Society",
+      "issn_l": "0002-9904",
+      "issn": ["0002-9904", "0273-0979", "1088-9485", "1936-881X"],
+      "is_oa": true,
+      "is_in_doaj": false,
+      "is_core": true,
+      "listed_in": ["cwts-core", "jufo-2", "norway-2"],
+      "host_organization": "https://openalex.org/P4310315719",
+      "host_organization_name": "American Mathematical Society",
+      "host_organization_lineage": ["https://openalex.org/P4310315719"],
+      "host_organization_lineage_names": ["American Mathematical Society"],
+      "type": "journal"
+    },
+    "license": null,
+    "license_id": null,
+    "version": "publishedVersion",
+    "is_accepted": true,
+    "is_published": true,
+    "raw_source_name": "Bulletin of the American Mathematical Society",
+    "raw_type": "journal-article"
+  },
+  "abstract_inverted_index": null
+}

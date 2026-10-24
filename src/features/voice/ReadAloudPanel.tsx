@@ -88,7 +88,7 @@ export function ReadAloudPanel({ document, onOpenPage }: ReadAloudPanelProps) {
         <p className="read-aloud-meta">
           {script.sections.length} sections · about {minutes} min
           {usesElevenLabs &&
-            ` · ${script.characterCount.toLocaleString()} characters for the full paper; replays are cached`}
+            ` · ${script.characterCount.toLocaleString()} characters for the full paper; replays are cached · Voice by ElevenLabs`}
         </p>
       </div>
 

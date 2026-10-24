@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { segmentText } from "@/lib/voice/reading-script";
+import { BROWSER_VOICE_ID } from "@/types/voice";
 import { resolveVoice, useVoiceCatalog, useVoicePreferences } from "./preferences";
 import { useSpeechPlayer } from "./use-speech-player";
 import "./voice.css";
@@ -42,7 +43,12 @@ function ListenControl({ text }: { text: string }) {
         </button>
       )}
       <span role="status" className={error ? "failed" : undefined}>
-        {error ?? (status === "loading" ? `Preparing ${voice.name}…` : voice.name)}
+        {error ??
+          (status === "loading"
+            ? `Preparing ${voice.name}…`
+            : voice.id === BROWSER_VOICE_ID
+              ? voice.name
+              : `${voice.name} · Voice by ElevenLabs`)}
       </span>
     </div>
   );
