@@ -56,3 +56,19 @@ small. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Provisional.** Vitest is fast and needs almost no configuration. Shared logic must be tested. E2E
 (Playwright) can come when there are real user flows worth protecting.
+
+### 10. PDF.js first, external OCR only with consent
+
+**Confirmed.** PDF.js is the default parser and preserves page text, positions, metadata, and references. A deterministic quality gate can recommend OCR, but Mistral or Mathpix only receives the document after explicit consent. Both providers normalize into the same `ParsedDocument` contract.
+
+### 11. Gemini is server-only and schema constrained
+
+**Confirmed.** Concept intelligence and tutoring use the official Google Gen AI SDK from server-only modules. The model is environment-configurable. Analysis uses a JSON response schema, Zod validation, bounded retries, and a deterministic graph validator; model claims never determine graph validity on their own.
+
+### 12. Mastery is local; document caches are ephemeral
+
+**Provisional.** Mastery is stored in browser IndexedDB because it is user-specific and must survive extension/app restarts without adding a database. Parsed documents, analyses, and quiz keys are content-hash keyed in server process memory for the hackathon deployment. A production multi-instance deployment needs authenticated, encrypted durable storage.
+
+### 13. Product visual language
+
+**Confirmed.** KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.

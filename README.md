@@ -1,88 +1,119 @@
-# HackPSU 2026
+# KnowBefore
 
-The foundation for our HackPSU 2026 project: one Next.js app with typed API contracts and a shared
-file-ingestion pipeline that every feature reuses. The UI has not been built yet.
+KnowBefore turns academic PDFs into prerequisite knowledge graphs and personalized learning paths. It extracts a PDF locally with PDF.js, optionally uses consented Mistral or Mathpix OCR, asks Gemini for structured concept analysis, validates the graph deterministically, and stores learner mastery in browser IndexedDB.
 
-The product itself is still being defined. This repo gives us a clean place to build it in parallel
-without stepping on each other.
+## Architecture
 
-## Stack
+```text
+PDF upload → PDF.js → quality gate → optional OCR → canonical document
+                                                      ↓
+IndexedDB mastery ← learning path ← graph validation ← Gemini
+                         ↓
+                 React Flow + tutor
+```
 
-Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Vitest · ESLint ·
-Prettier · npm · GitHub Actions
+This remains one Next.js 16 application: interactive UI in `src/features`, typed API routes in `src/app/api`, browser-safe clients in `src/lib/api`, and server-only parsing/provider logic in `src/lib`. Parsed documents and analyses are content-hash cached in the running server process. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for contracts and module boundaries.
 
-## Getting started
+## Install and run
 
-Requires Node.js 22 or newer (`.nvmrc` is provided).
+Requires Node.js 22 or newer.
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
+copy .env.example .env.local
+npm run dev
 ```
 
-No environment variables are needed yet.
+Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis and tutoring.
 
-## Commands
+## Environment configuration
 
-| Command                | What it does                                                  |
-| ---------------------- | ------------------------------------------------------------- |
-| `npm run dev`          | Start the dev server                                          |
-| `npm run build`        | Production build                                              |
-| `npm start`            | Serve the production build                                    |
-| `npm run lint`         | ESLint                                                        |
-| `npm run typecheck`    | Generate route types, then `tsc --noEmit`                     |
-| `npm test`             | Run unit tests once (`npm run test:watch` to watch)           |
-| `npm run format`       | Format everything with Prettier                               |
-| `npm run format:check` | Check formatting without writing                              |
-| `npm run check`        | Lint, typecheck, format check, and tests: run before every PR |
+| Variable                             | Purpose                                                       |
+| ------------------------------------ | ------------------------------------------------------------- |
+| `GEMINI_API_KEY`                     | Server-only Google AI Studio API key                          |
+| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-flash-latest`     |
+| `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
+| `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
+| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
+| `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
+| `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
 
-CI runs the same checks plus `npm run build` on every pull request.
+Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
 
-## Project layout
+### Gemini setup
 
-```
-src/
-  app/                  Pages, layouts, and API routes
-    api/ingest/         POST /api/ingest, the example ingestion endpoint
-  components/           Reusable UI primitives (empty until the UI is designed)
-  features/             Feature-specific code, one folder per feature
-  lib/
-    ingestion/          Shared ingestion pipeline (server-only)
-    api/                Browser-safe API clients and mock payloads
-  types/                Shared contracts: API envelope, ingestion types
-tests/fixtures/         Sample files for tests and manual testing
-docs/                   Architecture, contributing, design, and decision docs
-```
+Create a key in Google AI Studio, set `GEMINI_API_KEY`, and choose a currently supported model through `GEMINI_MODEL`. The backend uses the official `@google/genai` SDK, JSON response schemas, Zod validation, and at most three attempts for malformed model output.
 
-## Where to start
+### Mistral OCR setup
 
-| You are working on…            | Start in                           | Read                                    |
-| ------------------------------ | ---------------------------------- | --------------------------------------- |
-| UI, layout, visual design      | `src/app`, `src/components`        | [DESIGN.md](docs/DESIGN.md)             |
-| Parsing, ingestion, backend    | `src/lib/ingestion`, `src/app/api` | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| A product feature              | `src/features/<feature-name>`      | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Anything, before your first PR |                                    | [CONTRIBUTING.md](docs/CONTRIBUTING.md) |
+Create a Mistral API key and set `MISTRAL_API_KEY`. The adapter sends one base64 PDF to the official OCR endpoint only after the user checks the external-processing consent control. Tables, page Markdown, equations, headings, and page references are normalized into the canonical document shape.
 
-Past decisions and their reasons are in [DECISIONS.md](docs/DECISIONS.md).
+### Mathpix setup
 
-## What works today
+Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-heavy documents; its asynchronous PDF conversion is polled with a bounded timeout and converted from Markdown/LaTeX to the same canonical shape.
 
-- **File ingestion for `.txt` and `.md` (up to 5 MB).** Validation, strict UTF-8 decoding,
-  Markdown section splitting, and a normalized `ParsedDocument` result.
-- **`POST /api/ingest`.** Exposes the pipeline with a typed, predictable response envelope.
-- **A typed browser client** (`uploadDocument`) and **mock payloads** for frontend work without a
-  backend.
-- **Unit tests** for the pipeline, including a check that the mock matches real output.
+## PDF upload flow
 
-Try the endpoint:
+1. Choose a PDF (maximum 25 MB).
+2. Choose Automatic, Standard, or Advanced OCR.
+3. If external OCR may run, select a provider and explicitly consent.
+4. Analyze. PDF.js preserves pages, text positions, metadata, and page references. Automatic mode stays local unless quality is low **and** consent is checked.
+5. Inspect the graph, dependency evidence, learning path, explanations, source pages, and quizzes.
+6. Manual mastery changes and passed assessments persist in IndexedDB. Opening an explanation does not change mastery.
+
+## Chrome extension development
+
+The repository includes a small Manifest V3 companion launcher in `extension/`; it contains no secrets and opens the locally running KnowBefore application.
+
+1. Run `npm run dev`.
+2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
+3. Select the repository’s `extension` directory.
+4. Pin KnowBefore and choose **Open KnowBefore**.
+
+The full upload/analysis workspace runs in the app tab so large PDFs are not constrained by popup lifetime.
+
+## API
+
+- `POST /api/documents/parse` — multipart PDF/text input and parser settings
+- `POST /api/documents/analyze` — Gemini analysis plus graph/path generation
+- `GET /api/documents/:id` — cached canonical document
+- `POST /api/explain` — contextual concept tutoring
+- `POST /api/quiz` — short assessment generation
+- `POST /api/evaluate` — deterministic scoring and mastery recommendation
+- `GET /api/health` — service and provider configuration status
+- `POST /api/ingest` — backwards-compatible generic ingestion endpoint
+
+Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`.
+
+## Testing and production checks
 
 ```bash
-curl -F "file=@tests/fixtures/sample.md" http://localhost:3000/api/ingest
+npm test
+npm run typecheck
+npm run lint
+npm run format:check
+npm run build
+npm run check
 ```
 
-## Not built yet (on purpose)
+Tests use mocked provider responses and require no API keys. Fixtures cover Maxwell/vector-calculus material, humanities content, and scanned-page OCR output.
 
-The UI and design system (see [DESIGN.md](docs/DESIGN.md)); PDF, DOCX, and image (OCR) parsing;
-AI extraction; persistence/database; authentication;
-deployment. We add each one when a real feature needs it. See
-[ARCHITECTURE.md](docs/ARCHITECTURE.md#extending-ingestion) for where each would plug in.
+## Privacy and deployment
+
+- PDF.js extraction is local to the application server.
+- Mistral and Mathpix are never called without explicit user consent.
+- Gemini receives normalized, section-aware excerpts—not the raw PDF and not the whole document on every follow-up.
+- Credentials stay in backend environment variables.
+- Mastery remains in browser IndexedDB.
+- The server document cache is process-local and is cleared on restart.
+
+Do not expose this backend publicly without adding authentication, authorization, rate limiting, and a durable encrypted document store. Provider data-retention terms remain the deployer’s responsibility.
+
+## Troubleshooting
+
+- **Gemini is not configured:** set `GEMINI_API_KEY` in `.env.local` and restart Next.js.
+- **OCR is not configured:** add the selected provider credentials or use Standard parsing.
+- **Consent required:** check the external-processing control before Advanced OCR.
+- **Low extraction quality:** use Automatic with consent or Advanced OCR; Mathpix is often preferable for dense equations.
+- **Document not found after restart:** the server cache is intentionally process-local; upload the PDF again.
+- **Quiz expired:** quiz answer keys are held in server memory; generate a fresh quiz after a restart.

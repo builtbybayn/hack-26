@@ -24,7 +24,8 @@ describe("detectFormat", () => {
   });
 
   it("returns null for unsupported files", () => {
-    expect(detectFormat("report.pdf", "application/pdf")).toBeNull();
+    expect(detectFormat("report.pdf", "application/pdf")).toBe("pdf");
+    expect(detectFormat("report.docx", "application/octet-stream")).toBeNull();
   });
 });
 
@@ -91,11 +92,7 @@ describe("ingest", () => {
       "FILE_TOO_LARGE",
     );
     await expectIngestionError(
-      ingest({
-        fileName: "a.pdf",
-        mimeType: "application/pdf",
-        bytes: encode("%PDF"),
-      }),
+      ingest({ fileName: "a.docx", mimeType: "application/octet-stream", bytes: encode("binary") }),
       "UNSUPPORTED_FORMAT",
     );
     await expectIngestionError(

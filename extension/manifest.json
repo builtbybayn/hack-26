@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "KnowBefore",
+  "version": "0.1.0",
+  "description": "Open the KnowBefore PDF prerequisite intelligence workspace.",
+  "action": {
+    "default_title": "KnowBefore",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["tabs"]
+}

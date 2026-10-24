@@ -6,6 +6,7 @@
  */
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { SUPPORTED_FORMATS, type DocumentFormat, type ParsedDocument } from "@/types/ingestion";
 import { IngestionError } from "./errors";
 import { parsers } from "./parsers";
@@ -52,7 +53,9 @@ async function parse(input: IngestInput, format: DocumentFormat): Promise<Parsed
   }
 
   return {
+    id: createHash("sha256").update(input.bytes).digest("hex"),
     format,
+    sourceType: format === "pdf" ? "pdf" : "text",
     source: {
       fileName: input.fileName,
       mimeType: input.mimeType,
@@ -60,7 +63,14 @@ async function parse(input: IngestInput, format: DocumentFormat): Promise<Parsed
     },
     title: output.title,
     text: output.text,
+    pages: output.pages ?? [{ pageNumber: 1, text: output.text }],
     sections: output.sections,
+    metadata: output.metadata ?? {},
+    provenance: {
+      parser: output.parser ?? (format === "pdf" ? "standard" : format),
+      externalProcessing: false,
+    },
+    extractionQuality: output.extractionQuality,
     stats: countStats(output.text),
     warnings: output.warnings,
     parsedAt: new Date().toISOString(),

@@ -1,5 +1,13 @@
-import type { DocumentFormat, DocumentSection } from "@/types/ingestion";
+import type {
+  DocumentFormat,
+  DocumentMetadata,
+  DocumentSection,
+  ExtractionQuality,
+  ParsedPage,
+  ParserMethod,
+} from "@/types/ingestion";
 import { IngestionError } from "./errors";
+import { parsePdfWithPdfJs } from "./pdfjs-parser";
 
 /** What a parser produces. The pipeline adds source metadata and stats. */
 export interface ParserOutput {
@@ -7,6 +15,10 @@ export interface ParserOutput {
   text: string;
   sections: DocumentSection[];
   warnings: string[];
+  pages?: ParsedPage[];
+  metadata?: DocumentMetadata;
+  parser?: ParserMethod | "text" | "markdown";
+  extractionQuality?: ExtractionQuality;
 }
 
 /**
@@ -24,6 +36,7 @@ export type Parser = (bytes: Uint8Array) => ParserOutput | Promise<ParserOutput>
 export const parsers: Record<DocumentFormat, Parser> = {
   text: parsePlainText,
   markdown: parseMarkdown,
+  pdf: parsePdfWithPdfJs,
 };
 
 function parsePlainText(bytes: Uint8Array): ParserOutput {

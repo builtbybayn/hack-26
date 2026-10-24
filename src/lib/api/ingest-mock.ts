@@ -24,7 +24,9 @@ Standardize the intake template before the next review.
 export const MOCK_INGEST_SUCCESS = {
   ok: true,
   data: {
+    id: "7ab7b0f1be7160f59403b7cd96ccafd953388c072b6353cdfcfc65741b0c1284",
     format: "markdown",
+    sourceType: "text",
     source: {
       fileName: "mock-field-notes.md",
       mimeType: "text/markdown",
@@ -32,6 +34,7 @@ export const MOCK_INGEST_SUCCESS = {
     },
     title: "Quarterly field notes",
     text: MOCK_TEXT,
+    pages: [{ pageNumber: 1, text: MOCK_TEXT }],
     sections: [
       {
         heading: "Quarterly field notes",
@@ -49,6 +52,8 @@ export const MOCK_INGEST_SUCCESS = {
         text: "Standardize the intake template before the next review.",
       },
     ],
+    metadata: {},
+    provenance: { parser: "markdown", externalProcessing: false },
     stats: { characters: 249, words: 37, lines: 11 },
     warnings: [],
     parsedAt: "2026-01-01T00:00:00.000Z",
@@ -59,6 +64,6 @@ export const MOCK_INGEST_ERROR = {
   ok: false,
   error: {
     code: "UNSUPPORTED_FORMAT",
-    message: "Unsupported file type. Accepted: .txt, .text, .md, .markdown.",
+    message: "Unsupported file type. Accepted: .txt, .text, .md, .markdown, .pdf.",
   },
 } satisfies IngestResponse;

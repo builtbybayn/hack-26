@@ -14,6 +14,8 @@ flowchart LR
   subgraph Server
     Route["API routes<br/>src/app/api/*/route.ts"]
     Ingestion["Ingestion pipeline<br/>src/lib/ingestion"]
+    Intelligence["Gemini + graph validation<br/>src/lib/intelligence"]
+    Store["Content-hash cache<br/>src/lib/storage"]
   end
 
   Types["Contracts<br/>src/types"]
@@ -22,6 +24,9 @@ flowchart LR
   Feature --> Client
   Client -- "HTTP (FormData / JSON)" --> Route
   Route --> Ingestion
+  Route --> Intelligence
+  Ingestion --> Store
+  Intelligence --> Store
   Types -.-> Client
   Types -.-> Route
   Types -.-> Ingestion
@@ -36,7 +41,7 @@ flowchart LR
 | Features            | `src/features/<name>` | Mostly client    | A product capability's UI and state. Calls API clients.              |
 | API clients, mocks  | `src/lib/api`         | Browser-safe     | Typed `fetch` wrappers and mock payloads, one pair per endpoint.     |
 | API routes          | `src/app/api`         | Server           | HTTP: parse the request, call shared logic, map errors to status.    |
-| Shared server logic | `src/lib/<module>`    | Server only      | The real work (ingestion now; AI extraction, storage later).         |
+| Shared server logic | `src/lib/<module>`    | Server only      | Ingestion, OCR providers, Gemini calls, graph validation, and cache. |
 | Contracts           | `src/types`           | Both             | Types and constants shared across the network boundary.              |
 
 ### The client/server boundary
@@ -50,8 +55,8 @@ flowchart LR
 ## Ingestion pipeline
 
 ```
-File / bytes → validateInput → parsers[format] → ParsedDocument → consumer
-                (size, format)   (decode, split)   (normalized)
+File / bytes → validateInput → PDF.js/text parser → quality gate → optional OCR → ParsedDocument
+                (size, format)      (local first)       (consent)       (canonical)
 ```
 
 **Public API** (`@/lib/ingestion`):
@@ -86,11 +91,11 @@ const summary = await summarize(doc.sections); // feature logic works on the nor
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A new file format | Add an entry to `SUPPORTED_FORMATS` in `src/types/ingestion.ts`, then register a parser in `parsers.ts`. TypeScript fails until both exist. Add a test. |
 | PDF / DOCX        | Same as above, using a parsing library chosen at that time. Parsers may be async.                                                                       |
-| OCR               | A parser for image formats. Likely an external service; discuss first.                                                                                  |
-| AI extraction     | A new module, `src/lib/extraction`, that takes a `ParsedDocument`. It does not go inside ingestion.                                                     |
-| Persistence       | A new module, `src/lib/storage`. Ingestion stays storage-agnostic.                                                                                      |
+| OCR               | Add a `DocumentParser` adapter under `src/lib/ingestion/ocr`; keep consent and normalization behavior.                                                  |
+| AI extraction     | Extend `src/lib/intelligence`; never import the provider SDK from client code.                                                                          |
+| Persistence       | Replace `src/lib/storage` behind its existing get/put API; ingestion stays storage-agnostic.                                                            |
 
-None of these exist yet.
+PDF.js, Mistral OCR, Mathpix, Gemini intelligence, process-local caching, and browser IndexedDB mastery are implemented.
 
 ## API contract
 
@@ -106,20 +111,21 @@ Branch on `ok`, not on HTTP status. Status codes are still set correctly for too
 ### `POST /api/ingest`
 
 - **Request:** `multipart/form-data` with one field, `file`.
-- **Accepts:** `.txt`, `.text`, `.md`, `.markdown` (by extension, falling back to MIME type). UTF-8
-  only. Maximum 5 MB.
+- **Accepts:** `.txt`, `.text`, `.md`, `.markdown`, and `.pdf` (by extension, falling back to MIME type). Maximum 25 MB.
 - **Success (200):** `data` is a `ParsedDocument` (see `src/types/ingestion.ts`):
 
-  | Field      | Meaning                                                                               |
-  | ---------- | ------------------------------------------------------------------------------------- |
-  | `format`   | `"text"` or `"markdown"`                                                              |
-  | `source`   | `{ fileName, mimeType, sizeBytes }` as uploaded                                       |
-  | `title`    | First Markdown H1, else `null`                                                        |
-  | `text`     | Full content, `\n` line endings, BOM removed                                          |
-  | `sections` | `{ heading, level, text }[]`, split on Markdown headings (one section for plain text) |
-  | `stats`    | `{ characters, words, lines }`                                                        |
-  | `warnings` | Non-fatal issues, e.g. an unclosed code fence                                         |
-  | `parsedAt` | ISO timestamp                                                                         |
+  | Field      | Meaning                                                                          |
+  | ---------- | -------------------------------------------------------------------------------- |
+  | `format`   | `"text"`, `"markdown"`, or `"pdf"`                                               |
+  | `source`   | `{ fileName, mimeType, sizeBytes }` as uploaded                                  |
+  | `title`    | First Markdown H1, else `null`                                                   |
+  | `text`     | Full content, `\n` line endings, BOM removed                                     |
+  | `pages`    | Page-preserving text, Markdown, equations, tables, and positions where available |
+  | `sections` | Heading-aware content with original page references                              |
+  | `metadata` | Canonical document metadata and page count                                       |
+  | `stats`    | `{ characters, words, lines }`                                                   |
+  | `warnings` | Non-fatal issues, e.g. an unclosed code fence                                    |
+  | `parsedAt` | ISO timestamp                                                                    |
 
 - **Errors:**
 
@@ -127,7 +133,7 @@ Branch on `ok`, not on HTTP status. Status codes are still set correctly for too
   | ------ | -------------------- | -------------------------------------- |
   | 400    | `INVALID_REQUEST`    | Body is not multipart form data        |
   | 400    | `NO_FILE`            | No `file` field                        |
-  | 413    | `FILE_TOO_LARGE`     | Over 5 MB                              |
+  | 413    | `FILE_TOO_LARGE`     | Over 25 MB                             |
   | 415    | `UNSUPPORTED_FORMAT` | Not a supported extension or MIME type |
   | 422    | `EMPTY_FILE`         | Zero bytes or only whitespace          |
   | 422    | `DECODE_FAILED`      | Not valid UTF-8, or binary content     |
@@ -150,6 +156,22 @@ real output.
 3. Implement the route in `src/app/api/<name>/route.ts`, keeping logic in `src/lib/<module>`.
 4. Add a typed client in `src/lib/api/<domain>-client.ts`.
 5. Document it in this file.
+
+### PDF intelligence endpoints
+
+| Endpoint                      | Contract and responsibility                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/documents/parse`   | Multipart `file`, `mode`, `ocrProvider`, and `allowExternalProcessing`; returns a canonical document and cache status. |
+| `POST /api/documents/analyze` | JSON `documentId` plus optional mastery map; returns validated analysis and a recalculated path.                       |
+| `GET /api/documents/:id`      | Returns a document from the content-hash cache. Dynamic route params are awaited per Next.js 16.                       |
+| `POST /api/explain`           | Generates one contextual explanation using only relevant concept pages.                                                |
+| `POST /api/quiz`              | Generates a bounded quiz and retains answer keys on the server.                                                        |
+| `POST /api/evaluate`          | Scores an explicit assessment; this is the only automatic mastery update path.                                         |
+| `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                  |
+
+Provider calls are bounded by request cancellation/timeouts. The server cache deduplicates uploads by SHA-256. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
+
+The browser stores `{ conceptId, level, updatedAt }` records in one IndexedDB `mastery` object store. Learning paths are derived from that existing profile and the validated graph; no second knowledge-profile database exists.
 
 ## When to create what
 

@@ -1,7 +1,6 @@
 # Design
 
-**Status: not started.** The UI developer owns this document and will define the design system
-(typography, color, spacing, components) before the main UI is built.
+**Status: implemented.** The PDF intelligence workspace defines the initial product language.
 
 Until then, no shared styles, tokens, or components exist. `src/app/globals.css` only imports
 Tailwind.
@@ -15,12 +14,12 @@ Tailwind.
 - Avoid: heavy gradients, glassmorphism, random colored cards, excessive shadows or rounded panels,
   emoji decoration, icon overuse, and generic marketing copy.
 
-## To be defined
+## System
 
-- [ ] Fonts and type scale
-- [ ] Color tokens (light/dark)
-- [ ] Spacing, radius, shadow, and motion tokens (in `src/app/globals.css`)
-- [ ] Core components (in `src/components`)
-- [ ] Layout and responsive conventions
+- Display typography: Georgia; interface typography: Arial/system sans-serif.
+- Palette: warm paper (`#f4f1e9`), near-black green, forest accent, clay inference accent.
+- Fine 1px borders, nearly square controls, restrained depth, and generous whitespace.
+- Responsive layouts collapse to one column below 900px and remain usable at 360px.
+- Keyboard focus uses a visible three-pixel ring; controls retain native semantics.
 
 Record the main choices in [DECISIONS.md](DECISIONS.md) once made.
