@@ -11,6 +11,7 @@ import type {
   QuizResult,
 } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
+import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import {
   analyzeDocument,
   evaluateAnswers,
@@ -28,6 +29,8 @@ import {
   saveMastery,
 } from "@/lib/browser-store";
 import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
+import { ListenButton } from "@/features/voice/ListenButton";
+import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   extracting: "Extracting PDF locally",
@@ -285,9 +288,19 @@ export function DocumentIntelligence() {
           </div>
         </section>
       )}
+      {document && (
+        <ReadAloudPanel
+          key={document.id}
+          document={document}
+          onOpenPage={pdfUrl ? setSelectedPage : undefined}
+        />
+      )}
 
       {analysis && (
         <>
+          {document && (
+            <RecommendationsPanel key={document.id} document={document} analysis={analysis} />
+          )}
           <section className="insight-grid">
             <article className="subject-card">
               <span className="step">02 · UNDERSTANDING</span>
@@ -415,6 +428,7 @@ export function DocumentIntelligence() {
                     <button onClick={() => explain("worked-example")}>Worked example</button>
                   </div>
                   {explanation && <div className="explanation">{explanation}</div>}
+                  {explanation && <ListenButton text={explanation} />}
                   <button className="quiz-button" onClick={startQuiz}>
                     Take a short quiz
                   </button>

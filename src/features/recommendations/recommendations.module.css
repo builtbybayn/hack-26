@@ -1,0 +1,78 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.panel h2 {
+  margin: 10px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 29px;
+  font-weight: 400;
+}
+.panel p {
+  line-height: 1.6;
+}
+.groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  margin-top: 24px;
+}
+.list {
+  padding: 0;
+  list-style: none;
+}
+.list li {
+  padding: 20px 0;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.list h4 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.panel a {
+  color: var(--forest);
+  text-underline-offset: 3px;
+}
+.metadata {
+  color: var(--muted);
+  font-size: 12px;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  font-size: 13px;
+}
+.panel summary {
+  cursor: pointer;
+}
+.panel a:focus-visible,
+.panel summary:focus-visible {
+  outline: 3px solid #93ad9f;
+  outline-offset: 2px;
+}
+.searches {
+  margin-top: 20px;
+  font-size: 13px;
+}
+@media (max-width: 900px) {
+  .groups {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 540px) {
+  .panel {
+    padding: 20px;
+  }
+}

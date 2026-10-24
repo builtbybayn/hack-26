@@ -39,11 +39,14 @@ Open `http://localhost:3000`. Standard PDF extraction works without provider key
 | `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-flash-latest`     |
 | `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review       |
 | `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                            |
+| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget           |
 | `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
 | `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
 | `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
 | `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
 | `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
+| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen          |
+| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality            |
 
 Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
 
@@ -85,13 +88,16 @@ The full upload/analysis workspace runs in the app tab so large PDFs are not con
 - `POST /api/documents/parse` — multipart PDF/text input and parser settings
 - `POST /api/documents/analyze` — Gemini analysis plus graph/path generation
 - `POST /api/contradictions` — page-verified claims compared across two to four papers
+- `POST /api/recommendations` — background and related papers from OpenAlex
 - `POST /api/explain` — contextual concept tutoring
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
 - `GET /api/health` — service and provider configuration status
 - `POST /api/ingest` — backwards-compatible generic ingestion endpoint
+- `GET /api/voice/voices` — preset and ElevenLabs account voices
+- `POST /api/voice/speak` — text to streamed MP3 (errors use the JSON envelope)
 
-Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`.
+Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`, except that `/api/voice/speak` returns audio on success.
 
 ## Testing and production checks
 

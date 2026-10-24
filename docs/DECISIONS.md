@@ -76,3 +76,13 @@ devices; that requires accounts and server storage.
 ### 13. Product visual language
 
 **Confirmed.** KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+
+### 14. ElevenLabs over plain `fetch`, read one segment at a time
+
+**Provisional.** Voice uses ElevenLabs' REST API through `fetch` (no SDK dependency) from a
+server-only module, so the key never reaches a client. Papers are cleaned and split in the browser,
+spoken one segment at a time with the next two prefetched, and cached in IndexedDB, because
+credits are billed per character and a full paper is roughly 50,000 characters. Flash v2.5 is the
+default model (fastest, cheapest); Multilingual v2 is the high-quality option. Equations and code
+are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
+fallback when no key is configured.
