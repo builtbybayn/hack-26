@@ -121,6 +121,8 @@ export function DocumentIntelligence() {
       let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
       if (documentAnalysis)
         documentAnalysis = verifyConceptEvidence(parsedDocument, documentAnalysis);
+      // Keep the parsed paper even if analysis fails, so read-aloud and the extension can use it.
+      await saveDocument(parsedDocument, documentAnalysis ?? null);
       if (!documentAnalysis) {
         const analyzed = await analyzeDocument(
           { document: parsedDocument, mastery },
