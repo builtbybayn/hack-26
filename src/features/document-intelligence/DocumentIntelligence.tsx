@@ -19,6 +19,7 @@ import {
   requestQuiz,
 } from "@/lib/api/intelligence-client";
 import { buildLearningPath } from "@/lib/intelligence/learning-path";
+import { verifyConceptEvidence } from "@/lib/contradictions/evidence";
 import {
   getDocumentRecord,
   loadLatestDocument,
@@ -26,6 +27,7 @@ import {
   saveDocument,
   saveMastery,
 } from "@/lib/browser-store";
+import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   extracting: "Extracting PDF locally",
@@ -66,10 +68,13 @@ export function DocumentIntelligence() {
       .then(([savedMastery, record]) => {
         setMastery(savedMastery);
         if (record?.analysis) {
+          const verified = verifyConceptEvidence(record.document, record.analysis);
           setDocument(record.document);
-          setAnalysis(record.analysis);
-          setSelectedConcept(record.analysis.graph.concepts[0] ?? null);
+          setAnalysis(verified);
+          setSelectedConcept(verified.graph.concepts[0] ?? null);
           setStage("completed");
+          if (verified !== record.analysis)
+            void saveDocument(record.document, verified).catch(() => undefined);
         }
       })
       .catch(() => undefined);
@@ -111,6 +116,8 @@ export function DocumentIntelligence() {
       setStage("concepts");
       // Reuse a stored analysis of the same file (same content hash) instead of calling Gemini.
       let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
+      if (documentAnalysis)
+        documentAnalysis = verifyConceptEvidence(parsedDocument, documentAnalysis);
       if (!documentAnalysis) {
         const analyzed = await analyzeDocument(
           { document: parsedDocument, mastery },
@@ -466,6 +473,7 @@ export function DocumentIntelligence() {
               />
             </section>
           )}
+          {document && <ContradictionPanel document={document} analysis={analysis} />}
         </>
       )}
     </main>

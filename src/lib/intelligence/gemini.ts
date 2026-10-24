@@ -1,6 +1,7 @@
 import "server-only";
 
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from "@/lib/ai/gemini";
+import { verifyConceptEvidence } from "@/lib/contradictions/evidence";
 import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import { IntelligenceError } from "./errors";
@@ -42,11 +43,11 @@ ${chunks.map((chunk, index) => `--- EXCERPT ${index + 1} ---\n${chunk}`).join("\
         concepts: parsed.concepts,
         dependencies: parsed.dependencies,
       });
-      return {
+      return verifyConceptEvidence(document, {
         understanding: parsed.understanding,
         graph,
         learningPath: buildLearningPath(graph, mastery),
-      };
+      });
     } catch (error) {
       // Configuration and provider failures won't fix themselves; only malformed output is retried.
       if (error instanceof IntelligenceError) throw error;
@@ -61,27 +62,12 @@ ${chunks.map((chunk, index) => `--- EXCERPT ${index + 1} ---\n${chunk}`).join("\
 }
 
 export function createGeminiGenerator(): GenerateJson {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey)
-    return async () => {
-      throw new IntelligenceError("AI_NOT_CONFIGURED", "Gemini is not configured on the server.");
-    };
-  const ai = new GoogleGenAI({ apiKey });
-  return async (prompt) => {
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-flash-latest",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseJsonSchema: MODEL_ANALYSIS_JSON_SCHEMA,
-        maxOutputTokens: 12_000,
-        temperature: 0.2,
-      },
+  return (prompt) =>
+    generateText(prompt, {
+      jsonSchema: MODEL_ANALYSIS_JSON_SCHEMA,
+      maxOutputTokens: 12_000,
+      temperature: 0.2,
     });
-    if (!response.text)
-      throw new IntelligenceError("PROVIDER_ERROR", "Gemini returned an empty response.");
-    return response.text;
-  };
 }
 
 export function chunkDocument(

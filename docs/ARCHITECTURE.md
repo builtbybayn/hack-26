@@ -169,6 +169,22 @@ real output.
 
 Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
 
+### Cross-paper contradiction check
+
+`POST /api/contradictions` accepts two to four distinct parsed documents and optional analyses.
+It returns compared document IDs, candidate pair count, proposed conflicts with a verified quote
+and page from each paper, independent Gemini/Grok verdicts, and warnings. Only Gemini-proposed
+conflicts appear in the findings. The UI shows two-model agreement only when Grok also calls it a
+contradiction; a missing or failed Grok review remains visible as needing review. Comparison is
+bounded to 12 claims per paper and 24 candidate pairs. Long papers are sampled across their pages,
+and the report warns when pages or page text are excerpted. The server stores no documents or
+reports.
+
+`src/lib/ai/gemini.ts` serves analysis, tutoring, and claim extraction. `src/lib/ai/grok.ts`
+uses xAI's Responses API for independent review and reads `XAI_API_KEY` and `XAI_MODEL` only on
+the server. Concept source quotes and contradiction claim quotes are checked against the cited
+parsed page before they are shown as evidence.
+
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
