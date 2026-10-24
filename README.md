@@ -70,14 +70,31 @@ Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-he
 
 ## Chrome extension development
 
-The repository includes a small Manifest V3 companion launcher in `extension/`; it contains no secrets and opens the locally running KnowBefore application.
+`extension/` is a Manifest V3 side panel. It holds no secrets and almost no UI: the panel is the
+app's `/panel` page in an iframe, so it shares the app's code, API, and browser storage (papers,
+analyses, cached audio, reading positions). `extension/sidepanel.js` only bridges what needs
+Chrome APIs: the active tab, the selection on it, and the paper it shows. The panel's flow is
+in place; its visual design is provisional (**barebones build**).
 
-1. Run `npm run dev`.
+1. Run `npm run dev` (the extension expects `http://localhost:3000`).
 2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
-3. Select the repository’s `extension` directory.
-4. Pin KnowBefore and choose **Open KnowBefore**.
+3. Select the repository's `extension` directory. Chrome 114 or newer is required.
+4. Pin KnowBefore and click its icon to open the side panel.
 
-The full upload/analysis workspace runs in the app tab so large PDFs are not constrained by popup lifetime.
+The flow:
+
+1. Open a paper: a PDF (for example an arXiv PDF) or an article page.
+2. The panel shows **This tab** with **Use this PDF** or **Use this page**. Chrome asks once per
+   site for access. PDFs are downloaded and parsed; pages are parsed from their main text.
+3. The paper opens in five views: **Overview** (analyze with Gemini), **Prerequisites** (concepts
+   to know first, mastery, explanations), **Explain** (bring over text selected on the page and
+   hear it; the AI explanation of a passage is Track A's, shown as a placeholder), **Related**
+   (Track B's recommendations), and **Listen** (read-aloud).
+4. Switching tabs follows along: a paper used before reopens automatically.
+
+Chrome's built-in PDF viewer doesn't share text selections with extensions; use the
+Listen view or the paper's text instead. After changing files in `extension/`, click the reload
+icon on the extension's card in `chrome://extensions`. Changes to `/panel` only need a panel reload.
 
 ## API
 

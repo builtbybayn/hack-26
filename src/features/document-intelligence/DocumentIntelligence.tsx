@@ -114,6 +114,8 @@ export function DocumentIntelligence() {
       setStage("concepts");
       // Reuse a stored analysis of the same file (same content hash) instead of calling Gemini.
       let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
+      // Keep the parsed paper even if analysis fails, so read-aloud and the extension can use it.
+      await saveDocument(parsedDocument, documentAnalysis ?? null);
       if (!documentAnalysis) {
         const analyzed = await analyzeDocument(
           { document: parsedDocument, mastery },

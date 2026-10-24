@@ -81,7 +81,8 @@ ElevenLabs voices are disabled.
 - [ ] Sentence-level highlighting using ElevenLabs' `stream/with-timestamps` endpoint.
 - [ ] Keyboard shortcuts (space to play and pause, arrow keys for previous and next).
 - [ ] Optional: Gemini rewrites equations into speech instead of the "view it in the PDF" notice.
-- [ ] Extension: when the side panel loads an app page, the panel and cache work there unchanged.
+- [x] Extension: a temporary side panel (`extension/` + `/panel`) reuses the player, picker, and
+      cache unchanged, and reads text selected on any web page aloud.
 
 ## Stretch: conversational voice tutor
 
