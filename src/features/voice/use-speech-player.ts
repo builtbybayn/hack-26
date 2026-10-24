@@ -10,6 +10,7 @@
  * Only one player on the page speaks at a time; starting one stops the other.
  */
 import { useEffect, useRef, useState } from "react";
+import { beginActivity, reportAgentError } from "@/lib/agent-activity";
 import { speak } from "@/lib/api/voice-client";
 import { cacheAudio, getCachedAudio, saveReadingPosition } from "@/lib/browser-store";
 import { segmentContext } from "@/lib/voice/reading-script";
@@ -72,10 +73,17 @@ export function useSpeechPlayer(options: PlayerOptions) {
   });
   useEffect(() => () => haltRef.current(), []);
 
+  // Report what the voice is doing to the assistant's activity state (the sprite).
+  useEffect(() => {
+    if (state.status === "loading") return beginActivity("preparing-voice", "Generating speech");
+    if (state.status === "playing") return beginActivity("speaking", "Reading aloud");
+  }, [state.status]);
+
   const fail = (session: Session, message: string) => {
     if (!isCurrent(session)) return;
     halt();
     setState((current) => ({ ...current, status: "idle", error: message }));
+    reportAgentError(message);
   };
 
   const remember = (index: number) => {

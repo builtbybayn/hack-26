@@ -260,3 +260,43 @@
 .ext-view .transcript {
   max-height: 60vh;
 }
+
+/* Pipeline progress */
+.ext-pipeline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+  font-size: 12px;
+}
+.ext-pipeline li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+}
+.ext-pipeline small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+}
+.ext-pipeline-status {
+  color: var(--muted);
+  font-weight: 700;
+}
+.ext-pipeline li[data-status="running"] .ext-pipeline-status {
+  color: var(--forest);
+}
+.ext-pipeline li[data-status="done"] .ext-pipeline-status {
+  color: #385447;
+}
+.ext-pipeline li[data-status="failed"] .ext-pipeline-status {
+  color: #7a351e;
+}
+.ext-footer {
+  align-items: center;
+  gap: 12px;
+}
+.ext-header .agent-status {
+  justify-content: flex-end;
+}

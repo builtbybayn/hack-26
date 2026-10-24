@@ -10,11 +10,14 @@ import styles from "./recommendations.module.css";
 export function RecommendationsPanel({
   document,
   analysis,
+  initialResult = null,
 }: {
   document: ParsedDocument;
   analysis: DocumentAnalysis;
+  /** Results found earlier (e.g. by the analyze pipeline), shown without searching again. */
+  initialResult?: RecommendationsResult | null;
 }) {
-  const [result, setResult] = useState<RecommendationsResult | null>(null);
+  const [result, setResult] = useState<RecommendationsResult | null>(initialResult);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);

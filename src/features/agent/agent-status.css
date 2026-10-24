@@ -1,0 +1,74 @@
+/* Placeholder agent indicator until the sprite exists. One color per state via data-state. */
+
+.agent-status {
+  --orb: #9aa39c;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+}
+.agent-status-floating {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  max-width: min(320px, calc(100vw - 36px));
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  box-shadow: 0 10px 30px rgb(31 45 37 / 12%);
+}
+.agent-orb {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--orb);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--orb) 25%, transparent);
+}
+.agent-label {
+  display: grid;
+  min-width: 0;
+}
+.agent-label small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-status[data-state="reading"] {
+  --orb: #6f8fa8;
+}
+.agent-status[data-state="analyzing"],
+.agent-status[data-state="thinking"] {
+  --orb: var(--forest);
+}
+.agent-status[data-state="searching"],
+.agent-status[data-state="comparing"] {
+  --orb: #8a7a3f;
+}
+.agent-status[data-state="preparing-voice"],
+.agent-status[data-state="speaking"] {
+  --orb: var(--clay);
+}
+.agent-status[data-state="error"] {
+  --orb: #b3402a;
+}
+.agent-status:not([data-state="idle"], [data-state="error"]) .agent-orb {
+  animation: agent-pulse 1.4s ease-in-out infinite;
+}
+@keyframes agent-pulse {
+  50% {
+    transform: scale(0.75);
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-status .agent-orb {
+    animation: none !important;
+  }
+}

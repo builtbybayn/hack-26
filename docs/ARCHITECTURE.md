@@ -226,6 +226,37 @@ two, sends neighbouring text for smooth intonation, and caches audio in IndexedD
 free. Without an ElevenLabs key it falls back to the browser's built-in voice. Any feature can read
 text aloud with `<ListenButton text={…} />`.
 
+### Agent activity states (for the sprite)
+
+`src/lib/agent-activity.ts` holds what the assistant is doing, for the animated sprite. API
+clients report their own work through `track()`, so features get states without extra code:
+
+| State             | Reported by                                   |
+| ----------------- | --------------------------------------------- |
+| `reading`         | `parseDocument` (PDF/text extraction)         |
+| `analyzing`       | `analyzeDocument` (Gemini concept analysis)   |
+| `searching`       | `requestRecommendations` (related papers)     |
+| `comparing`       | `requestContradictions` (contradiction check) |
+| `thinking`        | `requestExplanation`, `requestQuiz`           |
+| `preparing-voice` | the speech player while audio is generated    |
+| `speaking`        | the speech player while audio plays           |
+| `error`           | any failed call, for 6 seconds                |
+| `idle`            | nothing running (after a 400 ms grace period) |
+
+When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
+React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
+event. `src/features/agent/AgentStatus.tsx` is the placeholder to replace with the sprite:
+map `snapshot.state` to an animation. New features call `track(state, detail, work)`.
+
+### "Analyze this paper" pipeline
+
+`runPaperPipeline` (`src/lib/paper-pipeline.ts`, browser) saves the paper and its original file,
+runs Gemini analysis (reused if saved), then related papers and the contradiction check in
+parallel. The check compares with up to three saved, analyzed papers whose topics overlap, and
+is skipped when none do. Each step's status (`src/types/pipeline.ts`) and result is saved on the
+paper's record, so the vault can read `recommendations`, `contradictions`, and `pipeline`
+directly, and re-running resumes rather than repeating finished work.
+
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
@@ -233,7 +264,8 @@ documents and their analyses keyed by the document's SHA-256 content hash, plus 
 Clients send whatever a request needs (the document, a concept, a quiz) in the body. A restart loses
 nothing, and re-uploading the same file reuses its stored analysis instead of calling Gemini again.
 
-Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
+A paper's record also holds its pipeline results, and a `files` store keeps the original upload
+(the PDF) for the vault. Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
 are evicted past 400 entries) and per-document reading positions.
 
 IndexedDB is per origin. An extension side panel that loads a page from this app shares the web

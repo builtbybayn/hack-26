@@ -29,6 +29,7 @@ import {
   saveMastery,
 } from "@/lib/browser-store";
 import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
+import { AgentStatus } from "@/features/agent/AgentStatus";
 import { ListenButton } from "@/features/voice/ListenButton";
 import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 
@@ -178,6 +179,7 @@ export function DocumentIntelligence() {
 
   return (
     <main className="app-shell">
+      <AgentStatus variant="floating" />
       <header className="masthead">
         <div>
           <span className="eyebrow">KNOWBEFORE</span>

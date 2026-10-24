@@ -6,15 +6,19 @@
  * its own database, so the web app and an extension page that loads it share data; a separately
  * bundled extension page would not.
  */
+import type { ContradictionReport } from "@/types/contradictions";
 import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
+import type { PaperPipeline } from "@/types/pipeline";
+import type { RecommendationsResult } from "@/types/research";
 
 const DB_NAME = "knowbefore";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
 const AUDIO_STORE = "audio";
 const READING_STORE = "readingPositions";
+const FILE_STORE = "files";
 /** Generated speech kept for replay. Oldest entries are evicted beyond this count. */
 const MAX_CACHED_AUDIO = 400;
 
@@ -24,11 +28,15 @@ interface MasteryRecord {
   updatedAt: string;
 }
 
-/** A parsed document plus its analysis once one exists. Keyed by the document's content hash. */
+/** A saved paper and everything derived from it. Keyed by the document's content hash. */
 export interface DocumentRecord {
   id: string;
   document: ParsedDocument;
   analysis: DocumentAnalysis | null;
+  recommendations?: RecommendationsResult | null;
+  contradictions?: ContradictionReport | null;
+  /** Progress of the "Analyze this paper" pipeline (src/lib/paper-pipeline.ts). */
+  pipeline?: PaperPipeline;
   updatedAt: string;
 }
 
@@ -45,18 +53,52 @@ export async function saveMastery(conceptId: string, level: MasteryLevel): Promi
   );
 }
 
+/**
+ * Saves a paper, keeping anything already derived from it. A `null` analysis keeps the stored
+ * one; pass an analysis to replace it.
+ */
 export async function saveDocument(
   document: ParsedDocument,
   analysis: DocumentAnalysis | null = null,
 ): Promise<void> {
+  const existing = await getDocumentRecord(document.id);
   await request(DOCUMENT_STORE, "readwrite", (store) =>
     store.put({
+      ...existing,
       id: document.id,
       document,
-      analysis,
+      analysis: analysis ?? existing?.analysis ?? null,
       updatedAt: new Date().toISOString(),
     } satisfies DocumentRecord),
   );
+}
+
+/** Merges derived results into a saved paper. Returns the updated record, or null if absent. */
+export async function updateDocumentRecord(
+  documentId: string,
+  patch: Partial<Omit<DocumentRecord, "id" | "document" | "updatedAt">>,
+): Promise<DocumentRecord | null> {
+  const existing = await getDocumentRecord(documentId);
+  if (!existing) return null;
+  const updated: DocumentRecord = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+  await request(DOCUMENT_STORE, "readwrite", (store) => store.put(updated));
+  return updated;
+}
+
+/** The original uploaded file (e.g. the PDF), kept so the vault can show the real paper. */
+export async function savePaperFile(documentId: string, file: Blob, fileName: string) {
+  await request(FILE_STORE, "readwrite", (store) => store.put({ documentId, file, fileName }));
+}
+
+export async function getPaperFile(
+  documentId: string,
+): Promise<{ file: Blob; fileName: string } | null> {
+  const record = await request<{ file: Blob; fileName: string } | undefined>(
+    FILE_STORE,
+    "readonly",
+    (store) => store.get(documentId),
+  );
+  return record ?? null;
 }
 
 export async function getDocumentRecord(documentId: string): Promise<DocumentRecord | null> {
@@ -168,6 +210,8 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(READING_STORE))
         db.createObjectStore(READING_STORE, { keyPath: "documentId" });
+      if (!db.objectStoreNames.contains(FILE_STORE))
+        db.createObjectStore(FILE_STORE, { keyPath: "documentId" });
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error);

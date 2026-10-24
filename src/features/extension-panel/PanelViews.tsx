@@ -2,112 +2,129 @@
 
 import { useState } from "react";
 import { ListenButton } from "@/features/voice/ListenButton";
-import { analyzeDocument, requestExplanation } from "@/lib/api/intelligence-client";
+import { requestExplanation } from "@/lib/api/intelligence-client";
 import type { DocumentRecord } from "@/lib/browser-store";
-import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
+import type { MasteryLevel } from "@/types/intelligence";
+import { PIPELINE_STEPS, type PipelineStepStatus } from "@/types/pipeline";
 import type { TabSelection } from "./bridge";
+
+const STATUS_TEXT: Record<PipelineStepStatus, string> = {
+  pending: "Waiting",
+  running: "Working…",
+  done: "Done",
+  skipped: "Skipped",
+  failed: "Failed",
+};
+
+/** Progress of "Analyze this paper", step by step. */
+export function PipelineProgress({ record }: { record: DocumentRecord }) {
+  if (!record.pipeline) return null;
+  return (
+    <ol className="ext-pipeline" aria-label="Analysis progress">
+      {PIPELINE_STEPS.map(({ id, label }) => {
+        const step = record.pipeline![id];
+        return (
+          <li key={id} data-status={step.status}>
+            <span className="ext-pipeline-label">{label}</span>
+            <span className="ext-pipeline-status">{STATUS_TEXT[step.status]}</span>
+            {step.message && <small>{step.message}</small>}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export function NeedsPaper() {
   return (
     <p className="ext-muted">
-      Use the paper in this tab, or choose a saved paper above, to see this view.
+      Analyze the paper in this tab, or choose a saved paper above, to see this view.
     </p>
   );
 }
 
-/** Paper facts, and Gemini analysis on request (it costs a model call). */
-export function OverviewView({
+/** Shown by views that depend on the analysis when it isn't available. */
+export function NeedsAnalysis({
   record,
-  onAnalyzed,
-  compact = false,
+  running,
+  onRun,
 }: {
   record: DocumentRecord;
-  onAnalyzed: (analysis: DocumentAnalysis) => Promise<void>;
-  /** Only the analyze prompt, for views that need an analysis first. */
-  compact?: boolean;
+  running: boolean;
+  onRun: () => void;
 }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { document, analysis } = record;
-
-  const analyze = async () => {
-    setBusy(true);
-    setError(null);
-    const result = await analyzeDocument({ document });
-    setBusy(false);
-    if (result.ok) await onAnalyzed(result.data.analysis);
-    else setError(result.error.message);
-  };
-
+  const failure = record.pipeline?.analysis.status === "failed" ? record.pipeline.analysis : null;
   return (
-    <div className="ext-stack">
-      {!compact && (
-        <>
-          <h2 className="ext-title">{document.title ?? document.source.fileName}</h2>
-          <p className="ext-muted">
-            {document.metadata.pageCount ?? document.pages.length} pages ·{" "}
-            {document.stats.words.toLocaleString()} words
-          </p>
-        </>
-      )}
-      {analysis ? (
-        !compact && (
-          <>
-            <h3 className="ext-subhead">{analysis.understanding.subject}</h3>
-            {analysis.understanding.learningObjectives[0] && (
-              <p>{analysis.understanding.learningObjectives[0]}</p>
-            )}
-            <div className="chips">
-              {analysis.understanding.topics.slice(0, 8).map((topic) => (
-                <span key={topic}>{topic}</span>
-              ))}
-            </div>
-          </>
-        )
-      ) : (
-        <div className="ext-callout">
-          <p>
-            Analyze the paper to find its concepts and prerequisites. This uses Gemini and the
-            server&apos;s <code>GEMINI_API_KEY</code>.
-          </p>
-          <button type="button" className="primary" onClick={analyze} disabled={busy}>
-            {busy ? "Analyzing…" : "Analyze with Gemini"}
-          </button>
-          {error && (
-            <p className="ext-status failed" role="status">
-              {error}
-            </p>
-          )}
-        </div>
+    <div className="ext-callout">
+      <p>
+        {running
+          ? "The analysis is running. This view fills in when it finishes."
+          : failure
+            ? `The analysis failed: ${failure.message}`
+            : "This view needs the paper's analysis (Gemini)."}
+      </p>
+      {!running && (
+        <button type="button" className="primary" onClick={onRun}>
+          {failure ? "Retry analysis" : "Run analysis"}
+        </button>
       )}
     </div>
   );
 }
 
-/** What to learn first, with mastery and explanations. Track A is improving the detection. */
+export function OverviewView({
+  record,
+  running,
+  onRun,
+}: {
+  record: DocumentRecord;
+  running: boolean;
+  onRun: () => void;
+}) {
+  const { document, analysis } = record;
+  return (
+    <div className="ext-stack">
+      <h2 className="ext-title">{document.title ?? document.source.fileName}</h2>
+      <p className="ext-muted">
+        {document.metadata.pageCount ?? document.pages.length} pages ·{" "}
+        {document.stats.words.toLocaleString()} words
+      </p>
+      {analysis ? (
+        <>
+          <h3 className="ext-subhead">{analysis.understanding.subject}</h3>
+          {analysis.understanding.learningObjectives[0] && (
+            <p>{analysis.understanding.learningObjectives[0]}</p>
+          )}
+          <div className="chips">
+            {analysis.understanding.topics.slice(0, 8).map((topic) => (
+              <span key={topic}>{topic}</span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <NeedsAnalysis record={record} running={running} onRun={onRun} />
+      )}
+    </div>
+  );
+}
+
+/** What to learn first, with mastery and explanations. */
 export function PrerequisitesView({
   record,
   mastery,
   onMastery,
-  onAnalyze,
+  running,
+  onRun,
 }: {
   record: DocumentRecord;
   mastery: Record<string, MasteryLevel>;
   onMastery: (conceptId: string, level: MasteryLevel) => void;
-  onAnalyze: () => void;
+  running: boolean;
+  onRun: () => void;
 }) {
   const [explanation, setExplanation] = useState<{ conceptId: string; text: string } | null>(null);
   const { document, analysis } = record;
-  if (!analysis) {
-    return (
-      <div className="ext-callout">
-        <p>Prerequisites come from the paper&apos;s analysis.</p>
-        <button type="button" className="secondary" onClick={onAnalyze}>
-          Go to Overview to analyze
-        </button>
-      </div>
-    );
-  }
+  if (!analysis) return <NeedsAnalysis record={record} running={running} onRun={onRun} />;
 
   const items = analysis.learningPath.slice(0, 8).flatMap((item) => {
     const concept = analysis.graph.concepts.find((entry) => entry.id === item.conceptId);
@@ -202,8 +219,8 @@ export function ExplainView({
           <div className="ext-placeholder">
             <strong>Explain this passage</strong>
             <p>
-              Coming from Track A: an explanation of the selected passage, with the prerequisites it
-              depends on and page references.
+              Coming next: an explanation of the selected passage, with the prerequisites it depends
+              on and page references.
             </p>
           </div>
         </>

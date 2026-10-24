@@ -88,13 +88,19 @@ in place; its visual design is provisional (**barebones build**).
 The flow:
 
 1. Open a paper: a PDF (for example an arXiv PDF) or an article page.
-2. The panel shows **This tab** with **Use this PDF** or **Use this page**. Chrome asks once per
-   site for access. PDFs are downloaded and parsed; pages are parsed from their main text.
-3. The paper opens in five views: **Overview** (analyze with Gemini), **Prerequisites** (concepts
-   to know first, mastery, explanations), **Explain** (bring over text selected on the page and
-   hear it; the AI explanation of a passage is Track A's, shown as a placeholder), **Related**
-   (Track B's recommendations), and **Listen** (read-aloud).
-4. Switching tabs follows along: a paper used before reopens automatically.
+2. The panel shows **This tab** with **Analyze this paper**. Chrome asks once per site for
+   access. PDFs are downloaded and parsed; pages are parsed from their main text.
+3. Analysis runs automatically: the paper (and its original file) is saved to the vault, then
+   Gemini analysis, then related papers and a contradiction check against saved papers that share
+   its topics. Progress is shown step by step and saved, so **Finish the analysis** resumes it.
+4. Six views: **Overview**, **Prerequisites** (concepts to know first, mastery, explanations),
+   **Explain** (bring over text selected on the page and hear it; passage explanations are a
+   placeholder), **Related**, **Conflicts**, and **Listen** (read-aloud).
+5. Switching tabs follows along: a paper analyzed before reopens automatically.
+
+The status in the panel header (and floating in the web app) shows what the assistant is doing.
+It is the placeholder for the assistant sprite; see "Agent activity states" in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 Chrome's built-in PDF viewer doesn't share text selections with extensions; use the
 Listen view or the paper's text instead. After changing files in `extension/`, click the reload

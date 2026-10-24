@@ -2,21 +2,25 @@
 
 /**
  * Barebones extension side panel, loaded at /panel inside the extension. It follows the active
- * tab: use the paper the tab shows, then explore it through five views. The flow and wiring are
- * what this establishes; the visual design is provisional.
+ * tab: "Analyze this paper" saves it to the vault and runs the full pipeline (analysis, related
+ * papers, contradiction check), then the paper can be explored through six views. The flow and
+ * wiring are what this establishes; the visual design is provisional.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AgentStatus } from "@/features/agent/AgentStatus";
+import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
 import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 import { parseDocument } from "@/lib/api/intelligence-client";
 import {
   listDocumentRecords,
   loadMastery,
-  saveDocument,
   saveMastery,
   type DocumentRecord,
 } from "@/lib/browser-store";
-import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
+import { runPaperPipeline } from "@/lib/paper-pipeline";
+import type { ParsedDocument } from "@/types/ingestion";
+import type { MasteryLevel } from "@/types/intelligence";
 import {
   paperForUrl,
   rememberPaperForUrl,
@@ -24,7 +28,14 @@ import {
   type TabPaper,
   type TabSelection,
 } from "./bridge";
-import { ExplainView, NeedsPaper, OverviewView, PrerequisitesView } from "./PanelViews";
+import {
+  ExplainView,
+  NeedsAnalysis,
+  NeedsPaper,
+  OverviewView,
+  PipelineProgress,
+  PrerequisitesView,
+} from "./PanelViews";
 import "./extension-panel.css";
 
 const VIEWS = [
@@ -32,6 +43,7 @@ const VIEWS = [
   { id: "prerequisites", label: "Prerequisites" },
   { id: "explain", label: "Explain" },
   { id: "related", label: "Related" },
+  { id: "conflicts", label: "Conflicts" },
   { id: "listen", label: "Listen" },
 ] as const;
 type View = (typeof VIEWS)[number]["id"];
@@ -42,11 +54,13 @@ export function ExtensionPanel() {
   const [view, setView] = useState<View>("overview");
   const [selection, setSelection] = useState<TabSelection | null>(null);
   const [mastery, setMastery] = useState<Record<string, MasteryLevel>>({});
+  const [runningId, setRunningId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pipelineAbort = useRef<AbortController | null>(null);
 
   const bridge = useExtensionBridge({
-    onPaper: (paper) => void ingest(paper),
+    onPaper: (paper) => void analyzeFromTab(paper),
     onSelection: (incoming) => {
       setSelection(incoming);
       setView("explain");
@@ -66,12 +80,13 @@ export function ExtensionPanel() {
       .catch(() => active && setError("Couldn't open browser storage."));
     return () => {
       active = false;
+      pipelineAbort.current?.abort();
     };
   }, []);
 
   const tab = bridge.tab;
   const tabUrl = tab?.url ?? null;
-  // Which paper to show: a manual pick for this tab, else the paper used from this tab before,
+  // Which paper to show: a manual pick for this tab, else the paper analyzed from this tab before,
   // else (outside the extension) the most recent paper.
   const tabPaperId = tabUrl ? paperForUrl(tabUrl) : null;
   const activeId =
@@ -79,8 +94,29 @@ export function ExtensionPanel() {
     (tabPaperId && records.some((entry) => entry.id === tabPaperId) ? tabPaperId : null) ??
     (tab ? null : (records[0]?.id ?? null));
   const record = records.find((entry) => entry.id === activeId) ?? null;
+  const running = Boolean(record && runningId === record.id);
 
-  async function ingest(paper: TabPaper | File) {
+  const upsert = (updated: DocumentRecord) =>
+    setRecords((current) => [updated, ...current.filter((entry) => entry.id !== updated.id)]);
+
+  async function runPipeline(document: ParsedDocument, file?: { blob: Blob; fileName: string }) {
+    pipelineAbort.current?.abort();
+    const controller = new AbortController();
+    pipelineAbort.current = controller;
+    setRunningId(document.id);
+    try {
+      await runPaperPipeline(document, { file, signal: controller.signal, onUpdate: upsert });
+    } catch (caught) {
+      if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+        setError(caught instanceof Error ? caught.message : "The analysis stopped unexpectedly.");
+      }
+    } finally {
+      setRunningId((current) => (current === document.id ? null : current));
+    }
+  }
+
+  /** Parse the paper, then save it and run the whole pipeline on it. */
+  async function analyzeFromTab(paper: TabPaper | File) {
     setError(null);
     setBusy("Reading the paper…");
     const file =
@@ -101,18 +137,13 @@ export function ExtensionPanel() {
       return;
     }
     const document = parsed.data.document;
-    const existing = (await listDocumentRecords()).find((entry) => entry.id === document.id);
-    await saveDocument(document, existing?.analysis ?? null);
-    if (!(paper instanceof File)) rememberPaperForUrl(paper.url, document.id);
-    setRecords(await listDocumentRecords());
-    setPicked(paper instanceof File ? { id: document.id, forUrl: tabUrl } : null);
+    if (paper instanceof File) setPicked({ id: document.id, forUrl: tabUrl });
+    else {
+      rememberPaperForUrl(paper.url, document.id);
+      setPicked(null);
+    }
     setView("overview");
-  }
-
-  async function saveAnalysis(analysis: DocumentAnalysis) {
-    if (!record) return;
-    await saveDocument(record.document, analysis);
-    setRecords(await listDocumentRecords());
+    await runPipeline(document, { blob: file, fileName: file.name });
   }
 
   async function updateMastery(conceptId: string, level: MasteryLevel) {
@@ -120,13 +151,19 @@ export function ExtensionPanel() {
     await saveMastery(conceptId, level);
   }
 
+  const rerun = () => record && void runPipeline(record.document);
   const usingTabPaper = Boolean(record && tabPaperId === record.id);
+  const pipelineIncomplete =
+    record?.pipeline &&
+    Object.values(record.pipeline).some(
+      (step) => step.status !== "done" && step.status !== "skipped",
+    );
 
   return (
     <main className="ext-panel">
       <header className="ext-header">
         <span className="eyebrow">KNOWBEFORE</span>
-        <span className="ext-tag">Barebones build</span>
+        <AgentStatus />
       </header>
 
       <section className="ext-card" aria-label="Current paper">
@@ -135,24 +172,22 @@ export function ExtensionPanel() {
             <span className="ext-label">THIS TAB</span>
             <p className="ext-tab-title">{tab.title || "Untitled tab"}</p>
             {tab.kind === "unsupported" ? (
-              <p className="ext-muted">Open a paper (a PDF or an article page) to use it here.</p>
-            ) : usingTabPaper ? (
-              <p className="ext-muted">This tab&apos;s paper is loaded below.</p>
-            ) : (
+              <p className="ext-muted">Open a paper (a PDF or an article page) to analyze it.</p>
+            ) : !usingTabPaper ? (
               <button
                 type="button"
                 className="primary"
                 onClick={bridge.requestPaper}
                 disabled={Boolean(busy) || bridge.pending === "kb:get-paper"}
               >
-                {tab.kind === "pdf" ? "Use this PDF" : "Use this page"}
+                Analyze this paper
               </button>
-            )}
+            ) : null}
           </>
         ) : (
           <p className="ext-muted">
-            Open this panel from the KnowBefore extension to use the paper in your current tab. You
-            can still choose or upload a paper below.
+            Open this panel from the KnowBefore extension to analyze the paper in your current tab.
+            You can still choose or upload a paper below.
           </p>
         )}
         {(error || busy || bridge.pending === "kb:get-paper") && (
@@ -160,11 +195,17 @@ export function ExtensionPanel() {
             {error ?? busy ?? "Getting the paper from this tab…"}
           </p>
         )}
+        {record && <PipelineProgress record={record} />}
+        {record && pipelineIncomplete && !running && (
+          <button type="button" className="secondary" onClick={rerun}>
+            Finish the analysis
+          </button>
+        )}
         <details className="ext-library">
           <summary>
             {record
               ? `Paper: ${record.document.title ?? record.document.source.fileName}`
-              : "Saved papers"}
+              : "Your vault"}
           </summary>
           {records.length > 0 && (
             <label className="ext-field">
@@ -188,10 +229,10 @@ export function ExtensionPanel() {
               accept=".pdf,application/pdf,.md,.txt"
               onChange={(event) => {
                 const file = event.target.files?.[0];
-                if (file) void ingest(file);
+                if (file) void analyzeFromTab(file);
               }}
             />
-            <span>Upload a file</span>
+            <span>Upload and analyze a file</span>
           </label>
         </details>
       </section>
@@ -224,26 +265,34 @@ export function ExtensionPanel() {
         ) : !record ? (
           <NeedsPaper />
         ) : view === "overview" ? (
-          <OverviewView record={record} onAnalyzed={saveAnalysis} />
+          <OverviewView record={record} running={running} onRun={rerun} />
         ) : view === "prerequisites" ? (
           <PrerequisitesView
             record={record}
             mastery={mastery}
             onMastery={updateMastery}
-            onAnalyze={() => setView("overview")}
+            running={running}
+            onRun={rerun}
           />
-        ) : view === "related" ? (
-          record.analysis ? (
-            <RecommendationsPanel
-              key={record.id}
-              document={record.document}
-              analysis={record.analysis}
-            />
-          ) : (
-            <OverviewView record={record} onAnalyzed={saveAnalysis} compact />
-          )
-        ) : (
+        ) : view === "listen" ? (
           <ReadAloudPanel key={record.id} document={record.document} />
+        ) : !record.analysis ? (
+          <NeedsAnalysis record={record} running={running} onRun={rerun} />
+        ) : view === "related" ? (
+          <RecommendationsPanel
+            // Remount when the pipeline saves results so they appear without a search.
+            key={`${record.id}-${Boolean(record.recommendations)}`}
+            document={record.document}
+            analysis={record.analysis}
+            initialResult={record.recommendations ?? null}
+          />
+        ) : (
+          <ContradictionPanel
+            key={`${record.id}-${Boolean(record.contradictions)}`}
+            document={record.document}
+            analysis={record.analysis}
+            initialReport={record.contradictions ?? null}
+          />
         )}
       </div>
 
@@ -255,6 +304,7 @@ export function ExtensionPanel() {
         >
           Open full app
         </button>
+        <span className="ext-tag">Barebones build</span>
       </footer>
     </main>
   );

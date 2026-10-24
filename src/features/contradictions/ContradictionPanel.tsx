@@ -10,13 +10,18 @@ import type { DocumentAnalysis } from "@/types/intelligence";
 export function ContradictionPanel({
   document,
   analysis,
+  initialReport = null,
 }: {
   document: ParsedDocument;
   analysis: DocumentAnalysis;
+  /** A comparison run earlier (e.g. by the analyze pipeline), shown with its papers selected. */
+  initialReport?: ContradictionReport | null;
 }) {
   const [records, setRecords] = useState<DocumentRecord[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([document.id]);
-  const [report, setReport] = useState<ContradictionReport | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    initialReport?.documentIds ?? [document.id],
+  );
+  const [report, setReport] = useState<ContradictionReport | null>(initialReport);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,13 +37,13 @@ export function ContradictionPanel({
           updatedAt: new Date().toISOString(),
         };
         setRecords([current, ...stored.filter((record) => record.id !== document.id)]);
-        setSelectedIds([document.id]);
+        setSelectedIds(initialReport?.documentIds ?? [document.id]);
       })
       .catch(() => active && setError("Could not load saved papers from this browser."));
     return () => {
       active = false;
     };
-  }, [document, analysis]);
+  }, [document, analysis, initialReport]);
 
   function toggle(id: string) {
     setReport(null);
