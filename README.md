@@ -1,36 +1,88 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HackPSU 2026
 
-## Getting Started
+The foundation for our HackPSU 2026 project: one Next.js app with typed API contracts and a shared
+file-ingestion pipeline that every feature reuses. The UI has not been built yet.
 
-First, run the development server:
+The product itself is still being defined. This repo gives us a clean place to build it in parallel
+without stepping on each other.
+
+## Stack
+
+Next.js 16 (App Router) · React 19 · TypeScript (strict) · Tailwind CSS 4 · Vitest · ESLint ·
+Prettier · npm · GitHub Actions
+
+## Getting started
+
+Requires Node.js 22 or newer (`.nvmrc` is provided).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+No environment variables are needed yet.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command                | What it does                                                  |
+| ---------------------- | ------------------------------------------------------------- |
+| `npm run dev`          | Start the dev server                                          |
+| `npm run build`        | Production build                                              |
+| `npm start`            | Serve the production build                                    |
+| `npm run lint`         | ESLint                                                        |
+| `npm run typecheck`    | Generate route types, then `tsc --noEmit`                     |
+| `npm test`             | Run unit tests once (`npm run test:watch` to watch)           |
+| `npm run format`       | Format everything with Prettier                               |
+| `npm run format:check` | Check formatting without writing                              |
+| `npm run check`        | Lint, typecheck, format check, and tests: run before every PR |
 
-## Learn More
+CI runs the same checks plus `npm run build` on every pull request.
 
-To learn more about Next.js, take a look at the following resources:
+## Project layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/                  Pages, layouts, and API routes
+    api/ingest/         POST /api/ingest, the example ingestion endpoint
+  components/           Reusable UI primitives (empty until the UI is designed)
+  features/             Feature-specific code, one folder per feature
+  lib/
+    ingestion/          Shared ingestion pipeline (server-only)
+    api/                Browser-safe API clients and mock payloads
+  types/                Shared contracts: API envelope, ingestion types
+tests/fixtures/         Sample files for tests and manual testing
+docs/                   Architecture, contributing, design, and decision docs
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Where to start
 
-## Deploy on Vercel
+| You are working on…            | Start in                           | Read                                    |
+| ------------------------------ | ---------------------------------- | --------------------------------------- |
+| UI, layout, visual design      | `src/app`, `src/components`        | [DESIGN.md](docs/DESIGN.md)             |
+| Parsing, ingestion, backend    | `src/lib/ingestion`, `src/app/api` | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| A product feature              | `src/features/<feature-name>`      | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Anything, before your first PR |                                    | [CONTRIBUTING.md](docs/CONTRIBUTING.md) |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Past decisions and their reasons are in [DECISIONS.md](docs/DECISIONS.md).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## What works today
+
+- **File ingestion for `.txt` and `.md` (up to 5 MB).** Validation, strict UTF-8 decoding,
+  Markdown section splitting, and a normalized `ParsedDocument` result.
+- **`POST /api/ingest`.** Exposes the pipeline with a typed, predictable response envelope.
+- **A typed browser client** (`uploadDocument`) and **mock payloads** for frontend work without a
+  backend.
+- **Unit tests** for the pipeline, including a check that the mock matches real output.
+
+Try the endpoint:
+
+```bash
+curl -F "file=@tests/fixtures/sample.md" http://localhost:3000/api/ingest
+```
+
+## Not built yet (on purpose)
+
+The UI and design system (see [DESIGN.md](docs/DESIGN.md)); PDF, DOCX, and image (OCR) parsing;
+AI extraction; persistence/database; authentication;
+deployment. We add each one when a real feature needs it. See
+[ARCHITECTURE.md](docs/ARCHITECTURE.md#extending-ingestion) for where each would plug in.

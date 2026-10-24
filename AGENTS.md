@@ -7,3 +7,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Project rules
+
+Read `docs/ARCHITECTURE.md` before structural changes. The UI is not designed yet (`docs/DESIGN.md`); do not invent a design system, tokens, or components unless asked.
+
+- One Next.js app. Do not add services, databases, auth, or AI SDKs without a recorded decision in `docs/DECISIONS.md`.
+- All file parsing goes through `src/lib/ingestion` (`ingest` / `ingestFile`). Never parse files inside a feature.
+- `src/lib/ingestion` is server-only. Client code uses `src/lib/api/*-client.ts` and types from `src/types`.
+- API routes return the `ApiResponse` envelope from `src/types/api.ts`. Contract changes update the mock, consumers, and `docs/ARCHITECTURE.md` together.
+- Feature code lives in `src/features/<name>`; promote to `src/components` or `src/lib` only when a second consumer exists.
+- Run `npm run check` before finishing; add tests for shared logic.
