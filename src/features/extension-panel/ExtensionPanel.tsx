@@ -1,43 +1,67 @@
 "use client";
 
 /**
- * TEMPORARY test harness for the Chrome extension's side panel (loaded at /panel). It exercises
- * real features (stored papers, parsing, Gemini analysis and explanations, read-aloud, and
- * reading a page selection aloud) in a narrow layout. Replace it with the designed panel later.
+ * Barebones extension side panel, loaded at /panel inside the extension. It follows the active
+ * tab: use the paper the tab shows, then explore it through five views. The flow and wiring are
+ * what this establishes; the visual design is provisional.
  */
 import { useEffect, useState } from "react";
-import { analyzeDocument, parseDocument, requestExplanation } from "@/lib/api/intelligence-client";
-import { listDocumentRecords, saveDocument, type DocumentRecord } from "@/lib/browser-store";
-import { ListenButton } from "@/features/voice/ListenButton";
+import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
+import { parseDocument } from "@/lib/api/intelligence-client";
+import {
+  listDocumentRecords,
+  loadMastery,
+  saveDocument,
+  saveMastery,
+  type DocumentRecord,
+} from "@/lib/browser-store";
+import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
+import {
+  paperForUrl,
+  rememberPaperForUrl,
+  useExtensionBridge,
+  type TabPaper,
+  type TabSelection,
+} from "./bridge";
+import { ExplainView, NeedsPaper, OverviewView, PrerequisitesView } from "./PanelViews";
 import "./extension-panel.css";
 
-interface PageSelection {
-  text: string;
-  title?: string;
-}
+const VIEWS = [
+  { id: "overview", label: "Overview" },
+  { id: "prerequisites", label: "Prerequisites" },
+  { id: "explain", label: "Explain" },
+  { id: "related", label: "Related" },
+  { id: "listen", label: "Listen" },
+] as const;
+type View = (typeof VIEWS)[number]["id"];
 
 export function ExtensionPanel() {
   const [records, setRecords] = useState<DocumentRecord[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [picked, setPicked] = useState<{ id: string; forUrl: string | null } | null>(null);
+  const [view, setView] = useState<View>("overview");
+  const [selection, setSelection] = useState<TabSelection | null>(null);
+  const [mastery, setMastery] = useState<Record<string, MasteryLevel>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selection, setSelection] = useState<PageSelection | null>(null);
-  const [explanation, setExplanation] = useState<{ concept: string; text: string } | null>(null);
 
-  const refresh = async (preferId?: string) => {
-    const stored = await listDocumentRecords();
-    setRecords(stored);
-    setSelectedId((current) => preferId ?? current ?? stored[0]?.id ?? null);
-  };
+  const bridge = useExtensionBridge({
+    onPaper: (paper) => void ingest(paper),
+    onSelection: (incoming) => {
+      setSelection(incoming);
+      setView("explain");
+      setError(null);
+    },
+    onError: (_request, message) => setError(message),
+  });
 
   useEffect(() => {
     let active = true;
-    listDocumentRecords()
-      .then((stored) => {
+    Promise.all([listDocumentRecords(), loadMastery()])
+      .then(([stored, levels]) => {
         if (!active) return;
         setRecords(stored);
-        setSelectedId(stored[0]?.id ?? null);
+        setMastery(levels);
       })
       .catch(() => active && setError("Couldn't open browser storage."));
     return () => {
@@ -45,158 +69,193 @@ export function ExtensionPanel() {
     };
   }, []);
 
-  // Text selected on the current tab arrives from the extension wrapper (sidepanel.js).
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (!event.origin.startsWith("chrome-extension://")) return;
-      const data = event.data as { type?: string; text?: unknown; title?: unknown };
-      if (data?.type !== "knowbefore:selection" || typeof data.text !== "string") return;
-      setSelection({
-        text: data.text,
-        title: typeof data.title === "string" ? data.title : undefined,
-      });
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
+  const tab = bridge.tab;
+  const tabUrl = tab?.url ?? null;
+  // Which paper to show: a manual pick for this tab, else the paper used from this tab before,
+  // else (outside the extension) the most recent paper.
+  const tabPaperId = tabUrl ? paperForUrl(tabUrl) : null;
+  const activeId =
+    (picked && picked.forUrl === tabUrl ? picked.id : null) ??
+    (tabPaperId && records.some((entry) => entry.id === tabPaperId) ? tabPaperId : null) ??
+    (tab ? null : (records[0]?.id ?? null));
+  const record = records.find((entry) => entry.id === activeId) ?? null;
 
-  const record = records.find((entry) => entry.id === selectedId) ?? null;
-
-  const upload = async (file: File | undefined) => {
-    if (!file) return;
+  async function ingest(paper: TabPaper | File) {
     setError(null);
-    setBusy("Extracting the PDF…");
+    setBusy("Reading the paper…");
+    const file =
+      paper instanceof File
+        ? paper
+        : paper.kind === "pdf"
+          ? new File([paper.bytes], paper.fileName, { type: "application/pdf" })
+          : // Page text becomes Markdown titled with the tab's title, so the paper has a title.
+            new File(
+              [paper.title ? `# ${paper.title}\n\n${paper.text}` : paper.text],
+              paper.fileName,
+              { type: "text/markdown" },
+            );
     const parsed = await parseDocument(file, { mode: "standard" });
     setBusy(null);
     if (!parsed.ok) {
       setError(parsed.error.message);
       return;
     }
-    const existing = records.find((entry) => entry.id === parsed.data.document.id);
-    await saveDocument(parsed.data.document, existing?.analysis ?? null);
-    await refresh(parsed.data.document.id);
-  };
+    const document = parsed.data.document;
+    const existing = (await listDocumentRecords()).find((entry) => entry.id === document.id);
+    await saveDocument(document, existing?.analysis ?? null);
+    if (!(paper instanceof File)) rememberPaperForUrl(paper.url, document.id);
+    setRecords(await listDocumentRecords());
+    setPicked(paper instanceof File ? { id: document.id, forUrl: tabUrl } : null);
+    setView("overview");
+  }
 
-  const analyze = async () => {
+  async function saveAnalysis(analysis: DocumentAnalysis) {
     if (!record) return;
-    setError(null);
-    setBusy("Analyzing with Gemini…");
-    const result = await analyzeDocument({ document: record.document });
-    setBusy(null);
-    if (!result.ok) {
-      setError(result.error.message);
-      return;
-    }
-    await saveDocument(record.document, result.data.analysis);
-    await refresh(record.id);
-  };
+    await saveDocument(record.document, analysis);
+    setRecords(await listDocumentRecords());
+  }
 
-  const explain = async (conceptId: string) => {
-    const concept = record?.analysis?.graph.concepts.find((entry) => entry.id === conceptId);
-    if (!record || !concept) return;
-    setExplanation({ concept: concept.name, text: "Asking Gemini…" });
-    const result = await requestExplanation({
-      document: record.document,
-      concept,
-      style: "beginner",
-    });
-    setExplanation({
-      concept: concept.name,
-      text: result.ok ? result.data.explanation : result.error.message,
-    });
-  };
+  async function updateMastery(conceptId: string, level: MasteryLevel) {
+    setMastery((current) => ({ ...current, [conceptId]: level }));
+    await saveMastery(conceptId, level);
+  }
 
-  const concepts = record?.analysis
-    ? record.analysis.learningPath
-        .slice(0, 5)
-        .map((item) => record.analysis!.graph.concepts.find((c) => c.id === item.conceptId))
-        .filter((concept) => concept !== undefined)
-    : [];
+  const usingTabPaper = Boolean(record && tabPaperId === record.id);
 
   return (
     <main className="ext-panel">
       <header className="ext-header">
         <span className="eyebrow">KNOWBEFORE</span>
-        <span className="ext-temporary">Temporary test UI</span>
+        <span className="ext-tag">Barebones build</span>
       </header>
 
-      {selection && (
-        <section className="ext-card" aria-labelledby="ext-selection">
-          <div className="ext-card-heading">
-            <h2 id="ext-selection">Selected text</h2>
-            <button type="button" className="ext-link" onClick={() => setSelection(null)}>
-              Clear
-            </button>
-          </div>
-          {selection.title && <p className="ext-muted">From {selection.title}</p>}
-          <blockquote className="ext-quote">{selection.text}</blockquote>
-          <ListenButton text={selection.text} />
-        </section>
-      )}
-
-      <section className="ext-card" aria-labelledby="ext-paper">
-        <h2 id="ext-paper">Paper</h2>
-        {records.length > 0 ? (
-          <label className="ext-field">
-            Stored papers
-            <select
-              value={selectedId ?? ""}
-              onChange={(event) => setSelectedId(event.target.value)}
-            >
-              {records.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.document.title ?? entry.document.source.fileName}
-                </option>
-              ))}
-            </select>
-          </label>
+      <section className="ext-card" aria-label="Current paper">
+        {tab ? (
+          <>
+            <span className="ext-label">THIS TAB</span>
+            <p className="ext-tab-title">{tab.title || "Untitled tab"}</p>
+            {tab.kind === "unsupported" ? (
+              <p className="ext-muted">Open a paper (a PDF or an article page) to use it here.</p>
+            ) : usingTabPaper ? (
+              <p className="ext-muted">This tab&apos;s paper is loaded below.</p>
+            ) : (
+              <button
+                type="button"
+                className="primary"
+                onClick={bridge.requestPaper}
+                disabled={Boolean(busy) || bridge.pending === "kb:get-paper"}
+              >
+                {tab.kind === "pdf" ? "Use this PDF" : "Use this page"}
+              </button>
+            )}
+          </>
         ) : (
-          <p className="ext-muted">No papers yet. Upload one here or in the full app.</p>
-        )}
-        <label className="ext-upload">
-          <input
-            type="file"
-            accept=".pdf,application/pdf,.md,.txt"
-            onChange={(event) => void upload(event.target.files?.[0])}
-          />
-          <span>Upload a PDF</span>
-        </label>
-        {record && !record.analysis && (
-          <button type="button" className="secondary" onClick={analyze} disabled={!!busy}>
-            Analyze concepts (Gemini)
-          </button>
-        )}
-        {(busy || error) && (
-          <p className={error ? "ext-status failed" : "ext-status"} role="status">
-            {error ?? busy}
+          <p className="ext-muted">
+            Open this panel from the KnowBefore extension to use the paper in your current tab. You
+            can still choose or upload a paper below.
           </p>
         )}
+        {(error || busy || bridge.pending === "kb:get-paper") && (
+          <p className={error ? "ext-status failed" : "ext-status"} role="status">
+            {error ?? busy ?? "Getting the paper from this tab…"}
+          </p>
+        )}
+        <details className="ext-library">
+          <summary>
+            {record
+              ? `Paper: ${record.document.title ?? record.document.source.fileName}`
+              : "Saved papers"}
+          </summary>
+          {records.length > 0 && (
+            <label className="ext-field">
+              Switch to a saved paper
+              <select
+                value={record?.id ?? ""}
+                onChange={(event) => setPicked({ id: event.target.value, forUrl: tabUrl })}
+              >
+                {!record && <option value="">Choose…</option>}
+                {records.map((entry) => (
+                  <option key={entry.id} value={entry.id}>
+                    {entry.document.title ?? entry.document.source.fileName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label className="ext-upload">
+            <input
+              type="file"
+              accept=".pdf,application/pdf,.md,.txt"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void ingest(file);
+              }}
+            />
+            <span>Upload a file</span>
+          </label>
+        </details>
       </section>
 
-      {concepts.length > 0 && (
-        <section className="ext-card" aria-labelledby="ext-concepts">
-          <h2 id="ext-concepts">Start with these concepts</h2>
-          <ol className="ext-concepts">
-            {concepts.map((concept) => (
-              <li key={concept.id}>
-                <span>{concept.name}</span>
-                <button type="button" className="ext-link" onClick={() => void explain(concept.id)}>
-                  Explain
-                </button>
-              </li>
-            ))}
-          </ol>
-          {explanation && (
-            <div className="ext-explanation">
-              <strong>{explanation.concept}</strong>
-              <p>{explanation.text}</p>
-              <ListenButton text={explanation.text} />
-            </div>
-          )}
-        </section>
-      )}
+      <nav className="ext-views" role="tablist" aria-label="Paper views">
+        {VIEWS.map((entry) => (
+          <button
+            key={entry.id}
+            id={`view-${entry.id}`}
+            type="button"
+            role="tab"
+            aria-selected={view === entry.id}
+            aria-controls="ext-view"
+            onClick={() => setView(entry.id)}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </nav>
 
-      {record && <ReadAloudPanel key={record.id} document={record.document} />}
+      <div id="ext-view" className="ext-view" role="tabpanel" aria-labelledby={`view-${view}`}>
+        {view === "explain" ? (
+          <ExplainView
+            selection={selection}
+            canRequest={Boolean(tab && tab.kind !== "unsupported")}
+            pending={bridge.pending === "kb:get-selection"}
+            onRequest={bridge.requestSelection}
+            onClear={() => setSelection(null)}
+          />
+        ) : !record ? (
+          <NeedsPaper />
+        ) : view === "overview" ? (
+          <OverviewView record={record} onAnalyzed={saveAnalysis} />
+        ) : view === "prerequisites" ? (
+          <PrerequisitesView
+            record={record}
+            mastery={mastery}
+            onMastery={updateMastery}
+            onAnalyze={() => setView("overview")}
+          />
+        ) : view === "related" ? (
+          record.analysis ? (
+            <RecommendationsPanel
+              key={record.id}
+              document={record.document}
+              analysis={record.analysis}
+            />
+          ) : (
+            <OverviewView record={record} onAnalyzed={saveAnalysis} compact />
+          )
+        ) : (
+          <ReadAloudPanel key={record.id} document={record.document} />
+        )}
+      </div>
+
+      <footer className="ext-footer">
+        <button
+          type="button"
+          className="ext-link"
+          onClick={tab ? bridge.openApp : () => window.open("/", "_blank")}
+        >
+          Open full app
+        </button>
+      </footer>
     </main>
   );
 }
