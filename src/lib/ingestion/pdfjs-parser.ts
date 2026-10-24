@@ -4,13 +4,21 @@ import type {
   DocumentSection,
   ExtractionQuality,
   ParsedPage,
-  TextPosition,
 } from "@/types/ingestion";
 import type { ParserOutput } from "./parsers";
 
-interface PositionedItem extends TextPosition {
+/** Text item with layout data. Used here for heading detection; not returned to clients. */
+interface PositionedItem {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fontName?: string;
   fontSize: number;
 }
+
+type PageWithPositions = ParsedPage & { positions: PositionedItem[] };
 
 export async function parsePdfWithPdfJs(bytes: Uint8Array): Promise<ParserOutput> {
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -19,7 +27,7 @@ export async function parsePdfWithPdfJs(bytes: Uint8Array): Promise<ParserOutput
     useSystemFonts: true,
   });
   const pdf = await task.promise;
-  const pages: ParsedPage[] = [];
+  const pages: PageWithPositions[] = [];
   const allItems: PositionedItem[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
@@ -62,7 +70,7 @@ export async function parsePdfWithPdfJs(bytes: Uint8Array): Promise<ParserOutput
   return {
     title,
     text,
-    pages,
+    pages: pages.map(({ pageNumber, text }) => ({ pageNumber, text })),
     sections,
     metadata,
     extractionQuality,
@@ -123,7 +131,7 @@ function itemsToText(items: PositionedItem[]): string {
 }
 
 function buildSections(
-  pages: ParsedPage[],
+  pages: PageWithPositions[],
   items: PositionedItem[],
   title: string | null,
 ): DocumentSection[] {
@@ -134,7 +142,7 @@ function buildSections(
     .sort((a, b) => a - b);
   const median = sizes[Math.floor(sizes.length / 2)] ?? 12;
   return pages.map((page) => {
-    const headingItem = (page.positions as PositionedItem[] | undefined)?.find(
+    const headingItem = page.positions.find(
       (item) =>
         item.text.trim().length > 2 &&
         item.text.trim().length < 120 &&

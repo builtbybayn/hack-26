@@ -11,23 +11,27 @@ export function failure(code: string, message: string, status = 400): Response {
   return Response.json({ ok: false, error: { code, message } }, { status });
 }
 
+/** Thrown by `readJson` when a body exceeds its size limit. */
+class RequestTooLargeError extends Error {}
+
 export function routeError(error: unknown, route: string): Response {
+  if (error instanceof RequestTooLargeError) {
+    return failure("INVALID_REQUEST", "The request body is too large.", 413);
+  }
   if (error instanceof SyntaxError) {
     return failure("INVALID_REQUEST", "The request body is not valid JSON.", 400);
   }
   if (error instanceof IntelligenceError) {
     const status =
-      error.code === "DOCUMENT_NOT_FOUND" || error.code === "CONCEPT_NOT_FOUND"
-        ? 404
-        : error.code === "CONSENT_REQUIRED"
-          ? 403
-          : error.code === "REQUEST_TIMEOUT"
-            ? 504
-            : error.code === "AI_NOT_CONFIGURED" || error.code === "OCR_NOT_CONFIGURED"
-              ? 503
-              : error.code === "MODEL_RESPONSE_INVALID"
-                ? 422
-                : 502;
+      error.code === "CONSENT_REQUIRED"
+        ? 403
+        : error.code === "REQUEST_TIMEOUT"
+          ? 504
+          : error.code === "AI_NOT_CONFIGURED" || error.code === "OCR_NOT_CONFIGURED"
+            ? 503
+            : error.code === "MODEL_RESPONSE_INVALID"
+              ? 422
+              : 502;
     return failure(error.code, error.message, status);
   }
   if (error instanceof IngestionError) {
@@ -41,9 +45,10 @@ export function routeError(error: unknown, route: string): Response {
   return failure("INTERNAL_ERROR", "Something went wrong while processing the request.", 500);
 }
 
-export async function readJson(request: Request, maxBytes = 1_000_000): Promise<unknown> {
+/** Request bodies carry whole parsed documents, so the default limit is generous. */
+export async function readJson(request: Request, maxBytes = 20_000_000): Promise<unknown> {
   const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > maxBytes) throw new Error("REQUEST_TOO_LARGE");
+  if (declared > maxBytes) throw new RequestTooLargeError();
   return request.json();
 }
 

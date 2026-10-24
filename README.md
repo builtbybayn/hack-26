@@ -7,12 +7,12 @@ KnowBefore turns academic PDFs into prerequisite knowledge graphs and personaliz
 ```text
 PDF upload → PDF.js → quality gate → optional OCR → canonical document
                                                       ↓
-IndexedDB mastery ← learning path ← graph validation ← Gemini
+IndexedDB storage ← learning path ← graph validation ← Gemini
                          ↓
                  React Flow + tutor
 ```
 
-This remains one Next.js 16 application: interactive UI in `src/features`, typed API routes in `src/app/api`, browser-safe clients in `src/lib/api`, and server-only parsing/provider logic in `src/lib`. Parsed documents and analyses are content-hash cached in the running server process. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for contracts and module boundaries.
+This remains one Next.js 16 application: interactive UI in `src/features`, typed API routes in `src/app/api`, browser-safe clients in `src/lib/api`, and server-only parsing/provider logic in `src/lib`. The server is stateless: parsed documents, analyses, and mastery are stored in the browser (IndexedDB, `src/lib/browser-store.ts`) and sent with each request. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for contracts and module boundaries.
 
 ## Install and run
 
@@ -76,7 +76,6 @@ The full upload/analysis workspace runs in the app tab so large PDFs are not con
 
 - `POST /api/documents/parse` — multipart PDF/text input and parser settings
 - `POST /api/documents/analyze` — Gemini analysis plus graph/path generation
-- `GET /api/documents/:id` — cached canonical document
 - `POST /api/explain` — contextual concept tutoring
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
@@ -104,8 +103,8 @@ Tests use mocked provider responses and require no API keys. Fixtures cover Maxw
 - Mistral and Mathpix are never called without explicit user consent.
 - Gemini receives normalized, section-aware excerpts—not the raw PDF and not the whole document on every follow-up.
 - Credentials stay in backend environment variables.
-- Mastery remains in browser IndexedDB.
-- The server document cache is process-local and is cleared on restart.
+- Documents, analyses, and mastery stay in browser IndexedDB.
+- The server stores nothing between requests.
 
 Do not expose this backend publicly without adding authentication, authorization, rate limiting, and a durable encrypted document store. Provider data-retention terms remain the deployer’s responsibility.
 
@@ -115,5 +114,3 @@ Do not expose this backend publicly without adding authentication, authorization
 - **OCR is not configured:** add the selected provider credentials or use Standard parsing.
 - **Consent required:** check the external-processing control before Advanced OCR.
 - **Low extraction quality:** use Automatic with consent or Advanced OCR; Mathpix is often preferable for dense equations.
-- **Document not found after restart:** the server cache is intentionally process-local; upload the PDF again.
-- **Quiz expired:** quiz answer keys are held in server memory; generate a fresh quiz after a restart.

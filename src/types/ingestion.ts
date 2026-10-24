@@ -56,15 +56,6 @@ export interface DocumentSection {
   pageNumbers?: number[];
 }
 
-export interface TextPosition {
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  fontName?: string;
-}
-
 export interface ParsedTable {
   markdown: string;
   rows?: string[][];
@@ -76,7 +67,6 @@ export interface ParsedPage {
   markdown?: string;
   equations?: string[];
   tables?: ParsedTable[];
-  positions?: TextPosition[];
 }
 
 export interface DocumentMetadata {

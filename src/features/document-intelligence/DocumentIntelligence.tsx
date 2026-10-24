@@ -20,11 +20,12 @@ import {
 } from "@/lib/api/intelligence-client";
 import { buildLearningPath } from "@/lib/intelligence/learning-path";
 import {
-  loadLatestSession,
+  getDocumentRecord,
+  loadLatestDocument,
   loadMastery,
-  saveLatestSession,
+  saveDocument,
   saveMastery,
-} from "./knowledge-profile";
+} from "@/lib/browser-store";
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   extracting: "Extracting PDF locally",
@@ -61,13 +62,13 @@ export function DocumentIntelligence() {
   );
 
   useEffect(() => {
-    Promise.all([loadMastery(), loadLatestSession()])
-      .then(([savedMastery, session]) => {
+    Promise.all([loadMastery(), loadLatestDocument()])
+      .then(([savedMastery, record]) => {
         setMastery(savedMastery);
-        if (session) {
-          setDocument(session.document);
-          setAnalysis(session.analysis);
-          setSelectedConcept(session.analysis.graph.concepts[0] ?? null);
+        if (record?.analysis) {
+          setDocument(record.document);
+          setAnalysis(record.analysis);
+          setSelectedConcept(record.analysis.graph.concepts[0] ?? null);
           setStage("completed");
         }
       })
@@ -105,15 +106,24 @@ export function DocumentIntelligence() {
         controller.signal,
       );
       if (!parsed.ok) throw new Error(parsed.error.message);
-      setDocument(parsed.data.document);
+      const parsedDocument = parsed.data.document;
+      setDocument(parsedDocument);
       setStage("concepts");
-      const analyzed = await analyzeDocument(parsed.data.document.id, mastery, controller.signal);
-      if (!analyzed.ok) throw new Error(analyzed.error.message);
+      // Reuse a stored analysis of the same file (same content hash) instead of calling Gemini.
+      let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
+      if (!documentAnalysis) {
+        const analyzed = await analyzeDocument(
+          { document: parsedDocument, mastery },
+          controller.signal,
+        );
+        if (!analyzed.ok) throw new Error(analyzed.error.message);
+        documentAnalysis = analyzed.data.analysis;
+      }
       setStage("validating");
-      setAnalysis(analyzed.data.analysis);
-      await saveLatestSession(parsed.data.document, analyzed.data.analysis);
+      setAnalysis(documentAnalysis);
+      await saveDocument(parsedDocument, documentAnalysis);
       setStage("learning-path");
-      setSelectedConcept(analyzed.data.analysis.graph.concepts[0] ?? null);
+      setSelectedConcept(documentAnalysis.graph.concepts[0] ?? null);
       setStage("completed");
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
@@ -130,30 +140,22 @@ export function DocumentIntelligence() {
   async function explain(style: "beginner" | "technical" | "analogy" | "worked-example") {
     if (!document || !selectedConcept) return;
     setExplanation("Loading a contextual explanation…");
-    const result = await requestExplanation({
-      documentId: document.id,
-      conceptId: selectedConcept.id,
-      style,
-    });
+    const result = await requestExplanation({ document, concept: selectedConcept, style });
     setExplanation(result.ok ? result.data.explanation : result.error.message);
   }
 
   async function startQuiz() {
-    if (!document || !selectedConcept) return;
+    if (!selectedConcept) return;
     setQuizFeedback(null);
     setAnswers({});
-    const result = await requestQuiz(document.id, selectedConcept.id);
+    const result = await requestQuiz(selectedConcept);
     if (result.ok) setQuiz(result.data);
     else setQuizFeedback(result.error.message);
   }
 
   async function submitQuiz() {
-    if (!document || !selectedConcept || !quiz) return;
-    const result = await evaluateAnswers({
-      documentId: document.id,
-      conceptId: selectedConcept.id,
-      answers,
-    });
+    if (!selectedConcept || !quiz) return;
+    const result = await evaluateAnswers({ quiz, answers });
     if (!result.ok) {
       setQuizFeedback(result.error.message);
       return;

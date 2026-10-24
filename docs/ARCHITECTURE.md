@@ -9,13 +9,13 @@ flowchart LR
     Page["Pages<br/>src/app/**/page.tsx"]
     Feature["Features<br/>src/features/*"]
     Client["API clients + mocks<br/>src/lib/api"]
+    Store["IndexedDB: documents, analyses, mastery<br/>src/lib/browser-store.ts"]
   end
 
   subgraph Server
     Route["API routes<br/>src/app/api/*/route.ts"]
     Ingestion["Ingestion pipeline<br/>src/lib/ingestion"]
     Intelligence["Gemini + graph validation<br/>src/lib/intelligence"]
-    Store["Content-hash cache<br/>src/lib/storage"]
   end
 
   Types["Contracts<br/>src/types"]
@@ -25,8 +25,7 @@ flowchart LR
   Client -- "HTTP (FormData / JSON)" --> Route
   Route --> Ingestion
   Route --> Intelligence
-  Ingestion --> Store
-  Intelligence --> Store
+  Feature --> Store
   Types -.-> Client
   Types -.-> Route
   Types -.-> Ingestion
@@ -34,15 +33,15 @@ flowchart LR
 
 ## Layers
 
-| Layer               | Location              | Runs in          | Responsibility                                                       |
-| ------------------- | --------------------- | ---------------- | -------------------------------------------------------------------- |
-| Pages and layouts   | `src/app`             | Server or client | Composition and routing. Keep thin: arrange features and components. |
-| Components          | `src/components`      | Either           | Reusable, product-agnostic UI primitives. No data fetching.          |
-| Features            | `src/features/<name>` | Mostly client    | A product capability's UI and state. Calls API clients.              |
-| API clients, mocks  | `src/lib/api`         | Browser-safe     | Typed `fetch` wrappers and mock payloads, one pair per endpoint.     |
-| API routes          | `src/app/api`         | Server           | HTTP: parse the request, call shared logic, map errors to status.    |
-| Shared server logic | `src/lib/<module>`    | Server only      | Ingestion, OCR providers, Gemini calls, graph validation, and cache. |
-| Contracts           | `src/types`           | Both             | Types and constants shared across the network boundary.              |
+| Layer               | Location              | Runs in          | Responsibility                                                           |
+| ------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------ |
+| Pages and layouts   | `src/app`             | Server or client | Composition and routing. Keep thin: arrange features and components.     |
+| Components          | `src/components`      | Either           | Reusable, product-agnostic UI primitives. No data fetching.              |
+| Features            | `src/features/<name>` | Mostly client    | A product capability's UI and state. Calls API clients.                  |
+| API clients, mocks  | `src/lib/api`         | Browser-safe     | Typed `fetch` wrappers and mock payloads, one pair per endpoint.         |
+| API routes          | `src/app/api`         | Server           | HTTP: parse the request, call shared logic, map errors to status.        |
+| Shared server logic | `src/lib/<module>`    | Server only      | Ingestion, OCR providers, Gemini calls, and graph validation. Stateless. |
+| Contracts           | `src/types`           | Both             | Types and constants shared across the network boundary.                  |
 
 ### The client/server boundary
 
@@ -93,9 +92,9 @@ const summary = await summarize(doc.sections); // feature logic works on the nor
 | PDF / DOCX        | Same as above, using a parsing library chosen at that time. Parsers may be async.                                                                       |
 | OCR               | Add a `DocumentParser` adapter under `src/lib/ingestion/ocr`; keep consent and normalization behavior.                                                  |
 | AI extraction     | Extend `src/lib/intelligence`; never import the provider SDK from client code.                                                                          |
-| Persistence       | Replace `src/lib/storage` behind its existing get/put API; ingestion stays storage-agnostic.                                                            |
+| Persistence       | Extend `src/lib/browser-store.ts`. Add server storage only if data must sync between browsers or devices.                                               |
 
-PDF.js, Mistral OCR, Mathpix, Gemini intelligence, process-local caching, and browser IndexedDB mastery are implemented.
+PDF.js, Mistral OCR, Mathpix, Gemini intelligence, and browser IndexedDB storage are implemented.
 
 ## API contract
 
@@ -159,19 +158,27 @@ real output.
 
 ### PDF intelligence endpoints
 
-| Endpoint                      | Contract and responsibility                                                                                            |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/documents/parse`   | Multipart `file`, `mode`, `ocrProvider`, and `allowExternalProcessing`; returns a canonical document and cache status. |
-| `POST /api/documents/analyze` | JSON `documentId` plus optional mastery map; returns validated analysis and a recalculated path.                       |
-| `GET /api/documents/:id`      | Returns a document from the content-hash cache. Dynamic route params are awaited per Next.js 16.                       |
-| `POST /api/explain`           | Generates one contextual explanation using only relevant concept pages.                                                |
-| `POST /api/quiz`              | Generates a bounded quiz and retains answer keys on the server.                                                        |
-| `POST /api/evaluate`          | Scores an explicit assessment; this is the only automatic mastery update path.                                         |
-| `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                  |
+| Endpoint                      | Contract and responsibility                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `POST /api/documents/parse`   | Multipart `file`, `mode`, `ocrProvider`, and `allowExternalProcessing`; returns `{ document }`.  |
+| `POST /api/documents/analyze` | JSON `{ document, mastery? }`; returns `{ analysis }`: validated graph and learning path.        |
+| `POST /api/explain`           | JSON `{ document, concept, style, question? }`; explains using only the concept's source pages.  |
+| `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                             |
+| `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path. |
+| `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.            |
 
-Provider calls are bounded by request cancellation/timeouts. The server cache deduplicates uploads by SHA-256. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
+Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
 
-The browser stores `{ conceptId, level, updatedAt }` records in one IndexedDB `mastery` object store. Learning paths are derived from that existing profile and the validated graph; no second knowledge-profile database exists.
+### Storage: the browser owns state, the server is stateless
+
+The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
+documents and their analyses keyed by the document's SHA-256 content hash, plus mastery records.
+Clients send whatever a request needs (the document, a concept, a quiz) in the body. A restart loses
+nothing, and re-uploading the same file reuses its stored analysis instead of calling Gemini again.
+
+IndexedDB is per origin. An extension side panel that loads a page from this app shares the web
+app's storage; a page bundled inside the extension would have its own. Learning paths are derived
+from the stored mastery profile and the validated graph.
 
 ## When to create what
 

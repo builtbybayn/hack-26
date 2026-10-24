@@ -1,10 +1,11 @@
 import type {
   AnalyzeDocumentResponse,
+  AnalyzeRequest,
+  Concept,
   EvaluateRequest,
   EvaluateResponse,
   ExplainRequest,
   ExplainResponse,
-  GetDocumentResponse,
   ParseDocumentResponse,
   ParseOptions,
   QuizResponse,
@@ -24,23 +25,18 @@ export async function parseDocument(
 }
 
 export function analyzeDocument(
-  documentId: string,
-  mastery: Record<string, string>,
+  input: AnalyzeRequest,
   signal?: AbortSignal,
 ): Promise<AnalyzeDocumentResponse> {
-  return requestJson("/api/documents/analyze", jsonRequest({ documentId, mastery }, signal));
-}
-
-export function getDocument(documentId: string): Promise<GetDocumentResponse> {
-  return requestJson(`/api/documents/${encodeURIComponent(documentId)}`);
+  return requestJson("/api/documents/analyze", jsonRequest(input, signal));
 }
 
 export function requestExplanation(input: ExplainRequest): Promise<ExplainResponse> {
   return requestJson("/api/explain", jsonRequest(input));
 }
 
-export function requestQuiz(documentId: string, conceptId: string): Promise<QuizResponse> {
-  return requestJson("/api/quiz", jsonRequest({ documentId, conceptId }));
+export function requestQuiz(concept: Concept): Promise<QuizResponse> {
+  return requestJson("/api/quiz", jsonRequest({ concept }));
 }
 
 export function evaluateAnswers(input: EvaluateRequest): Promise<EvaluateResponse> {

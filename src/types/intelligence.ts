@@ -1,5 +1,9 @@
+/**
+ * Intelligence contracts. The server is stateless: the browser stores parsed documents, analyses,
+ * and mastery (see `@/lib/browser-store`) and sends whatever a request needs in its body.
+ */
 import type { ApiResponse, CommonErrorCode } from "./api";
-import type { ParsedDocument } from "./ingestion";
+import type { IngestionErrorCode, ParsedDocument } from "./ingestion";
 
 export interface SourceReference {
   pageNumber: number;
@@ -83,22 +87,21 @@ export type PipelineStage =
 
 export interface ParseDocumentResult {
   document: ParsedDocument;
-  cacheHit: boolean;
 }
 
 export interface AnalyzeRequest {
-  documentId: string;
+  document: ParsedDocument;
   mastery?: Record<string, MasteryLevel>;
 }
 
 export interface AnalyzeDocumentResult {
   analysis: DocumentAnalysis;
-  cacheHit: boolean;
 }
 
 export interface ExplainRequest {
-  documentId: string;
-  conceptId: string;
+  /** Supplies the source pages the concept references. */
+  document: ParsedDocument;
+  concept: Concept;
   style: "beginner" | "technical" | "analogy" | "worked-example";
   question?: string;
 }
@@ -108,10 +111,17 @@ export interface ExplainResult {
   sourceReferences: SourceReference[];
 }
 
+export interface QuizRequest {
+  concept: Concept;
+}
+
+/** Includes the answer key: this is a self-check learning aid, graded without server state. */
 export interface QuizQuestion {
   id: string;
   prompt: string;
   choices: string[];
+  correctAnswer: string;
+  explanation: string;
 }
 
 export interface QuizResult {
@@ -120,8 +130,8 @@ export interface QuizResult {
 }
 
 export interface EvaluateRequest {
-  documentId: string;
-  conceptId: string;
+  quiz: QuizResult;
+  /** Question id → chosen answer. */
   answers: Record<string, string>;
 }
 
@@ -133,8 +143,6 @@ export interface EvaluateResult {
 }
 
 export type IntelligenceErrorCode =
-  | "DOCUMENT_NOT_FOUND"
-  | "CONCEPT_NOT_FOUND"
   | "CONSENT_REQUIRED"
   | "OCR_NOT_CONFIGURED"
   | "AI_NOT_CONFIGURED"
@@ -144,14 +152,10 @@ export type IntelligenceErrorCode =
 
 export type ParseDocumentResponse = ApiResponse<
   ParseDocumentResult,
-  IntelligenceErrorCode | CommonErrorCode | import("./ingestion").IngestionErrorCode
+  IntelligenceErrorCode | CommonErrorCode | IngestionErrorCode
 >;
 export type AnalyzeDocumentResponse = ApiResponse<
   AnalyzeDocumentResult,
-  IntelligenceErrorCode | CommonErrorCode
->;
-export type GetDocumentResponse = ApiResponse<
-  ParsedDocument,
   IntelligenceErrorCode | CommonErrorCode
 >;
 export type ExplainResponse = ApiResponse<ExplainResult, IntelligenceErrorCode | CommonErrorCode>;

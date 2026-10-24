@@ -10,11 +10,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Project rules
 
-Read `docs/ARCHITECTURE.md` before structural changes. The UI is not designed yet (`docs/DESIGN.md`); do not invent a design system, tokens, or components unless asked.
+Read `docs/ARCHITECTURE.md` before structural changes and `docs/DESIGN.md` before UI work.
 
 - One Next.js app. Do not add services, databases, auth, or AI SDKs without a recorded decision in `docs/DECISIONS.md`.
 - All file parsing goes through `src/lib/ingestion` (`ingest` / `ingestFile`). Never parse files inside a feature.
 - `src/lib/ingestion` is server-only. Client code uses `src/lib/api/*-client.ts` and types from `src/types`.
 - API routes return the `ApiResponse` envelope from `src/types/api.ts`. Contract changes update the mock, consumers, and `docs/ARCHITECTURE.md` together.
+- The server is stateless. Persist data in the browser through `src/lib/browser-store.ts`; never keep state in server memory.
 - Feature code lives in `src/features/<name>`; promote to `src/components` or `src/lib` only when a second consumer exists.
 - Run `npm run check` before finishing; add tests for shared logic.

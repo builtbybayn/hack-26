@@ -2,9 +2,6 @@
 
 **Status: implemented.** The PDF intelligence workspace defines the initial product language.
 
-Until then, no shared styles, tokens, or components exist. `src/app/globals.css` only imports
-Tailwind.
-
 ## Goals agreed during planning
 
 - A premium, intentional product feel, not a generic hackathon dashboard.

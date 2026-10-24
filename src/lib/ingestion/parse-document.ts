@@ -3,7 +3,6 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { ParseOptions } from "@/types/intelligence";
 import type { ExtractionQuality, ParsedDocument } from "@/types/ingestion";
-import { getDocument, putDocument } from "@/lib/storage/document-store";
 import { IntelligenceError } from "@/lib/intelligence/errors";
 import { ingest } from "./index";
 import { MistralOcrParser } from "./ocr/mistral";
@@ -13,18 +12,13 @@ export async function parseDocumentFile(
   file: File,
   options: ParseOptions,
   signal?: AbortSignal,
-): Promise<{ document: ParsedDocument; cacheHit: boolean }> {
+): Promise<{ document: ParsedDocument }> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const id = createHash("sha256").update(bytes).digest("hex");
-  const cached = getDocument(id);
-  if (cached && (options.mode !== "advanced" || cached.provenance.externalProcessing)) {
-    return { document: cached, cacheHit: true };
-  }
 
   const standard = await ingest({ fileName: file.name, mimeType: file.type, bytes });
   if (standard.format !== "pdf" || options.mode === "standard") {
-    putDocument(standard);
-    return { document: standard, cacheHit: false };
+    return { document: standard };
   }
 
   const shouldUseOcr = shouldUseAdvancedOcr(options.mode, standard.extractionQuality);
@@ -35,8 +29,7 @@ export async function parseDocumentFile(
         "Advanced OCR sends this PDF to the selected external provider. Confirm consent to continue.",
       );
     }
-    putDocument(standard);
-    return { document: standard, cacheHit: false };
+    return { document: standard };
   }
 
   const parser = options.ocrProvider === "mathpix" ? new MathpixParser() : new MistralOcrParser();
@@ -44,8 +37,7 @@ export async function parseDocumentFile(
     { bytes, fileName: file.name, mimeType: file.type, documentId: id },
     { signal, timeoutMs: 90_000 },
   );
-  putDocument(document);
-  return { document, cacheHit: false };
+  return { document };
 }
 
 export function shouldUseAdvancedOcr(

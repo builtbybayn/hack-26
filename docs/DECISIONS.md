@@ -65,9 +65,13 @@ small. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Confirmed.** Concept intelligence and tutoring use the official Google Gen AI SDK from server-only modules. The model is environment-configurable. Analysis uses a JSON response schema, Zod validation, bounded retries, and a deterministic graph validator; model claims never determine graph validity on their own.
 
-### 12. Mastery is local; document caches are ephemeral
+### 12. The browser owns all state; the server is stateless
 
-**Provisional.** Mastery is stored in browser IndexedDB because it is user-specific and must survive extension/app restarts without adding a database. Parsed documents, analyses, and quiz keys are content-hash keyed in server process memory for the hackathon deployment. A production multi-instance deployment needs authenticated, encrypted durable storage.
+**Confirmed.** Parsed documents, analyses, and mastery live in browser IndexedDB
+(`src/lib/browser-store.ts`), keyed by content hash. API routes receive what they need in the request
+body and keep nothing in memory, so restarts lose nothing and no database is needed. Quizzes carry
+their own answer keys (a self-check aid, not an exam). Revisit if data must sync across browsers or
+devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 

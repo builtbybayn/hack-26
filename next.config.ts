@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
+  // pdfjs-dist sets up its worker at runtime; bundling it breaks server-side PDF parsing.
+  serverExternalPackages: ["pdfjs-dist"],
   partialPrefetching: true,
   turbopack: {
     rules: {

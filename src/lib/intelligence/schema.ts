@@ -22,6 +22,43 @@ export const dependencySchema = z.object({
   rationale: z.string().min(1),
 });
 
+/**
+ * Validates a client-supplied `ParsedDocument` in request bodies. Checks only the fields the
+ * server reads; anything else passes through untouched.
+ */
+export const documentInputSchema = z.looseObject({
+  id: z.string().min(1),
+  title: z.string().nullable(),
+  source: z.looseObject({ fileName: z.string() }),
+  pages: z.array(
+    z.looseObject({
+      pageNumber: z.number().int(),
+      text: z.string(),
+      markdown: z.string().optional(),
+    }),
+  ),
+  sections: z.array(
+    z.looseObject({
+      heading: z.string().nullable(),
+      text: z.string(),
+      pageNumbers: z.array(z.number().int()).optional(),
+    }),
+  ),
+});
+
+export const quizQuestionSchema = z.object({
+  id: z.string(),
+  prompt: z.string(),
+  choices: z.array(z.string()).min(2).max(5),
+  correctAnswer: z.string(),
+  explanation: z.string(),
+});
+
+export const quizSchema = z.object({
+  conceptId: z.string(),
+  questions: z.array(quizQuestionSchema).min(1).max(5),
+});
+
 export const modelAnalysisSchema = z.object({
   understanding: z.object({
     subject: z.string().min(1),

@@ -48,6 +48,8 @@ ${chunks.map((chunk, index) => `--- EXCERPT ${index + 1} ---\n${chunk}`).join("\
         learningPath: buildLearningPath(graph, mastery),
       };
     } catch (error) {
+      // Configuration and provider failures won't fix themselves; only malformed output is retried.
+      if (error instanceof IntelligenceError) throw error;
       lastError = error;
     }
   }

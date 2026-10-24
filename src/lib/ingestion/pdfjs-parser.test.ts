@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { assessExtractionQuality, parsePdfWithPdfJs } from "./pdfjs-parser";
 
 describe("PDF.js extraction", () => {
-  it("extracts page text, positions, metadata, and page references", async () => {
+  it("extracts page text, metadata, and page references without layout data", async () => {
     const result = await parsePdfWithPdfJs(makePdf("Maxwell Equations"));
     expect(result.pages).toHaveLength(1);
     expect(result.pages?.[0].text).toContain("Maxwell Equations");
-    expect(result.pages?.[0].positions?.length).toBeGreaterThan(0);
+    expect(result.pages?.[0]).toEqual({ pageNumber: 1, text: expect.any(String) });
     expect(result.metadata?.pageCount).toBe(1);
     expect(result.sections[0].pageNumbers).toEqual([1]);
   });
