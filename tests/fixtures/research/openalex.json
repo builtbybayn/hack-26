@@ -1,0 +1,609 @@
+{
+  "meta": {
+    "notice": "No API key, so this request shares one free daily budget ($0.10) with everyone on your network's IP address. Get a free key with its own $1/day at https://openalex.org/settings/api and add api_key=YOUR_KEY to your requests. An AI agent can get one for its user in one call: POST https://api.openalex.org/api-keys with {\"email\": \"<your user's email>\"}; we email them a link, and the key works once they click it. Docs for agents: https://help.openalex.org/llms.txt",
+    "count": 209180,
+    "db_response_time_ms": 82,
+    "page": 1,
+    "per_page": 5,
+    "groups_count": null,
+    "x_query": {
+      "oql": "get works with (vector calculus) in the full text",
+      "x_new_oql": "get works with (vector calculus) in the full text",
+      "oqo": {
+        "get_rows": "works",
+        "filter_rows": [
+          { "column_id": "fulltext.search", "value": "vector calculus", "operator": "has" }
+        ]
+      },
+      "url": "/works?filter=fulltext.search:vector calculus&per_page=5",
+      "order": "best matches first",
+      "order_default": true
+    },
+    "cost_usd": 0.001
+  },
+  "results": [
+    {
+      "id": "https://openalex.org/W47667379",
+      "display_name": "Fractional Vector Calculus",
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5005919362",
+            "display_name": "Vasily Evgenevich Tarasov",
+            "orcid": "https://orcid.org/0000-0002-4718-6274",
+            "observed_orcids": ["https://orcid.org/0000-0002-4718-6274"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I19880235",
+              "display_name": "Lomonosov Moscow State University",
+              "ror": "https://ror.org/010pmpe69",
+              "country_code": "RU",
+              "type": "education",
+              "lineage": ["https://openalex.org/I19880235"]
+            },
+            {
+              "id": "https://openalex.org/I4405279538",
+              "display_name": "Skobeltsyn Institute of Nuclear Physics, Lomonosov Moscow State University",
+              "ror": "https://ror.org/01mjggc44",
+              "country_code": "RU",
+              "type": "facility",
+              "lineage": ["https://openalex.org/I19880235", "https://openalex.org/I4405279538"]
+            }
+          ],
+          "countries": ["RU"],
+          "is_corresponding": true,
+          "raw_author_name": "Vasily E. Tarasov",
+          "raw_affiliation_strings": [
+            "Skobeltsyn Institute of Nuclear Physics, Moscow State University, 119992, Moscow, Russia",
+            "Moscow State  University"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Skobeltsyn Institute of Nuclear Physics, Moscow State University, 119992, Moscow, Russia",
+              "institution_ids": [
+                "https://openalex.org/I19880235",
+                "https://openalex.org/I4405279538"
+              ]
+            },
+            {
+              "raw_affiliation_string": "Moscow State  University",
+              "institution_ids": ["https://openalex.org/I19880235"]
+            }
+          ]
+        }
+      ],
+      "publication_year": 2010,
+      "doi": "https://doi.org/10.1007/978-3-642-14003-7_11",
+      "primary_location": {
+        "id": "doi:10.1007/978-3-642-14003-7_11",
+        "doi": "https://doi.org/10.1007/978-3-642-14003-7_11",
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.1007/978-3-642-14003-7_11",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210225623",
+          "display_name": "Nonlinear physical science",
+          "issn_l": "1867-8440",
+          "issn": ["1867-8440", "1867-8459"],
+          "is_oa": false,
+          "is_in_doaj": false,
+          "is_core": true,
+          "listed_in": ["cwts-core", "poland-20"],
+          "host_organization": "https://openalex.org/P4310319965",
+          "host_organization_name": "Springer Nature",
+          "host_organization_lineage": ["https://openalex.org/P4310319965"],
+          "host_organization_lineage_names": ["Springer Nature"],
+          "type": "book series"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Nonlinear Physical Science",
+        "raw_type": "book-chapter"
+      },
+      "best_oa_location": null,
+      "cited_by_count": 132,
+      "abstract_inverted_index": null
+    },
+    {
+      "id": "https://openalex.org/W4255663092",
+      "display_name": "Vector Calculus",
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5086634397",
+            "display_name": "Paul C. Matthews",
+            "orcid": "https://orcid.org/0000-0002-2011-9303",
+            "observed_orcids": ["https://orcid.org/0000-0002-2011-9303"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I142263535",
+              "display_name": "University of Nottingham",
+              "ror": "https://ror.org/01ee9ar58",
+              "country_code": "GB",
+              "type": "education",
+              "lineage": ["https://openalex.org/I142263535"]
+            }
+          ],
+          "countries": ["GB"],
+          "is_corresponding": true,
+          "raw_author_name": "Paul C. Matthews",
+          "raw_affiliation_strings": [
+            "School of Mathematical Sciences, University of Nottingham, University Park, UK"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "School of Mathematical Sciences, University of Nottingham, University Park, UK",
+              "institution_ids": ["https://openalex.org/I142263535"]
+            }
+          ]
+        }
+      ],
+      "publication_year": 1998,
+      "doi": "https://doi.org/10.1007/978-1-4471-0597-8",
+      "primary_location": {
+        "id": "doi:10.1007/978-1-4471-0597-8",
+        "doi": "https://doi.org/10.1007/978-1-4471-0597-8",
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.1007/978-1-4471-0597-8",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4210216041",
+          "display_name": "Springer undergraduate mathematics series",
+          "issn_l": "1615-2085",
+          "issn": ["1615-2085", "2197-4144"],
+          "is_oa": false,
+          "is_in_doaj": false,
+          "is_core": false,
+          "listed_in": [],
+          "host_organization": null,
+          "host_organization_name": null,
+          "host_organization_lineage": [],
+          "host_organization_lineage_names": [],
+          "type": "book series"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Springer Undergraduate Mathematics Series",
+        "raw_type": "book"
+      },
+      "best_oa_location": null,
+      "cited_by_count": 16,
+      "abstract_inverted_index": null
+    },
+    {
+      "id": "https://openalex.org/W1509254685",
+      "display_name": "Students\u2019 difficulties with vector calculus in electrodynamics",
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5079229089",
+            "display_name": "Laurens Bollen",
+            "orcid": null,
+            "observed_orcids": []
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I99464096",
+              "display_name": "KU Leuven",
+              "ror": "https://ror.org/05f950310",
+              "country_code": "BE",
+              "type": "education",
+              "lineage": ["https://openalex.org/I99464096"]
+            }
+          ],
+          "countries": ["BE"],
+          "is_corresponding": false,
+          "raw_author_name": "Laurens Bollen",
+          "raw_affiliation_strings": [
+            "Department of Physics and Astronomy & LESEC, KU Leuven, Celestijnenlaan 200c, 3001 Leuven, Belgium"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Department of Physics and Astronomy & LESEC, KU Leuven, Celestijnenlaan 200c, 3001 Leuven, Belgium",
+              "institution_ids": ["https://openalex.org/I99464096"]
+            }
+          ]
+        },
+        {
+          "author_position": "middle",
+          "author": {
+            "id": "https://openalex.org/A5036405234",
+            "display_name": "Paul van Kampen",
+            "orcid": "https://orcid.org/0000-0003-3043-8110",
+            "observed_orcids": ["https://orcid.org/0000-0003-3043-8110"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I42934936",
+              "display_name": "Dublin City University",
+              "ror": "https://ror.org/04a1a1e81",
+              "country_code": "IE",
+              "type": "education",
+              "lineage": ["https://openalex.org/I42934936"]
+            }
+          ],
+          "countries": ["IE"],
+          "is_corresponding": false,
+          "raw_author_name": "Paul van Kampen",
+          "raw_affiliation_strings": [
+            "Centre for the Advancement of Science and Mathematics Teaching and Learning & School of Physical Sciences, Dublin City University, Glasnevin, Dublin 9, Ireland"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Centre for the Advancement of Science and Mathematics Teaching and Learning & School of Physical Sciences, Dublin City University, Glasnevin, Dublin 9, Ireland",
+              "institution_ids": ["https://openalex.org/I42934936"]
+            }
+          ]
+        },
+        {
+          "author_position": "last",
+          "author": {
+            "id": "https://openalex.org/A5031333351",
+            "display_name": "Mieke De Cock",
+            "orcid": "https://orcid.org/0000-0002-2489-1528",
+            "observed_orcids": ["https://orcid.org/0000-0002-2489-1528"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I99464096",
+              "display_name": "KU Leuven",
+              "ror": "https://ror.org/05f950310",
+              "country_code": "BE",
+              "type": "education",
+              "lineage": ["https://openalex.org/I99464096"]
+            }
+          ],
+          "countries": ["BE"],
+          "is_corresponding": false,
+          "raw_author_name": "Mieke De Cock",
+          "raw_affiliation_strings": [
+            "Department of Physics and Astronomy & LESEC, KU Leuven, Celestijnenlaan 200c, 3001 Leuven, Belgium"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Department of Physics and Astronomy & LESEC, KU Leuven, Celestijnenlaan 200c, 3001 Leuven, Belgium",
+              "institution_ids": ["https://openalex.org/I99464096"]
+            }
+          ]
+        }
+      ],
+      "publication_year": 2015,
+      "doi": "https://doi.org/10.1103/physrevstper.11.020129",
+      "primary_location": {
+        "id": "doi:10.1103/physrevstper.11.020129",
+        "doi": "https://doi.org/10.1103/physrevstper.11.020129",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1103/physrevstper.11.020129",
+        "pdf_url": "http://link.aps.org/pdf/10.1103/PhysRevSTPER.11.020129",
+        "source": {
+          "id": "https://openalex.org/S184542645",
+          "display_name": "Physical Review Special Topics - Physics Education Research",
+          "issn_l": "1554-9178",
+          "issn": ["1554-9178"],
+          "is_oa": true,
+          "is_in_doaj": true,
+          "is_core": true,
+          "listed_in": ["cwts-core", "doaj"],
+          "host_organization": "https://openalex.org/P4310320261",
+          "host_organization_name": "American Physical Society",
+          "host_organization_lineage": ["https://openalex.org/P4310320261"],
+          "host_organization_lineage_names": ["American Physical Society"],
+          "type": "journal"
+        },
+        "license": "cc-by",
+        "license_id": "https://openalex.org/licenses/cc-by",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Physical Review Special Topics - Physics Education Research",
+        "raw_type": "journal-article"
+      },
+      "best_oa_location": {
+        "id": "doi:10.1103/physrevstper.11.020129",
+        "doi": "https://doi.org/10.1103/physrevstper.11.020129",
+        "is_oa": true,
+        "landing_page_url": "https://doi.org/10.1103/physrevstper.11.020129",
+        "pdf_url": "http://link.aps.org/pdf/10.1103/PhysRevSTPER.11.020129",
+        "source": {
+          "id": "https://openalex.org/S184542645",
+          "display_name": "Physical Review Special Topics - Physics Education Research",
+          "issn_l": "1554-9178",
+          "issn": ["1554-9178"],
+          "is_oa": true,
+          "is_in_doaj": true,
+          "is_core": true,
+          "listed_in": ["cwts-core", "doaj"],
+          "host_organization": "https://openalex.org/P4310320261",
+          "host_organization_name": "American Physical Society",
+          "host_organization_lineage": ["https://openalex.org/P4310320261"],
+          "host_organization_lineage_names": ["American Physical Society"],
+          "type": "journal"
+        },
+        "license": "cc-by",
+        "license_id": "https://openalex.org/licenses/cc-by",
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Physical Review Special Topics - Physics Education Research",
+        "raw_type": "journal-article"
+      },
+      "cited_by_count": 61,
+      "abstract_inverted_index": {
+        "Understanding": [0],
+        "Maxwell's": [1, 108],
+        "equations": [2, 109],
+        "in": [3, 16, 31, 56, 110],
+        "differential": [4],
+        "form": [5],
+        "is": [6, 20, 94],
+        "of": [7, 28, 52, 77, 107],
+        "great": [8],
+        "importance": [9],
+        "when": [10],
+        "studying": [11],
+        "the": [12, 26, 38, 48, 103],
+        "electrodynamic": [13],
+        "phenomena": [14],
+        "discussed": [15],
+        "advanced": [17],
+        "electromagnetism": [18],
+        "courses.It": [19],
+        "therefore": [21],
+        "necessary": [22],
+        "that": [23, 63, 91],
+        "students": [24, 42, 99],
+        "master": [25],
+        "use": [27],
+        "vector": [29, 54, 78, 82],
+        "calculus": [30, 83],
+        "physical": [32, 59, 85],
+        "situations.In": [33],
+        "this": [34],
+        "light": [35],
+        "we": [36],
+        "investigated": [37],
+        "difficulties": [39],
+        "second": [40],
+        "year": [41],
+        "at": [43, 68],
+        "KU": [44],
+        "Leuven": [45],
+        "encounter": [46],
+        "with": [47, 73],
+        "divergence": [49],
+        "and": [50, 58, 80, 105],
+        "curl": [51],
+        "a": [53],
+        "field": [55],
+        "mathematical": [57],
+        "contexts.We": [60],
+        "have": [61, 87],
+        "found": [62, 88],
+        "they": [64],
+        "are": [65],
+        "quite": [66],
+        "skilled": [67],
+        "doing": [69],
+        "calculations,": [70],
+        "but": [71],
+        "struggle": [72],
+        "interpreting": [74],
+        "graphical": [75],
+        "representations": [76],
+        "fields": [79],
+        "applying": [81],
+        "to": [84, 100],
+        "situations.We": [86],
+        "strong": [89],
+        "indications": [90],
+        "traditional": [92],
+        "instruction": [93],
+        "not": [95],
+        "sufficient": [96],
+        "for": [97],
+        "our": [98],
+        "fully": [101],
+        "understand": [102],
+        "meaning": [104],
+        "power": [106],
+        "electrodynamics.": [111]
+      }
+    },
+    {
+      "id": "https://openalex.org/W2098940483",
+      "display_name": "Fractional vector calculus and fractional Maxwell\u2019s equations",
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5005919362",
+            "display_name": "Vasily Evgenevich Tarasov",
+            "orcid": "https://orcid.org/0000-0002-4718-6274",
+            "observed_orcids": ["https://orcid.org/0000-0002-4718-6274"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I19880235",
+              "display_name": "Lomonosov Moscow State University",
+              "ror": "https://ror.org/010pmpe69",
+              "country_code": "RU",
+              "type": "education",
+              "lineage": ["https://openalex.org/I19880235"]
+            }
+          ],
+          "countries": ["RU"],
+          "is_corresponding": true,
+          "raw_author_name": "Vasily E. Tarasov",
+          "raw_affiliation_strings": [
+            "Skobeltsyn Institute of Nuclear Physics, Moscow State University, Leninskie gory, Moscow 119991, Russia"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Skobeltsyn Institute of Nuclear Physics, Moscow State University, Leninskie gory, Moscow 119991, Russia",
+              "institution_ids": ["https://openalex.org/I19880235"]
+            }
+          ]
+        }
+      ],
+      "publication_year": 2008,
+      "doi": "https://doi.org/10.1016/j.aop.2008.04.005",
+      "primary_location": {
+        "id": "doi:10.1016/j.aop.2008.04.005",
+        "doi": "https://doi.org/10.1016/j.aop.2008.04.005",
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.1016/j.aop.2008.04.005",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S173877794",
+          "display_name": "Annals of Physics",
+          "issn_l": "0003-4916",
+          "issn": ["0003-4916", "1096-035X"],
+          "is_oa": false,
+          "is_in_doaj": false,
+          "is_core": true,
+          "listed_in": [
+            "cwts-core",
+            "dongbi-c",
+            "jufo-1",
+            "norway-1",
+            "poland-100",
+            "russia-white-list-1"
+          ],
+          "host_organization": "https://openalex.org/P4310320990",
+          "host_organization_name": "Elsevier BV",
+          "host_organization_lineage": ["https://openalex.org/P4310320990"],
+          "host_organization_lineage_names": ["Elsevier BV"],
+          "type": "journal"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Annals of Physics",
+        "raw_type": "journal-article"
+      },
+      "best_oa_location": {
+        "id": "pmh:oai:arXiv.org:0907.2363",
+        "doi": null,
+        "is_oa": true,
+        "landing_page_url": "http://arxiv.org/abs/0907.2363",
+        "pdf_url": "https://arxiv.org/pdf/0907.2363",
+        "source": {
+          "id": "https://openalex.org/S4306400194",
+          "display_name": "arXiv (Cornell University)",
+          "issn_l": "2331-8422",
+          "issn": ["2331-8422"],
+          "is_oa": true,
+          "is_in_doaj": false,
+          "is_core": false,
+          "listed_in": [],
+          "host_organization": "https://openalex.org/I205783295",
+          "host_organization_name": "Cornell University",
+          "host_organization_lineage": ["https://openalex.org/I205783295"],
+          "host_organization_lineage_names": [],
+          "type": "repository"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "submittedVersion",
+        "is_accepted": false,
+        "is_published": false,
+        "raw_source_name": null,
+        "raw_type": "text"
+      },
+      "cited_by_count": 316,
+      "abstract_inverted_index": null
+    },
+    {
+      "id": "https://openalex.org/W4242575981",
+      "display_name": "Vector Calculus",
+      "authorships": [
+        {
+          "author_position": "first",
+          "author": {
+            "id": "https://openalex.org/A5055478873",
+            "display_name": "Nathan Ida",
+            "orcid": "https://orcid.org/0000-0002-4806-9926",
+            "observed_orcids": ["https://orcid.org/0000-0002-4806-9926"]
+          },
+          "institutions": [
+            {
+              "id": "https://openalex.org/I110152177",
+              "display_name": "University of Akron",
+              "ror": "https://ror.org/02kyckx55",
+              "country_code": "US",
+              "type": "education",
+              "lineage": ["https://openalex.org/I110152177"]
+            }
+          ],
+          "countries": ["US"],
+          "is_corresponding": true,
+          "raw_author_name": "Nathan Ida",
+          "raw_affiliation_strings": [
+            "Department of Electrical Engineering, University of Akron, Akron, OH, USA"
+          ],
+          "raw_orcid": null,
+          "affiliations": [
+            {
+              "raw_affiliation_string": "Department of Electrical Engineering, University of Akron, Akron, OH, USA",
+              "institution_ids": ["https://openalex.org/I110152177"]
+            }
+          ]
+        }
+      ],
+      "publication_year": 2020,
+      "doi": "https://doi.org/10.1007/978-3-030-15557-5_2",
+      "primary_location": {
+        "id": "doi:10.1007/978-3-030-15557-5_2",
+        "doi": "https://doi.org/10.1007/978-3-030-15557-5_2",
+        "is_oa": false,
+        "landing_page_url": "https://doi.org/10.1007/978-3-030-15557-5_2",
+        "pdf_url": null,
+        "source": {
+          "id": "https://openalex.org/S4306463937",
+          "display_name": "Springer eBooks",
+          "issn_l": null,
+          "issn": null,
+          "is_oa": false,
+          "is_in_doaj": false,
+          "is_core": false,
+          "listed_in": [],
+          "host_organization": "https://openalex.org/P4310319965",
+          "host_organization_name": "Springer Nature",
+          "host_organization_lineage": ["https://openalex.org/P4310319965"],
+          "host_organization_lineage_names": ["Springer Nature"],
+          "type": "ebook platform"
+        },
+        "license": null,
+        "license_id": null,
+        "version": "publishedVersion",
+        "is_accepted": true,
+        "is_published": true,
+        "raw_source_name": "Engineering Electromagnetics",
+        "raw_type": "book-chapter"
+      },
+      "best_oa_location": null,
+      "cited_by_count": 1,
+      "abstract_inverted_index": null
+    }
+  ],
+  "group_by": []
+}

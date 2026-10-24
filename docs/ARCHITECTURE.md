@@ -169,6 +169,27 @@ real output.
 
 Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
 
+### Paper recommendations (Track B)
+
+`POST /api/recommendations` accepts `{ document: ParsedDocument, analysis: DocumentAnalysis,
+limit?: number }` (default 8, maximum 20). The analysis must belong to the supplied document.
+It returns `{ recommendations, queries, warnings }` inside the usual `ApiResponse` envelope;
+see `src/types/research.ts` and `src/lib/api/research-mock.ts` for the contract and mock.
+
+The server-only `src/lib/research` searches OpenAlex for up to three foundational concepts
+and one related-work query. Only concept names, subject, and topics are sent to OpenAlex.
+It excludes the current paper by title or metadata DOI, deduplicates IDs/DOIs/titles, and
+ranks by term overlap, citation count, recency, and open-access availability. Bibliographic
+fields always come from OpenAlex; optional AI reasons are currently `null`. No Gemini key
+is needed. Empty results succeed with a warning. Provider failures return
+`SEARCH_PROVIDER_ERROR` (502), quotas return `SEARCH_RATE_LIMITED` (429), and a request
+timeout returns `REQUEST_TIMEOUT` (504). Provider calls have a 12-second timeout and the
+route has a 20-second deadline. `OPENALEX_API_KEY` is optional and server-only; anonymous
+requests share an IP usage budget. No recommendation state is kept on the server.
+
+The browser uses `src/lib/api/research-client.ts`. `RecommendationsPanel` searches on demand
+and displays Read first / Related groups, provider links, missing abstracts, and the query trail.
+
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
