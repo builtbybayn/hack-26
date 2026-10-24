@@ -70,14 +70,26 @@ Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-he
 
 ## Chrome extension development
 
-The repository includes a small Manifest V3 companion launcher in `extension/`; it contains no secrets and opens the locally running KnowBefore application.
+`extension/` is a Manifest V3 side panel. It holds no secrets: the panel is the app's `/panel`
+page in an iframe, so it uses the same code, API, and browser storage as the web app (papers,
+cached audio, and reading positions are shared). The panel UI is a **temporary test harness**.
 
-1. Run `npm run dev`.
+1. Run `npm run dev` (the extension expects `http://localhost:3000`).
 2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
-3. Select the repository’s `extension` directory.
-4. Pin KnowBefore and choose **Open KnowBefore**.
+3. Select the repository's `extension` directory. Chrome 114 or newer is required.
+4. Pin KnowBefore and click its icon to open the side panel.
 
-The full upload/analysis workspace runs in the app tab so large PDFs are not constrained by popup lifetime.
+What you can test from the panel:
+
+- **Read my selection:** select text on any web page, then click it; Chrome asks once per site for
+  permission to read the selection. The text appears in the panel with a Listen button. Chrome's
+  built-in PDF viewer doesn't expose selections, so upload PDFs in the panel instead.
+- **Papers:** pick a stored paper or upload one; optionally analyze it with Gemini and hear
+  explanations of the first concepts.
+- **Read aloud:** the full player, voice picker, and transcript.
+
+After changing files in `extension/`, click the reload icon on the extension's card in
+`chrome://extensions`. Changes to `/panel` only need a panel reload.
 
 ## API
 

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>KnowBefore</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <!--
+      TEMPORARY development panel. The UI is a page served by the app (/panel) in an iframe, so it
+      shares the app's code, API, and browser storage (the host permission for localhost:3000 gives
+      the iframe the app's own storage partition). This toolbar adds what only the extension can
+      do: read the text selected on the current tab.
+    -->
+    <header class="toolbar">
+      <button id="selection" type="button">Read my selection</button>
+      <button id="open-app" type="button" class="secondary">Open full app</button>
+    </header>
+    <p id="status" role="status" hidden></p>
+    <iframe id="app" title="KnowBefore panel" src="http://localhost:3000/panel"></iframe>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

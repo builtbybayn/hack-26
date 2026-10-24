@@ -1,0 +1,150 @@
+/* TEMPORARY extension side panel layout. Uses the app tokens from globals.css. */
+
+.ext-panel {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+.ext-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ext-temporary {
+  padding: 3px 7px;
+  border: 1px dashed var(--clay);
+  color: var(--clay);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ext-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.ext-card h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+.ext-card-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.ext-muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.ext-field {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.ext-field select {
+  width: 100%;
+  min-width: 0;
+}
+.ext-upload {
+  display: grid;
+  place-items: center;
+  min-height: 52px;
+  border: 1px dashed #8c968e;
+  background: #f8f6ef;
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ext-upload:hover,
+.ext-upload:focus-within {
+  border-color: var(--forest);
+  background: var(--forest-soft);
+}
+.ext-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.ext-status {
+  margin: 0;
+  padding: 9px 11px;
+  background: #e8ece8;
+  color: #385447;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ext-status.failed {
+  background: #f5dfd4;
+  color: #7a351e;
+}
+.ext-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.ext-quote {
+  max-height: 180px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-y: auto;
+  border-left: 3px solid var(--forest);
+  background: #f8f6ef;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.ext-concepts {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.ext-concepts li::marker {
+  color: var(--muted);
+}
+.ext-concepts li {
+  display: list-item;
+}
+.ext-concepts li span {
+  margin-right: 8px;
+}
+.ext-explanation {
+  padding: 12px;
+  background: #edf1ed;
+  color: #34453c;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ext-explanation p {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+}
+
+/* The read-aloud panel is reused as-is; tighten it for the narrow side panel. */
+.ext-panel .read-aloud {
+  margin-top: 0;
+  padding: 16px;
+}
+.ext-panel .read-aloud h2 {
+  font-size: 22px;
+}
+.ext-panel .transcript {
+  max-height: 60vh;
+}

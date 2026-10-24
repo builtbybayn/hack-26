@@ -1,0 +1,57 @@
+:root {
+  color: #15231d;
+  background: #f4f1e9;
+  font-family: Arial, Helvetica, sans-serif;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  display: flex;
+  flex-direction: column;
+}
+.toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #d7d2c7;
+  background: #fffdf8;
+}
+.toolbar button {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid #294f3d;
+  background: #294f3d;
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.toolbar button.secondary {
+  background: transparent;
+  color: #294f3d;
+}
+.toolbar button:focus-visible {
+  outline: 3px solid #93ad9f;
+  outline-offset: 2px;
+}
+#status {
+  margin: 0;
+  padding: 8px 10px;
+  background: #e8ece8;
+  color: #385447;
+  font-size: 12px;
+  line-height: 1.4;
+}
+#status.error {
+  background: #f5dfd4;
+  color: #7a351e;
+}
+iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}

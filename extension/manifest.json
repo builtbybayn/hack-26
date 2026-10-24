@@ -1,11 +1,19 @@
 {
   "manifest_version": 3,
   "name": "KnowBefore",
-  "version": "0.1.0",
-  "description": "Open the KnowBefore PDF prerequisite intelligence workspace.",
+  "version": "0.2.0",
+  "description": "KnowBefore reading companion (development build). Requires the app at http://localhost:3000.",
+  "minimum_chrome_version": "114",
   "action": {
-    "default_title": "KnowBefore",
-    "default_popup": "popup.html"
+    "default_title": "Open KnowBefore"
   },
-  "permissions": ["tabs"]
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["sidePanel", "tabs", "scripting"],
+  "host_permissions": ["http://localhost:3000/*"],
+  "optional_host_permissions": ["<all_urls>"]
 }
