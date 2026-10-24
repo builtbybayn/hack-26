@@ -34,7 +34,7 @@ export interface KnowledgeGraph {
 }
 
 export interface GraphRepair {
-  type: "duplicate" | "invalid-reference" | "cycle";
+  type: "duplicate" | "invalid-reference" | "cycle" | "unverified-quote";
   message: string;
 }
 

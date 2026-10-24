@@ -29,7 +29,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis and tutoring.
+Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis, tutoring, and cross-paper comparison. Grok provides an optional independent contradiction review.
 
 ## Environment configuration
 
@@ -37,6 +37,9 @@ Open `http://localhost:3000`. Standard PDF extraction works without provider key
 | ------------------------------------ | ------------------------------------------------------------- |
 | `GEMINI_API_KEY`                     | Server-only Google AI Studio API key                          |
 | `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-flash-latest`     |
+| `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review       |
+| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                            |
+| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget           |
 | `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
 | `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
 | `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
@@ -67,6 +70,7 @@ Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-he
 4. Analyze. PDF.js preserves pages, text positions, metadata, and page references. Automatic mode stays local unless quality is low **and** consent is checked.
 5. Inspect the graph, dependency evidence, learning path, explanations, source pages, and quizzes.
 6. Manual mastery changes and passed assessments persist in IndexedDB. Opening an explanation does not change mastery.
+7. After analyzing a second paper, select two to four saved papers in the comparison panel to inspect possible conflicts with quotes from both sources.
 
 ## Chrome extension development
 
@@ -100,6 +104,8 @@ icon on the extension's card in `chrome://extensions`. Changes to `/panel` only 
 
 - `POST /api/documents/parse` — multipart PDF/text input and parser settings
 - `POST /api/documents/analyze` — Gemini analysis plus graph/path generation
+- `POST /api/contradictions` — page-verified claims compared across two to four papers
+- `POST /api/recommendations` — background and related papers from OpenAlex
 - `POST /api/explain` — contextual concept tutoring
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation

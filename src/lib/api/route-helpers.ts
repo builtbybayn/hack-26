@@ -39,8 +39,12 @@ export function routeError(error: unknown, route: string): Response {
       error.code === "FILE_TOO_LARGE" ? 413 : error.code === "UNSUPPORTED_FORMAT" ? 415 : 422;
     return failure(error.code, error.message, status);
   }
-  if (error instanceof DOMException && error.name === "AbortError")
-    return failure("REQUEST_TIMEOUT", "The request was cancelled or timed out.", 408);
+  if (error instanceof DOMException && ["AbortError", "TimeoutError"].includes(error.name))
+    return failure(
+      "REQUEST_TIMEOUT",
+      "The request was cancelled or timed out.",
+      error.name === "TimeoutError" ? 504 : 408,
+    );
   console.error(`[${route}] Unexpected failure`, error);
   return failure("INTERNAL_ERROR", "Something went wrong while processing the request.", 500);
 }
