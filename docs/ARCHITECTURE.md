@@ -190,12 +190,35 @@ requests share an IP usage budget. No recommendation state is kept on the server
 The browser uses `src/lib/api/research-client.ts`. `RecommendationsPanel` searches on demand
 and displays Read first / Related groups, provider links, missing abstracts, and the query trail.
 
+### Voice endpoints
+
+| Endpoint                | Contract and responsibility                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `GET /api/voice/voices` | Returns `{ configured, presets, account }`. Presets are confirmed against the ElevenLabs account at request time. |
+| `POST /api/voice/speak` | JSON `SpeakRequest` (`text`, `voiceId`, `quality?`, `previousText?`, `nextText?`) → **streamed `audio/mpeg`**.    |
+
+`/api/voice/speak` is the one route that does not return the JSON envelope on success; failures
+still do (`VOICE_NOT_CONFIGURED`, `VOICE_NOT_FOUND`, `TEXT_TOO_LONG`, `VOICE_QUOTA_EXCEEDED`,
+`VOICE_RATE_LIMITED`, `VOICE_PROVIDER_ERROR`). Use `speak()` from `src/lib/api/voice-client.ts`,
+which returns `{ ok, audio }` or `{ ok, error }` either way.
+
+Papers are prepared for listening in the browser by `buildReadingScript` (`src/lib/voice/reading-script.ts`):
+running headers, page numbers, citations, URLs, the contents page, and the reference list are
+removed; equations and code become a short notice pointing at their PDF page. The player
+(`src/features/voice/use-speech-player.ts`) requests one segment at a time, prefetches the next
+two, sends neighbouring text for smooth intonation, and caches audio in IndexedDB so replays are
+free. Without an ElevenLabs key it falls back to the browser's built-in voice. Any feature can read
+text aloud with `<ListenButton text={…} />`.
+
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
 documents and their analyses keyed by the document's SHA-256 content hash, plus mastery records.
 Clients send whatever a request needs (the document, a concept, a quiz) in the body. A restart loses
 nothing, and re-uploading the same file reuses its stored analysis instead of calling Gemini again.
+
+Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
+are evicted past 400 entries) and per-document reading positions.
 
 IndexedDB is per origin. An extension side panel that loads a page from this app shares the web
 app's storage; a page bundled inside the extension would have its own. Learning paths are derived
