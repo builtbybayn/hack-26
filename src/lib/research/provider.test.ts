@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import fixture from "../../../tests/fixtures/research/openalex.json";
+import bookReview from "../../../tests/fixtures/research/openalex-book-review.json";
 import { MOCK_RECOMMENDATIONS } from "@/lib/api/research-mock";
 import { openAlex, reconstructAbstract } from "./provider";
 
@@ -33,6 +34,13 @@ describe("OpenAlex adapter", () => {
     expect(reconstructAbstract({ word: [1_000_000_000] })).toBe("word");
     expect(reconstructAbstract(null)).toBeUndefined();
     expect(reconstructAbstract({})).toBeUndefined();
+  });
+
+  it("filters book reviews from real scholarly search results", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ results: [bookReview] }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await openAlex.search("vector calculus review", { limit: 5 })).toEqual([]);
+    expect(fetchMock.mock.calls[0][0].searchParams.get("select")).toContain("type");
   });
 
   it("works without a key and refuses unsafe provider PDF links", async () => {

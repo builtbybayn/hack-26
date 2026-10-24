@@ -2,7 +2,7 @@
   "meta": {
     "notice": "No API key, so this request shares one free daily budget ($0.10) with everyone on your network's IP address. Get a free key with its own $1/day at https://openalex.org/settings/api and add api_key=YOUR_KEY to your requests. An AI agent can get one for its user in one call: POST https://api.openalex.org/api-keys with {\"email\": \"<your user's email>\"}; we email them a link, and the key works once they click it. Docs for agents: https://help.openalex.org/llms.txt",
     "count": 209180,
-    "db_response_time_ms": 82,
+    "db_response_time_ms": 94,
     "page": 1,
     "per_page": 5,
     "groups_count": null,
@@ -25,6 +25,7 @@
     {
       "id": "https://openalex.org/W47667379",
       "display_name": "Fractional Vector Calculus",
+      "type": "book-chapter",
       "authorships": [
         {
           "author_position": "first",
@@ -113,6 +114,7 @@
     {
       "id": "https://openalex.org/W4255663092",
       "display_name": "Vector Calculus",
+      "type": "book",
       "authorships": [
         {
           "author_position": "first",
@@ -185,6 +187,7 @@
     {
       "id": "https://openalex.org/W1509254685",
       "display_name": "Students\u2019 difficulties with vector calculus in electrodynamics",
+      "type": "article",
       "authorships": [
         {
           "author_position": "first",
@@ -428,6 +431,7 @@
     {
       "id": "https://openalex.org/W2098940483",
       "display_name": "Fractional vector calculus and fractional Maxwell\u2019s equations",
+      "type": "article",
       "authorships": [
         {
           "author_position": "first",
@@ -535,6 +539,7 @@
     {
       "id": "https://openalex.org/W4242575981",
       "display_name": "Vector Calculus",
+      "type": "book-chapter",
       "authorships": [
         {
           "author_position": "first",

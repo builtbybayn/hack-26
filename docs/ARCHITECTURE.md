@@ -178,10 +178,10 @@ see `src/types/research.ts` and `src/lib/api/research-mock.ts` for the contract 
 
 The server-only `src/lib/research` searches OpenAlex for up to three foundational concepts
 and one related-work query. Only concept names, subject, and topics are sent to OpenAlex.
-It excludes the current paper by title or metadata DOI, deduplicates IDs/DOIs/titles, and
-ranks by term overlap, citation count, recency, and open-access availability. Bibliographic
-fields always come from OpenAlex; optional AI reasons are currently `null`. No Gemini key
-is needed. Empty results succeed with a warning. Provider failures return
+It excludes the current paper by title or metadata DOI, filters book reviews, deduplicates
+IDs/DOIs/titles, and ranks by term overlap, citation count, recency, and open-access
+availability. Bibliographic fields always come from OpenAlex; optional AI reasons are
+currently `null`. No Gemini key is needed. Empty results succeed with a warning. Provider failures return
 `SEARCH_PROVIDER_ERROR` (502), quotas return `SEARCH_RATE_LIMITED` (429), and a request
 timeout returns `REQUEST_TIMEOUT` (504). Provider calls have a 12-second timeout and the
 route has a 20-second deadline. `OPENALEX_API_KEY` is optional and server-only; anonymous

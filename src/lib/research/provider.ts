@@ -26,6 +26,7 @@ const locationSchema = z.object({
 const workSchema = z.object({
   id: z.string().regex(/^https:\/\/openalex\.org\/W\d+$/),
   display_name: z.string().min(1),
+  type: z.string(),
   authorships: z.array(z.object({ author: z.object({ display_name: z.string() }) })),
   publication_year: z.number().int().nullish(),
   doi: z.string().nullish(),
@@ -67,7 +68,7 @@ export const openAlex: ResearchProvider = {
     url.searchParams.set("per_page", String(Math.min(20, Math.max(1, limit))));
     url.searchParams.set(
       "select",
-      "id,display_name,authorships,publication_year,doi,primary_location,best_oa_location,cited_by_count,abstract_inverted_index",
+      "id,display_name,type,authorships,publication_year,doi,primary_location,best_oa_location,cited_by_count,abstract_inverted_index",
     );
     const key = process.env.OPENALEX_API_KEY;
     try {
@@ -90,21 +91,23 @@ export const openAlex: ResearchProvider = {
           "OpenAlex could not complete the search. Try again later.",
         );
       const data = z.object({ results: z.array(workSchema) }).parse(await response.json());
-      return data.results.map((work) => ({
-        id: `openalex:${work.id.split("/").at(-1)}`,
-        title: work.display_name,
-        authors: work.authorships.map(({ author }) => author.display_name),
-        year: work.publication_year ?? undefined,
-        venue: work.primary_location?.source?.display_name ?? undefined,
-        doi: webUrl(work.doi),
-        abstract: reconstructAbstract(work.abstract_inverted_index),
-        url: work.id,
-        openAccessPdfUrl: work.best_oa_location?.is_oa
-          ? webUrl(work.best_oa_location.pdf_url)
-          : undefined,
-        citationCount: work.cited_by_count,
-        provider: "openalex" as const,
-      }));
+      return data.results
+        .filter((work) => work.type !== "book-review")
+        .map((work) => ({
+          id: `openalex:${work.id.split("/").at(-1)}`,
+          title: work.display_name,
+          authors: work.authorships.map(({ author }) => author.display_name),
+          year: work.publication_year ?? undefined,
+          venue: work.primary_location?.source?.display_name ?? undefined,
+          doi: webUrl(work.doi),
+          abstract: reconstructAbstract(work.abstract_inverted_index),
+          url: work.id,
+          openAccessPdfUrl: work.best_oa_location?.is_oa
+            ? webUrl(work.best_oa_location.pdf_url)
+            : undefined,
+          citationCount: work.cited_by_count,
+          provider: "openalex" as const,
+        }));
     } catch (error) {
       if (error instanceof ResearchError) throw error;
       if (signal?.aborted) throw signal.reason;
