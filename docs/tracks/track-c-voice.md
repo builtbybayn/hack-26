@@ -4,138 +4,90 @@ Read [the track overview](README.md) first for the rules every track follows.
 
 ## Goal
 
-Let a reader **listen** to explanations: press Listen on any generated explanation and hear it
-in a natural voice, with clear playing and stopped states.
+Smooth, clean listening for research papers:
 
-This is the first step toward the white paper's voice tutor (a two-way spoken conversation about
-the paper). Text-to-speech comes first because it is independent and demo-safe; the conversational
-agent is a stretch goal below.
+- **Read aloud:** play the whole paper, or any section or paragraph, with a transcript that
+  highlights what is being read and scrolls with it.
+- **Listen:** any generated text (explanations today, other tracks' output later) can be heard
+  with one button.
+- **Voices:** a few curated presets, any voice in our ElevenLabs account (clones, saved library
+  voices), a pasted voice ID, or the browser's own voice when ElevenLabs isn't configured.
 
-## You own
+The conversational voice tutor from the white paper is the stretch goal below.
 
-| Path                                           | Status                                    |
-| ---------------------------------------------- | ----------------------------------------- |
-| `src/lib/voice/`                               | **New.** ElevenLabs adapter (server-only) |
-| `src/app/api/voice/speak/route.ts`             | **New**                                   |
-| `src/types/voice.ts`                           | **New** contract                          |
-| `src/lib/api/voice-client.ts`, `voice-mock.ts` | **New**                                   |
-| `src/features/voice/`                          | **New** UI component                      |
+## Status
 
-## What you depend on
+Built on branch `feat/voice-reader`:
 
-Only the explanation text. `POST /api/explain` already returns
-`{ explanation: string, sourceReferences: SourceReference[] }`, and the UI shows it. You don't
-need anything from Tracks A or B: anything that produces text can use your Listen button.
+| Piece                         | Where                                        |
+| ----------------------------- | -------------------------------------------- |
+| Contract                      | `src/types/voice.ts`                         |
+| Paper → listening script      | `src/lib/voice/reading-script.ts` (+ tests)  |
+| ElevenLabs adapter            | `src/lib/voice/elevenlabs.ts` (server-only)  |
+| Preset voices                 | `src/lib/voice/presets.ts`                   |
+| Routes                        | `src/app/api/voice/{speak,voices}` (+ tests) |
+| Browser client                | `src/lib/api/voice-client.ts`                |
+| Player, picker, panel, button | `src/features/voice/`                        |
+| Audio cache, reading position | `src/lib/browser-store.ts` (DB version 4)    |
 
-## Step 1 (first hour): contract
+Verified without a key: all unit and route tests pass with ElevenLabs faked, and in Chrome the
+panel builds the white paper's script (185 segments, 16 sections), highlights and scrolls, and
+plays with the browser voice. **Not yet verified with a real ElevenLabs key.**
 
-`src/types/voice.ts` (proposal; adjust in your first PR):
+## How it works
 
-```ts
-import type { ApiResponse, CommonErrorCode } from "./api";
+1. **Cleaning** (browser, free). `buildReadingScript(document)` removes running headers, page
+   numbers, citations, URLs, the contents page, and the reference list; rejoins wrapped and
+   hyphenated lines into paragraphs; expands abbreviations; and replaces equations and code with
+   "An equation appears here. You can view it on page N of the PDF."
+2. **Playback.** One request per segment (at most 1,000 characters). While one plays, the next two
+   are fetched one at a time. Each request carries neighbouring text so intonation flows across
+   segments. Audio is cached in IndexedDB, so replays and resumes are free.
+3. **Cost.** Credits are billed per character; the white paper is about 49,000 characters. The
+   default model is `eleven_flash_v2_5` (fastest, cheapest); "High quality" uses
+   `eleven_multilingual_v2`. The panel shows the character count before reading.
+4. **Speed** is changed in the browser (free and instant), not by regenerating audio.
 
-/** Upper bound per request: keeps latency and cost predictable. */
-export const MAX_SPEECH_CHARACTERS = 2_500;
-
-export interface SpeakRequest {
-  text: string;
-  /** Optional override; the server falls back to ELEVENLABS_VOICE_ID. */
-  voiceId?: string;
-}
-
-export type VoiceErrorCode = "VOICE_NOT_CONFIGURED" | "TEXT_TOO_LONG" | "VOICE_PROVIDER_ERROR";
-
-/** Error body only. On success the route returns audio, not JSON (see below). */
-export type SpeakErrorResponse = ApiResponse<never, VoiceErrorCode | CommonErrorCode>;
-```
-
-**The one exception to the JSON envelope:** on success, `POST /api/voice/speak` returns the audio
-bytes directly (`Content-Type: audio/mpeg`) so the browser can play or stream them. Failures still
-return the standard `{ ok: false, error: { code, message } }` JSON with an error status. Document
-this in `docs/ARCHITECTURE.md`.
-
-The client wraps that difference so callers get one shape:
-
-```ts
-// src/lib/api/voice-client.ts (browser-safe)
-export async function speak(
-  text: string,
-  signal?: AbortSignal,
-): Promise<{ ok: true; audio: Blob } | { ok: false; error: { code: string; message: string } }>;
-```
-
-**Mock:** `src/lib/api/voice-mock.ts` can use the browser's built-in `speechSynthesis` so the UI
-works with no key. Label it in the UI as the mock voice, so it is never mistaken for ElevenLabs.
-
-## Step 2: server adapter and route
-
-- `src/lib/voice/elevenlabs.ts` (`import "server-only"`): call ElevenLabs' text-to-speech API
-  with `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID`, and `ELEVENLABS_MODEL_ID` from the environment.
-  Check ElevenLabs' current docs for the endpoint, model ids, and output formats; prefer a
-  low-latency model and MP3 output. Use the official SDK or plain `fetch`, whichever is simpler;
-  record a new dependency in `docs/DECISIONS.md`.
-- `src/app/api/voice/speak/route.ts`:
-  - Validate with zod: non-empty `text`, at most `MAX_SPEECH_CHARACTERS` (`TEXT_TOO_LONG`, 413).
-  - Missing key: `VOICE_NOT_CONFIGURED` (503). Provider failure or quota: `VOICE_PROVIDER_ERROR` (502).
-  - Add a timeout (`timeoutSignal` in `src/lib/api/route-helpers.ts`).
-  - Stream the provider's response body through to the client if practical; it reduces the time
-    to first sound.
-- **Never** send the API key to the browser or the extension, and never log it.
-
-Unit-test the route with `fetch` mocked: success returns audio, plus each error code. Tests must
-not call ElevenLabs.
-
-## Step 3: UI
-
-`src/features/voice/ListenButton.tsx`, a small reusable component:
+## Using it from another track
 
 ```tsx
-<ListenButton text={explanation} />
+import { ListenButton } from "@/features/voice/ListenButton";
+
+<ListenButton text={someGeneratedText} />;
 ```
 
-- States: idle → loading → playing → idle, with a visible Stop at all times while playing.
-- One audio at a time: starting a new one stops the previous.
-- Revoke object URLs when done; stop playback when the component unmounts.
-- Long text: if over the limit, split on sentence boundaries and play the chunks in order (or
-  disable with a clear message for the first version).
-- Accessible: a real `<button>` with an `aria-label` and an `aria-live` status ("Playing", "Stopped").
-- Mount it next to the explanation in `DocumentIntelligence.tsx` with one line. Tracks A and B can
-  reuse it for their own text.
+It uses the voice, quality, and speed the user picked in the read-aloud panel, and only one
+voice plays on the page at a time.
 
-Optional: cache audio per text in memory for the page session to avoid paying twice for replays.
-If you want it to persist, add a store to `src/lib/browser-store.ts`, and announce it first because
-it bumps `DB_VERSION`.
+## Setup
+
+Add to `.env.local` and restart:
+
+```
+ELEVENLABS_API_KEY=...
+# optional overrides
+ELEVENLABS_MODEL_FAST=eleven_flash_v2_5
+ELEVENLABS_MODEL_HIGH=eleven_multilingual_v2
+```
+
+Without a key, everything still works with the browser voice, and the picker explains why
+ElevenLabs voices are disabled.
+
+## Next
+
+- [ ] Test with a real key: presets resolve, account voices list, audio streams, and errors such as
+      running out of credits show clearly. The preset IDs are ElevenLabs premade voices; the server
+      drops any the account doesn't have.
+- [ ] Sentence-level highlighting using ElevenLabs' `stream/with-timestamps` endpoint.
+- [ ] Keyboard shortcuts (space to play and pause, arrow keys for previous and next).
+- [ ] Optional: Gemini rewrites equations into speech instead of the "view it in the PDF" notice.
+- [ ] Extension: when the side panel loads an app page, the panel and cache work there unchanged.
 
 ## Stretch: conversational voice tutor
 
-Only after Listen is merged and solid. From the white paper's voice spec:
-
-1. The user explicitly starts voice mode and grants microphone access.
-2. The browser gets a short-lived **signed URL** from a server route (`POST /api/voice/session`);
-   the API key stays on the server.
-3. The agent receives scoped context: document id, selected text, concept, page.
-4. For factual questions, the agent calls a server tool that answers from the paper (for example,
-   `/api/explain` with a `question`), so answers stay grounded in the document rather than in the
-   conversation history.
-5. The transcript and source pages appear in the UI; Stop ends the session.
-
-Check ElevenLabs' current agent and authentication docs before starting. This touches Track A's
-explain logic, so agree on the tool's request and response with Track A first.
-
-## Definition of done
-
-- [ ] Contract, client, and mock merged in the first hour.
-- [ ] `/api/voice/speak` returns playable audio via `curl -o out.mp3` with a real key, and the
-      documented error codes without one.
-- [ ] Route tests cover success and every error code, with no network.
-- [ ] Listen button on explanations: plays, stops, handles errors visibly, works by keyboard.
-- [ ] The app still runs without an ElevenLabs key (button shows "Voice not configured" or uses
-      the labeled mock).
-- [ ] No key in the client bundle: `npm run build`, then search `.next/static` for the key's prefix.
-- [ ] `docs/ARCHITECTURE.md` documents the endpoint, including the audio success response; env vars
-      appended to `.env.example`.
-
-## Out of scope
-
-Speech-to-text and the conversational agent (stretch above), changing the explanation format,
-extension-specific code.
+From the white paper's voice spec: the user starts voice mode and grants the microphone; the
+browser gets a short-lived **signed URL** from a server route (`POST /api/voice/session`) so the key
+stays on the server; the agent gets scoped context (document, selection, page); factual questions
+go to a server tool that answers from the paper (for example `/api/explain` with a `question`);
+the transcript and source pages are shown, and Stop ends the session. Agree on the tool's request
+and response with Track A first, and check ElevenLabs' current agent and authentication docs.

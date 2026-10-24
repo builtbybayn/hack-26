@@ -26,6 +26,8 @@ import {
   saveDocument,
   saveMastery,
 } from "@/lib/browser-store";
+import { ListenButton } from "@/features/voice/ListenButton";
+import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   extracting: "Extracting PDF locally",
@@ -278,6 +280,13 @@ export function DocumentIntelligence() {
           </div>
         </section>
       )}
+      {document && (
+        <ReadAloudPanel
+          key={document.id}
+          document={document}
+          onOpenPage={pdfUrl ? setSelectedPage : undefined}
+        />
+      )}
 
       {analysis && (
         <>
@@ -408,6 +417,7 @@ export function DocumentIntelligence() {
                     <button onClick={() => explain("worked-example")}>Worked example</button>
                   </div>
                   {explanation && <div className="explanation">{explanation}</div>}
+                  {explanation && <ListenButton text={explanation} />}
                   <button className="quiz-button" onClick={startQuiz}>
                     Take a short quiz
                   </button>

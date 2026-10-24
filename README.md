@@ -42,6 +42,8 @@ Open `http://localhost:3000`. Standard PDF extraction works without provider key
 | `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
 | `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
 | `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
+| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen          |
+| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality            |
 
 Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
 
@@ -86,8 +88,10 @@ The full upload/analysis workspace runs in the app tab so large PDFs are not con
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
 - `GET /api/health` — service and provider configuration status
 - `POST /api/ingest` — backwards-compatible generic ingestion endpoint
+- `GET /api/voice/voices` — preset and ElevenLabs account voices
+- `POST /api/voice/speak` — text to streamed MP3 (errors use the JSON envelope)
 
-Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`.
+Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`, except that `/api/voice/speak` returns audio on success.
 
 ## Testing and production checks
 
