@@ -1,7 +1,7 @@
 # Design
 
 **Status: implemented.** The research vault (`/`) follows Obsidian's default theme and layout
-([decision 18](DECISIONS.md)). The classic workspace (`/classic`) keeps the earlier editorial style
+([decision 19](DECISIONS.md)). The classic workspace (`/classic`) keeps the earlier editorial style
 until it is retired.
 
 ## Goals

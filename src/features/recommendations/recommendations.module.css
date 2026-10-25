@@ -20,6 +20,32 @@
 .panel p {
   line-height: 1.6;
 }
+.topicForm {
+  margin: 20px 0 12px;
+}
+.topicForm label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.topicForm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.topicForm input {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: inherit;
+}
+.topicForm input:focus-visible {
+  outline: 3px solid #93ad9f;
+  outline-offset: 2px;
+}
 .groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

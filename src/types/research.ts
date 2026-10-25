@@ -26,12 +26,20 @@ export interface PaperRecommendation {
   reason: string | null;
 }
 
-export interface RecommendationsRequest {
+export interface DocumentRecommendationsRequest {
   document: ParsedDocument;
   analysis: DocumentAnalysis;
   /** Defaults to 8, maximum 20. */
   limit?: number;
 }
+
+export interface TopicRecommendationsRequest {
+  topic: string;
+  /** Defaults to 8, maximum 20. */
+  limit?: number;
+}
+
+export type RecommendationsRequest = DocumentRecommendationsRequest | TopicRecommendationsRequest;
 
 export interface RecommendationsResult {
   recommendations: PaperRecommendation[];
@@ -42,6 +50,13 @@ export interface RecommendationsResult {
     resultCount: number;
   }[];
   warnings: string[];
+}
+
+export interface SavedTopicSearch {
+  id: string;
+  topic: string;
+  createdAt: string;
+  result: RecommendationsResult;
 }
 
 export type ResearchErrorCode = "SEARCH_PROVIDER_ERROR" | "SEARCH_RATE_LIMITED";

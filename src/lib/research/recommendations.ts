@@ -25,6 +25,36 @@ export const recommendationsSchema = z
     message: "The analysis must belong to this document.",
   });
 
+export const topicRecommendationsSchema = z.object({
+  topic: z.string().trim().min(3).max(240),
+  limit: z.number().int().min(1).max(20).default(8),
+});
+
+export async function searchTopicPapers(
+  input: z.infer<typeof topicRecommendationsSchema>,
+  signal?: AbortSignal,
+  provider: ResearchProvider = openAlex,
+): Promise<RecommendationsResult> {
+  const query = input.topic.replace(/\s+/g, " ");
+  const papers = await provider.search(query, { limit: input.limit, signal });
+  const missingAbstracts = papers.filter((paper) => !paper.abstract).length;
+  return {
+    recommendations: papers.map((paper) => ({
+      paper,
+      kind: "related",
+      conceptIds: [],
+      reason: null,
+    })),
+    queries: [
+      { text: query, kind: "related", provider: provider.name, resultCount: papers.length },
+    ],
+    warnings: [
+      ...(!papers.length ? ["No matching papers found. Try a more specific topic."] : []),
+      ...(missingAbstracts ? [`Abstract unavailable for ${missingAbstracts} results.`] : []),
+    ],
+  };
+}
+
 type Input = z.infer<typeof recommendationsSchema>;
 const normalize = (value: string) =>
   value

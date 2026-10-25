@@ -45,3 +45,19 @@ export const MOCK_RECOMMENDATIONS = {
     warnings: ["Mock recommendations; abstracts unavailable for 2 results."],
   },
 } satisfies RecommendationsResponse;
+
+export const MOCK_TOPIC_RECOMMENDATIONS = {
+  ok: true,
+  data: {
+    recommendations: [
+      {
+        ...MOCK_RECOMMENDATIONS.data.recommendations[1],
+        conceptIds: [],
+      },
+    ],
+    queries: [
+      { text: "fractional vector calculus", kind: "related", provider: "openalex", resultCount: 1 },
+    ],
+    warnings: ["Mock topic search; abstract unavailable for 1 result."],
+  },
+} satisfies RecommendationsResponse;

@@ -75,7 +75,7 @@ devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 
-**Superseded by 18 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+**Superseded by 19 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
 
 ### 14. Optional independent review for cross-paper conflicts
 
@@ -109,7 +109,14 @@ default model (fastest, cheapest); Multilingual v2 is the high-quality option. E
 are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
 fallback when no key is configured.
 
-### 18. The vault looks and works like Obsidian
+### 18. Save topic search snapshots with browser projects
+
+**Provisional.** Each successful topic search made with a selected project stores its query,
+provider trail, and returned records on that project in IndexedDB. Reopening a search uses the
+snapshot, so the result is reproducible even when OpenAlex changes or is unavailable. Keep the
+newest 20 searches per project to bound browser storage; older project records need no migration.
+
+### 19. The vault looks and works like Obsidian
 
 **Confirmed.** The main UI (`/`) recreates Obsidian's default theme and layout: ribbon, file tree,
 tabbed and split work area, right sidebar, status bar, dark by default with a light option. Papers,
@@ -117,12 +124,12 @@ notes, and AI chats are all files in one tree. The team chose this so the produc
 familiar research vault rather than a dashboard. The editorial palette from decision 13 remains
 only in the classic workspace (`/classic`), which the vault replaces.
 
-### 19. Lucide icons
+### 20. Lucide icons
 
 **Confirmed.** `lucide-react` provides the vault's icons. It is the icon set Obsidian uses, so the
 look matches, and icons are tree-shaken per import.
 
-### 20. Annotations and chat stay in the browser
+### 21. Annotations and chat stay in the browser
 
 **Provisional.** Highlights, comments, notes, and chats are stored in IndexedDB like everything
 else (decision 12). `/api/chat` receives the conversation and paper text per request and stores

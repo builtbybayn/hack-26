@@ -15,7 +15,6 @@ import type {
 } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import { ResearchProjects } from "@/features/projects/ResearchProjects";
-import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import {
   analyzeDocument,
   evaluateAnswers,
@@ -395,9 +394,6 @@ export function DocumentIntelligence() {
 
       {analysis && (
         <>
-          {document && (
-            <RecommendationsPanel key={document.id} document={document} analysis={analysis} />
-          )}
           <section className="insight-grid">
             <article className="subject-card">
               <span className="step">02 · UNDERSTANDING</span>

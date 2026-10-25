@@ -256,13 +256,15 @@ parsed page before they are shown as evidence.
 
 ### Paper recommendations (Track B)
 
-`POST /api/recommendations` accepts `{ document: ParsedDocument, analysis: DocumentAnalysis,
-limit?: number }` (default 8, maximum 20). The analysis must belong to the supplied document.
+`POST /api/recommendations` accepts either `{ topic: string, limit?: number }` or
+`{ document: ParsedDocument, analysis: DocumentAnalysis, limit?: number }` (default 8, maximum 20).
+Topics must contain 3–240 characters. The analysis must belong to the supplied document.
 It returns `{ recommendations, queries, warnings }` inside the usual `ApiResponse` envelope;
 see `src/types/research.ts` and `src/lib/api/research-mock.ts` for the contract and mock.
 
 The server-only `src/lib/research` searches OpenAlex for up to three foundational concepts
 and one related-work query. Only concept names, subject, and topics are sent to OpenAlex.
+Topic-only searches send the entered interest to OpenAlex as one query; they need no PDF or AI key.
 It excludes the current paper by title or metadata DOI, filters book reviews, deduplicates
 IDs/DOIs/titles, and ranks by term overlap, citation count, recency, and open-access
 availability. Bibliographic fields always come from OpenAlex; optional AI reasons are
@@ -273,9 +275,13 @@ route has a 20-second deadline. `OPENALEX_API_KEY` is optional and server-only; 
 requests share an IP usage budget. No recommendation state is kept on the server.
 
 The browser uses `src/lib/api/research-client.ts`. `RecommendationsPanel` searches on demand
-and displays Read first / Related groups, abstracts, citation counts, access links, and the query
+from a typed interest or the current document and displays results, abstracts, citation counts, access links, and the query
 trail. Users can save papers into browser projects from these cards. OpenAlex reference IDs are
 included when available, so newly saved papers can form citation links without a second request.
+Successful topic searches in a selected project also save the query, timestamp, provider trail,
+warnings, and returned paper snapshot in that project's IndexedDB record. The newest 20 searches
+can be reopened without another provider request. Older projects simply have no history until a
+new search is saved; no IndexedDB store or version change is needed.
 
 ### Voice endpoints
 

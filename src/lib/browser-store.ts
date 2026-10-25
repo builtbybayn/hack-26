@@ -12,7 +12,7 @@ import type { ResearchGap } from "@/types/gaps";
 import type { DocumentAnalysis, EvidenceFeedback, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { PaperPipeline } from "@/types/pipeline";
-import type { PaperRecord, RecommendationsResult } from "@/types/research";
+import type { PaperRecord, RecommendationsResult, SavedTopicSearch } from "@/types/research";
 import type { SynthesisReport } from "@/types/synthesis";
 import type { Annotation, VaultEntry } from "@/types/vault";
 
@@ -36,6 +36,7 @@ export interface ResearchProject {
   name: string;
   notes: string;
   papers: PaperRecord[];
+  searchHistory?: SavedTopicSearch[];
   documentIds: string[];
   synthesis?: SynthesisReport;
   brief?: ResearchBrief;
