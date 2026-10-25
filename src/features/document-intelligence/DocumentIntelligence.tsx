@@ -6,12 +6,15 @@ import type {
   Concept,
   Dependency,
   DocumentAnalysis,
+  EvidenceFeedback,
+  EvidenceVerdict,
+  ExplainResult,
   MasteryLevel,
   PipelineStage,
   QuizResult,
 } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
-import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
+import { ResearchProjects } from "@/features/projects/ResearchProjects";
 import {
   analyzeDocument,
   evaluateAnswers,
@@ -20,15 +23,24 @@ import {
   requestQuiz,
 } from "@/lib/api/intelligence-client";
 import { buildLearningPath } from "@/lib/intelligence/learning-path";
-import { verifyConceptEvidence } from "@/lib/contradictions/evidence";
 import {
+  evidenceAgreement,
+  evidenceEvaluationCases,
+  evidenceFeedbackId,
+  verifyAnalysisReferences,
+} from "@/lib/intelligence/source-evidence";
+import {
+  deleteEvidenceFeedback,
   getDocumentRecord,
+  listEvidenceFeedback,
   loadLatestDocument,
   loadMastery,
   saveDocument,
+  saveEvidenceFeedback,
   saveMastery,
 } from "@/lib/browser-store";
 import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
+import { AgentStatus } from "@/features/agent/AgentStatus";
 import { ListenButton } from "@/features/voice/ListenButton";
 import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 
@@ -56,22 +68,30 @@ export function DocumentIntelligence() {
   const [selectedPage, setSelectedPage] = useState<number | null>(null);
   const [stage, setStage] = useState<PipelineStage | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explanation, setExplanation] = useState<ExplainResult | string | null>(null);
+  const [feedback, setFeedback] = useState<Record<string, EvidenceFeedback>>({});
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<QuizResult | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [quizFeedback, setQuizFeedback] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const explanationRequestId = useRef(0);
   const pdfUrl = useMemo(
     () => (file?.type === "application/pdf" ? URL.createObjectURL(file) : null),
     [file],
   );
 
   useEffect(() => {
-    Promise.all([loadMastery(), loadLatestDocument()])
+    const requestedId = new URLSearchParams(window.location.search).get("document");
+    Promise.all([
+      loadMastery(),
+      requestedId ? getDocumentRecord(requestedId) : loadLatestDocument(),
+    ])
       .then(([savedMastery, record]) => {
         setMastery(savedMastery);
+        if (requestedId && !record) setError("This document is no longer stored in this browser.");
         if (record?.analysis) {
-          const verified = verifyConceptEvidence(record.document, record.analysis);
+          const verified = verifyAnalysisReferences(record.document, record.analysis);
           setDocument(record.document);
           setAnalysis(verified);
           setSelectedConcept(verified.graph.concepts[0] ?? null);
@@ -97,6 +117,7 @@ export function DocumentIntelligence() {
     () => (analysis ? layoutGraph(analysis, mastery) : { nodes: [], edges: [] }),
     [analysis, mastery],
   );
+  const review = useMemo(() => evidenceAgreement(Object.values(feedback)), [feedback]);
 
   async function runAnalysis() {
     if (!file) return;
@@ -106,6 +127,9 @@ export function DocumentIntelligence() {
     setError(null);
     setAnalysis(null);
     setSelectedConcept(null);
+    setExplanation(null);
+    setFeedback({});
+    explanationRequestId.current += 1;
     setStage(mode === "advanced" ? "ocr" : "extracting");
     try {
       const parsed = await parseDocument(
@@ -120,9 +144,8 @@ export function DocumentIntelligence() {
       // Reuse a stored analysis of the same file (same content hash) instead of calling Gemini.
       let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
       if (documentAnalysis)
-        documentAnalysis = verifyConceptEvidence(parsedDocument, documentAnalysis);
-      // Keep the parsed paper even if analysis fails, so read-aloud and the extension can use it.
-      await saveDocument(parsedDocument, documentAnalysis ?? null);
+        // Keep the parsed paper even if analysis fails, so read-aloud and the extension can use it.
+        await saveDocument(parsedDocument, documentAnalysis ?? null);
       if (!documentAnalysis) {
         const analyzed = await analyzeDocument(
           { document: parsedDocument, mastery },
@@ -131,6 +154,7 @@ export function DocumentIntelligence() {
         if (!analyzed.ok) throw new Error(analyzed.error.message);
         documentAnalysis = analyzed.data.analysis;
       }
+      documentAnalysis = verifyAnalysisReferences(parsedDocument, documentAnalysis);
       setStage("validating");
       setAnalysis(documentAnalysis);
       await saveDocument(parsedDocument, documentAnalysis);
@@ -151,9 +175,76 @@ export function DocumentIntelligence() {
 
   async function explain(style: "beginner" | "technical" | "analogy" | "worked-example") {
     if (!document || !selectedConcept) return;
+    const requestId = ++explanationRequestId.current;
+    setFeedbackError(null);
     setExplanation("Loading a contextual explanation…");
     const result = await requestExplanation({ document, concept: selectedConcept, style });
-    setExplanation(result.ok ? result.data.explanation : result.error.message);
+    if (requestId === explanationRequestId.current) {
+      setExplanation(result.ok ? result.data : result.error.message);
+      try {
+        const saved = await listEvidenceFeedback(document.id);
+        if (requestId === explanationRequestId.current)
+          setFeedback(Object.fromEntries(saved.map((entry) => [entry.id, entry])));
+      } catch {
+        setFeedbackError("Saved corrections could not be loaded.");
+      }
+    }
+  }
+
+  async function correctEvidence(
+    section: ExplainResult["sections"][number],
+    verdict: EvidenceVerdict | "",
+  ) {
+    if (!document || !section.sourceReference || !section.evidence) return;
+    const id = evidenceFeedbackId(document.id, section.text, section.sourceReference);
+    setFeedbackError(null);
+    try {
+      if (!verdict) {
+        await deleteEvidenceFeedback(id);
+        setFeedback((current) => {
+          const next = { ...current };
+          delete next[id];
+          return next;
+        });
+      } else {
+        const entry: EvidenceFeedback = {
+          id,
+          documentId: document.id,
+          claim: section.text,
+          pageNumber: section.sourceReference.pageNumber,
+          quote: section.sourceReference.quote,
+          aiVerdict: section.evidence.verdict,
+          correctedVerdict: verdict,
+          updatedAt: new Date().toISOString(),
+        };
+        await saveEvidenceFeedback(entry);
+        setFeedback((current) => ({ ...current, [id]: entry }));
+      }
+    } catch {
+      setFeedbackError("The correction could not be saved.");
+    }
+  }
+
+  function exportEvidenceReviews() {
+    if (!document) return;
+    const cases = evidenceEvaluationCases(document, Object.values(feedback));
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(cases, null, 2)], {
+        type: "application/json",
+      }),
+    );
+    const link = window.document.createElement("a");
+    link.href = url;
+    link.download = "evidence-reviews.json";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  function selectConcept(concept: Concept | null) {
+    explanationRequestId.current += 1;
+    setSelectedConcept(concept);
+    setExplanation(null);
+    setSelectedPage(null);
   }
 
   async function startQuiz() {
@@ -178,6 +269,7 @@ export function DocumentIntelligence() {
 
   return (
     <main className="app-shell">
+      <AgentStatus variant="floating" />
       <header className="masthead">
         <div>
           <span className="eyebrow">KNOWBEFORE</span>
@@ -298,11 +390,10 @@ export function DocumentIntelligence() {
         />
       )}
 
+      <ResearchProjects document={document} analysis={analysis} />
+
       {analysis && (
         <>
-          {document && (
-            <RecommendationsPanel key={document.id} document={document} analysis={analysis} />
-          )}
           <section className="insight-grid">
             <article className="subject-card">
               <span className="step">02 · UNDERSTANDING</span>
@@ -327,7 +418,7 @@ export function DocumentIntelligence() {
                   )!;
                   return (
                     <li key={item.conceptId}>
-                      <button onClick={() => setSelectedConcept(concept)}>
+                      <button onClick={() => selectConcept(concept)}>
                         <b>{String(index + 1).padStart(2, "0")}</b>
                         <span>
                           {concept.name}
@@ -359,6 +450,18 @@ export function DocumentIntelligence() {
                   </span>
                 </div>
               </div>
+              {analysis.graph.repairs.some((repair) => repair.type === "unverified-quote") && (
+                <details>
+                  <summary>Some source references could not be verified</summary>
+                  <ul>
+                    {analysis.graph.repairs
+                      .filter((repair) => repair.type === "unverified-quote")
+                      .map((repair, index) => (
+                        <li key={index}>{repair.message}</li>
+                      ))}
+                  </ul>
+                </details>
+              )}
               <div className="flow">
                 <ReactFlow
                   nodes={graphElements.nodes}
@@ -367,7 +470,7 @@ export function DocumentIntelligence() {
                   minZoom={0.35}
                   maxZoom={1.6}
                   onNodeClick={(_, node) =>
-                    setSelectedConcept(
+                    selectConcept(
                       analysis.graph.concepts.find((concept) => concept.id === node.id) ?? null,
                     )
                   }
@@ -423,14 +526,87 @@ export function DocumentIntelligence() {
                     )}
                   </div>
                   <h3>Ask the tutor</h3>
+                  {review.reviewed > 0 && (
+                    <div className="evidence-summary">
+                      <p>
+                        Reviewed sample only: {review.reviewed} claims. AI matched {review.agreed};{" "}
+                        supported verdicts matched {review.supportedAgreed} of{" "}
+                        {review.supportedReviewed} reviewed.
+                      </p>
+                      <button onClick={exportEvidenceReviews}>
+                        Export reviewed examples and source passages
+                      </button>
+                    </div>
+                  )}
                   <div className="tutor-actions">
                     <button onClick={() => explain("beginner")}>Beginner</button>
                     <button onClick={() => explain("technical")}>Technical</button>
                     <button onClick={() => explain("analogy")}>Analogy</button>
                     <button onClick={() => explain("worked-example")}>Worked example</button>
                   </div>
-                  {explanation && <div className="explanation">{explanation}</div>}
-                  {explanation && <ListenButton text={explanation} />}
+                  {typeof explanation === "string" && (
+                    <div className="explanation">{explanation}</div>
+                  )}
+                  {explanation && typeof explanation !== "string" && (
+                    <div className="explanation">
+                      {explanation.sections.map((section, index) => (
+                        <div key={index}>
+                          <p>{section.text}</p>
+                          {section.sourceReference ? (
+                            <>
+                              <button
+                                onClick={() => setSelectedPage(section.sourceReference!.pageNumber)}
+                              >
+                                Page {section.sourceReference.pageNumber}: “
+                                {section.sourceReference.quote}”
+                              </button>
+                              {section.evidence && (
+                                <div className="evidence-check">
+                                  <p>
+                                    <strong>AI evidence check: {section.evidence.verdict}.</strong>{" "}
+                                    {section.evidence.reason}
+                                  </p>
+                                  <label>
+                                    Your assessment{" "}
+                                    <select
+                                      value={
+                                        feedback[
+                                          evidenceFeedbackId(
+                                            document!.id,
+                                            section.text,
+                                            section.sourceReference,
+                                          )
+                                        ]?.correctedVerdict ?? ""
+                                      }
+                                      onChange={(event) =>
+                                        void correctEvidence(
+                                          section,
+                                          event.target.value as EvidenceVerdict | "",
+                                        )
+                                      }
+                                    >
+                                      <option value="">No correction</option>
+                                      <option value="supported">Supported</option>
+                                      <option value="contradicted">Contradicted</option>
+                                      <option value="unclear">Unclear</option>
+                                    </select>
+                                  </label>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <small>Background or inference · no direct source quote</small>
+                          )}
+                        </div>
+                      ))}
+                      {feedbackError && <p role="alert">{feedbackError}</p>}
+                    </div>
+                  )}
+                  {explanation && typeof explanation !== "string" && (
+                    <ListenButton
+                      text={explanation.sections.map((section) => section.text).join(" ")}
+                    />
+                  )}
                   <button className="quiz-button" onClick={startQuiz}>
                     Take a short quiz
                   </button>
@@ -472,7 +648,7 @@ export function DocumentIntelligence() {
               )}
             </aside>
           </section>
-          {selectedPage && pdfUrl && (
+          {selectedPage && document && (
             <section className="pdf-panel">
               <div className="panel-heading">
                 <div>
@@ -483,10 +659,17 @@ export function DocumentIntelligence() {
                   Close
                 </button>
               </div>
-              <iframe
-                title={`PDF page ${selectedPage}`}
-                src={`${pdfUrl}#page=${selectedPage}&view=FitH`}
-              />
+              {pdfUrl ? (
+                <iframe
+                  title={`PDF page ${selectedPage}`}
+                  src={`${pdfUrl}#page=${selectedPage}&view=FitH`}
+                />
+              ) : (
+                <pre>
+                  {document.pages.find((page) => page.pageNumber === selectedPage)?.text ??
+                    "Page text unavailable."}
+                </pre>
+              )}
             </section>
           )}
           {document && <ContradictionPanel document={document} analysis={analysis} />}

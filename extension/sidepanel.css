@@ -1,7 +1,9 @@
+/* Matches Research Core so nothing flashes before the app panel loads. */
 :root {
-  color: #15231d;
-  background: #f4f1e9;
-  font-family: Arial, Helvetica, sans-serif;
+  color: #d4d4d4;
+  background: #1e1e1e;
+  color-scheme: dark;
+  font-family: Georgia, "Times New Roman", serif;
 }
 html,
 body {
@@ -15,15 +17,32 @@ iframe {
   border: 0;
 }
 #offline {
-  padding: 24px 18px;
+  padding: 32px 20px;
 }
 #offline strong {
-  font:
-    400 22px/1.2 Georgia,
-    serif;
+  font-size: 16px;
+  font-weight: 600;
 }
 #offline p {
-  color: #687069;
+  color: #b3b3b3;
   font-size: 13px;
   line-height: 1.5;
+}
+#offline code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #1e1e1e;
+  font-size: 12px;
+}
+#offline button {
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 4px;
+  background: #383838;
+  color: #d4d4d4;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
 }

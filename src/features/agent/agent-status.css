@@ -1,0 +1,39 @@
+.agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.agent-status-floating {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 50;
+  max-width: min(320px, calc(100vw - 36px));
+  padding: 9px 13px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  box-shadow: var(--shadow-s);
+}
+
+.agent-status-matter {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
+.agent-label {
+  display: grid;
+  min-width: 0;
+}
+
+.agent-label small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

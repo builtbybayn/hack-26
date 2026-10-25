@@ -1,0 +1,50 @@
+[
+  {
+    "index": 0,
+    "claim": "The intervention group's average score rose from 12 to 17.",
+    "quote": "average score rose from 12 to 17",
+    "pageNumber": 1,
+    "passage": "In the intervention group, the average score rose from 12 to 17 after eight weeks. The comparison group average remained at 11.",
+    "expectedVerdict": "supported"
+  },
+  {
+    "index": 1,
+    "claim": "The intervention group's average score fell after eight weeks.",
+    "quote": "average score rose from 12 to 17",
+    "pageNumber": 1,
+    "passage": "In the intervention group, the average score rose from 12 to 17 after eight weeks. The comparison group average remained at 11.",
+    "expectedVerdict": "contradicted"
+  },
+  {
+    "index": 2,
+    "claim": "The intervention caused the score increase.",
+    "quote": "average score rose from 12 to 17",
+    "pageNumber": 1,
+    "passage": "This observational study did not assign participants to groups. In the intervention group, the average score rose from 12 to 17 after eight weeks.",
+    "expectedVerdict": "unclear"
+  },
+  {
+    "index": 3,
+    "claim": "The sample included 40 participants.",
+    "quote": "40 participants completed the study",
+    "pageNumber": 2,
+    "passage": "A total of 40 participants completed the study. Two participants withdrew before the final assessment.",
+    "expectedVerdict": "supported"
+  },
+  {
+    "index": 4,
+    "claim": "No participants withdrew before the final assessment.",
+    "quote": "Two participants withdrew",
+    "pageNumber": 2,
+    "passage": "A total of 40 participants completed the study. Two participants withdrew before the final assessment.",
+    "expectedVerdict": "contradicted"
+  },
+  {
+    "index": 5,
+    "claim": "The treatment has no effect.",
+    "quote": "No statistically significant difference was observed",
+    "pageNumber": 3,
+    "passage": "No statistically significant difference was observed between groups (p = 0.12). The study was not powered to rule out small effects.",
+    "expectedVerdict": "unclear"
+  }
+]

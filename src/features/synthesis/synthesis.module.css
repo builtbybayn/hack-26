@@ -1,0 +1,70 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.panel h2 {
+  margin: 10px 0;
+  font:
+    400 29px Georgia,
+    "Times New Roman",
+    serif;
+}
+.panel p {
+  line-height: 1.55;
+}
+.selection {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0;
+}
+.selection label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.report {
+  margin-top: 24px;
+}
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.finding {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.finding h3 {
+  margin: 8px 0;
+  font:
+    400 23px Georgia,
+    "Times New Roman",
+    serif;
+}
+.assessment {
+  font-size: 12px;
+  color: var(--muted);
+}
+.finding li {
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+}
+.finding summary {
+  cursor: pointer;
+  color: var(--forest);
+}
+.finding pre {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font:
+    12px/1.5 Arial,
+    sans-serif;
+}
+@media (max-width: 540px) {
+  .panel {
+    padding: 20px;
+  }
+}

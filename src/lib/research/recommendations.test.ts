@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { MOCK_INGEST_SUCCESS } from "@/lib/api/ingest-mock";
 import type { PaperRecord } from "@/types/research";
-import { recommendationsSchema, recommendPapers } from "./recommendations";
+import {
+  recommendationsSchema,
+  recommendPapers,
+  searchTopicPapers,
+  topicRecommendationsSchema,
+} from "./recommendations";
 
 const input = () =>
   recommendationsSchema.parse({
@@ -32,6 +37,26 @@ const paper = (id: string, title: string, extra: Partial<PaperRecord> = {}): Pap
 });
 
 describe("recommendations", () => {
+  it("searches a bounded topic without a document and labels the provider trail", async () => {
+    const search = vi.fn().mockResolvedValue([paper("one", "AI tutoring study")]);
+    const input = topicRecommendationsSchema.parse({ topic: "  AI tutoring  and learning  " });
+    const result = await searchTopicPapers(input, undefined, { name: "openalex", search });
+    expect(search).toHaveBeenCalledWith("AI tutoring and learning", {
+      limit: 8,
+      signal: undefined,
+    });
+    expect(result.recommendations[0]).toMatchObject({
+      kind: "related",
+      conceptIds: [],
+      reason: null,
+      paper: { id: "one" },
+    });
+    expect(result.queries).toEqual([
+      { text: "AI tutoring and learning", kind: "related", provider: "openalex", resultCount: 1 },
+    ]);
+    expect(topicRecommendationsSchema.safeParse({ topic: "ab" }).success).toBe(false);
+    expect(topicRecommendationsSchema.safeParse({ topic: "topic", limit: 21 }).success).toBe(false);
+  });
   it("builds bounded queries, excludes the source, deduplicates and merges addressed concepts", async () => {
     const search = vi
       .fn()

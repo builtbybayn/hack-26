@@ -25,11 +25,25 @@ export interface ContradictionRequest {
   analyses?: DocumentAnalysis[];
 }
 
+/** Where a compared document came from: the user's saved papers or the published literature. */
+export interface ContradictionSource {
+  documentId: string;
+  title: string;
+  kind: "saved" | "literature";
+  /** The provider's page for a published paper. */
+  url?: string;
+}
+
 export interface ContradictionReport {
   documentIds: string[];
   findings: ContradictionFinding[];
   comparedClaimCount: number;
   warnings: string[];
+  /**
+   * Added by the browser (not the server) when the check includes published papers found online,
+   * so results can name and link papers that aren't saved.
+   */
+  sources?: ContradictionSource[];
 }
 
 export type ContradictionResponse = ApiResponse<

@@ -1,0 +1,77 @@
+.agent-sprite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.agent-sprite-stage {
+  width: 160px;
+  height: 160px;
+}
+.agent-glass-canvas {
+  width: 100%;
+  height: 100%;
+}
+.agent-glass-canvas canvas {
+  display: block;
+}
+
+/* One reflective material, derived from the host theme. No ground plane in zero gravity. */
+.fluid-matter {
+  --matter-color: var(--interactive-accent, var(--forest));
+  --matter-pearl: var(--text-on-accent, var(--white));
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: var(--matter-color);
+  contain: layout paint;
+}
+
+.fluid-matter[data-state="error"] {
+  --matter-color: var(--background-modifier-error, var(--clay));
+}
+
+.fluid-matter-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  opacity: 0;
+}
+
+.fluid-matter-canvas[data-ready] {
+  opacity: 1;
+}
+
+.fluid-matter-fallback {
+  position: absolute;
+  inset: 25%;
+  border: 1px solid color-mix(in srgb, var(--matter-pearl) 50%, transparent);
+  border-radius: 46% 54% 58% 42% / 48% 42% 58% 52%;
+  background: radial-gradient(circle at 32% 24%, var(--matter-pearl), var(--matter-color) 65%);
+}
+
+.fluid-matter:has(.fluid-matter-canvas[data-ready]) .fluid-matter-fallback {
+  visibility: hidden;
+}
+
+.agent-sprite-label {
+  margin: 8px 0 0;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.agent-sprite-detail {
+  margin: 2px 0 0;
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

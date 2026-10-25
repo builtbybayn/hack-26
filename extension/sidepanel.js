@@ -3,7 +3,7 @@
 // active tab, read the selection on it, and fetch the paper it shows.
 //
 // Protocol (every message has a `type`):
-//   panel -> bridge: kb:ready, kb:get-selection, kb:get-paper, kb:open-app
+//   panel -> bridge: kb:ready, kb:get-selection, kb:get-paper, kb:open-app { path? }
 //   bridge -> panel: kb:tab { tab }, kb:selection { text, title, url },
 //                    kb:paper { kind: "pdf", bytes } | { kind: "text", text, title }  (+ fileName, url),
 //                    kb:error { request, message }
@@ -159,15 +159,34 @@ window.addEventListener("message", (event) => {
   if (event.source !== frame.contentWindow || event.origin !== APP_ORIGIN) return;
   const type = event.data?.type;
   if (type === "kb:ready") void refreshTargetTab();
-  else if (type === "kb:open-app") void chrome.tabs.create({ url: APP_ORIGIN });
+  else if (type === "kb:open-app") void openVault(event.data.path);
   else if (type === "kb:get-selection" || type === "kb:get-paper") {
     const fail = (message) => send({ type: "kb:error", request: type, message });
     handle(type, fail).catch((error) => fail(`Couldn't read this tab: ${error.message}`));
   }
 });
 
+/** Shows the vault, reusing an open vault tab. Only the vault's own paper links are allowed. */
+async function openVault(path) {
+  const safe =
+    typeof path === "string" && /^\/(\?(paper=[\w-]+(&page=\d+)?|entry=[\w-]+))?$/.test(path)
+      ? path
+      : "/";
+  const url = `${APP_ORIGIN}${safe}`;
+  const tabs = await chrome.tabs.query({ url: `${APP_ORIGIN}/*` });
+  const vaultTab = tabs.find((candidate) => new URL(candidate.url).pathname === "/");
+  if (!vaultTab) {
+    await chrome.tabs.create({ url });
+    return;
+  }
+  await chrome.tabs.update(vaultTab.id, { url, active: true });
+  await chrome.windows.update(vaultTab.windowId, { focused: true });
+}
+
 // Iframes don't report failed loads, so check the app directly.
 fetch(`${APP_ORIGIN}/api/health`).catch(() => {
   document.getElementById("offline").hidden = false;
   frame.hidden = true;
 });
+
+document.getElementById("retry").addEventListener("click", () => location.reload());

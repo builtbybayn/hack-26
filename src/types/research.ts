@@ -14,6 +14,8 @@ export interface PaperRecord {
   url: string;
   openAccessPdfUrl?: string;
   citationCount?: number;
+  /** Provider-scoped IDs of works this paper cites, when supplied by OpenAlex. */
+  referencedWorkIds?: string[];
   provider: "openalex" | "semantic-scholar";
 }
 
@@ -24,12 +26,20 @@ export interface PaperRecommendation {
   reason: string | null;
 }
 
-export interface RecommendationsRequest {
+export interface DocumentRecommendationsRequest {
   document: ParsedDocument;
   analysis: DocumentAnalysis;
   /** Defaults to 8, maximum 20. */
   limit?: number;
 }
+
+export interface TopicRecommendationsRequest {
+  topic: string;
+  /** Defaults to 8, maximum 20. */
+  limit?: number;
+}
+
+export type RecommendationsRequest = DocumentRecommendationsRequest | TopicRecommendationsRequest;
 
 export interface RecommendationsResult {
   recommendations: PaperRecommendation[];
@@ -42,8 +52,24 @@ export interface RecommendationsResult {
   warnings: string[];
 }
 
+export interface SavedTopicSearch {
+  id: string;
+  topic: string;
+  createdAt: string;
+  result: RecommendationsResult;
+}
+
 export type ResearchErrorCode = "SEARCH_PROVIDER_ERROR" | "SEARCH_RATE_LIMITED";
 export type RecommendationsResponse = ApiResponse<
   RecommendationsResult,
   ResearchErrorCode | IntelligenceErrorCode | CommonErrorCode
+>;
+
+export interface CitationReferencesRequest {
+  paperIds: string[];
+}
+
+export type CitationReferencesResponse = ApiResponse<
+  { references: Record<string, string[]> },
+  ResearchErrorCode | CommonErrorCode
 >;

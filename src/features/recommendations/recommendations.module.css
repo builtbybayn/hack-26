@@ -20,6 +20,32 @@
 .panel p {
   line-height: 1.6;
 }
+.topicForm {
+  margin: 20px 0 12px;
+}
+.topicForm label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.topicForm > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.topicForm input {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: inherit;
+}
+.topicForm input:focus-visible {
+  outline: 3px solid #93ad9f;
+  outline-offset: 2px;
+}
 .groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -48,6 +74,82 @@
   color: var(--muted);
   font-size: 12px;
 }
+.abstract {
+  max-height: 12em;
+  overflow: auto;
+  padding: 12px;
+  border-left: 2px solid var(--line);
+  background: var(--paper);
+  font-size: 14px;
+}
+.abstractDetails {
+  margin: 14px 0;
+  font-size: 13px;
+}
+.abstractDetails .abstract {
+  max-height: none;
+}
+.preview {
+  margin: 16px 0;
+  padding: 14px;
+  background: var(--paper);
+}
+.preview h5 {
+  margin: 0;
+  font-size: 14px;
+}
+.preview .metadata {
+  margin: 5px 0 12px;
+}
+.preview dl {
+  margin: 0;
+}
+.preview dl > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.preview dt {
+  font-weight: 700;
+}
+.preview dd {
+  margin: 0;
+}
+.preview dd a {
+  white-space: nowrap;
+}
+.pdfPreview {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.pdfPreview label {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.pdfFields {
+  margin: 0;
+}
+.pdfFields > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.pdfFields dt {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.pdfFields dd {
+  margin: 0;
+}
 .links {
   display: flex;
   flex-wrap: wrap;
@@ -74,5 +176,12 @@
 @media (max-width: 540px) {
   .panel {
     padding: 20px;
+  }
+  .preview dl > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .pdfFields > div {
+    grid-template-columns: 1fr;
   }
 }

@@ -34,7 +34,14 @@ const workSchema = z.object({
   best_oa_location: locationSchema.nullish(),
   cited_by_count: z.number().int().nonnegative().optional(),
   abstract_inverted_index: z.record(z.string(), z.array(z.number().int().nonnegative())).nullish(),
+  referenced_works: z.array(z.string()).nullish(),
 });
+
+const openAlexWorkId = /^https:\/\/openalex\.org\/W\d+$/;
+const normalizeReferences = (references: string[]) =>
+  references
+    .filter((id) => openAlexWorkId.test(id))
+    .map((id) => `openalex:${id.split("/").at(-1)}`);
 
 function webUrl(value: string | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -68,7 +75,7 @@ export const openAlex: ResearchProvider = {
     url.searchParams.set("per_page", String(Math.min(20, Math.max(1, limit))));
     url.searchParams.set(
       "select",
-      "id,display_name,type,authorships,publication_year,doi,primary_location,best_oa_location,cited_by_count,abstract_inverted_index",
+      "id,display_name,type,authorships,publication_year,doi,primary_location,best_oa_location,cited_by_count,abstract_inverted_index,referenced_works",
     );
     const key = process.env.OPENALEX_API_KEY;
     try {
@@ -106,6 +113,9 @@ export const openAlex: ResearchProvider = {
             ? webUrl(work.best_oa_location.pdf_url)
             : undefined,
           citationCount: work.cited_by_count,
+          referencedWorkIds: work.referenced_works
+            ? normalizeReferences(work.referenced_works)
+            : undefined,
           provider: "openalex" as const,
         }));
     } catch (error) {
@@ -118,3 +128,60 @@ export const openAlex: ResearchProvider = {
     }
   },
 };
+
+export async function fetchOpenAlexReferences(
+  paperIds: string[],
+  signal?: AbortSignal,
+): Promise<Record<string, string[]>> {
+  const url = new URL("https://api.openalex.org/works");
+  url.searchParams.set(
+    "filter",
+    `openalex:${paperIds.map((id) => id.slice("openalex:".length)).join("|")}`,
+  );
+  url.searchParams.set("per_page", String(paperIds.length));
+  url.searchParams.set("select", "id,referenced_works");
+  const key = process.env.OPENALEX_API_KEY;
+  try {
+    const response = await fetch(url, {
+      headers: key ? { Authorization: `Bearer ${key}` } : {},
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(12_000)])
+        : AbortSignal.timeout(12_000),
+      cache: "no-store",
+    });
+    if (response.status === 429)
+      throw new ResearchError(
+        "SEARCH_RATE_LIMITED",
+        "OpenAlex's request limit was reached. Try again later.",
+      );
+    if (!response.ok)
+      throw new ResearchError(
+        "SEARCH_PROVIDER_ERROR",
+        "OpenAlex could not load citation references.",
+      );
+    const data = z
+      .object({
+        results: z.array(
+          z.object({
+            id: z.string().regex(openAlexWorkId),
+            referenced_works: z.array(z.string()).nullish(),
+          }),
+        ),
+      })
+      .parse(await response.json());
+    return Object.fromEntries(
+      data.results.flatMap((work) =>
+        work.referenced_works
+          ? [[`openalex:${work.id.split("/").at(-1)}`, normalizeReferences(work.referenced_works)]]
+          : [],
+      ),
+    );
+  } catch (error) {
+    if (error instanceof ResearchError) throw error;
+    if (signal?.aborted) throw signal.reason;
+    throw new ResearchError(
+      "SEARCH_PROVIDER_ERROR",
+      "OpenAlex citation references are unavailable. Please retry.",
+    );
+  }
+}

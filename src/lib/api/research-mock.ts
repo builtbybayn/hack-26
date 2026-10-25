@@ -15,6 +15,7 @@ export const MOCK_RECOMMENDATIONS = {
           doi: "https://doi.org/10.1007/978-3-642-14003-7_11",
           url: "https://openalex.org/W47667379",
           citationCount: 132,
+          referencedWorkIds: undefined,
           provider: "openalex",
         },
         kind: "background",
@@ -32,6 +33,7 @@ export const MOCK_RECOMMENDATIONS = {
           url: "https://openalex.org/W2098940483",
           openAccessPdfUrl: "https://arxiv.org/pdf/0907.2363",
           citationCount: 316,
+          referencedWorkIds: undefined,
           provider: "openalex",
         },
         kind: "related",
@@ -41,5 +43,21 @@ export const MOCK_RECOMMENDATIONS = {
     ],
     queries: [{ text: "vector calculus", kind: "related", provider: "openalex", resultCount: 5 }],
     warnings: ["Mock recommendations; abstracts unavailable for 2 results."],
+  },
+} satisfies RecommendationsResponse;
+
+export const MOCK_TOPIC_RECOMMENDATIONS = {
+  ok: true,
+  data: {
+    recommendations: [
+      {
+        ...MOCK_RECOMMENDATIONS.data.recommendations[1],
+        conceptIds: [],
+      },
+    ],
+    queries: [
+      { text: "fractional vector calculus", kind: "related", provider: "openalex", resultCount: 1 },
+    ],
+    warnings: ["Mock topic search; abstract unavailable for 1 result."],
   },
 } satisfies RecommendationsResponse;

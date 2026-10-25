@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import "@xyflow/react/dist/style.css";
-import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KnowBefore · PDF Intelligence",
-  description: "Map the knowledge you need before complex material clicks.",
+  title: "KnowBefore",
+  description:
+    "A research workspace: read and annotate papers, learn their prerequisites, check evidence against the literature, and write with citations.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );

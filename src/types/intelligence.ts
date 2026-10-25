@@ -107,8 +107,24 @@ export interface ExplainRequest {
 }
 
 export interface ExplainResult {
-  explanation: string;
-  sourceReferences: SourceReference[];
+  sections: {
+    text: string;
+    sourceReference: (SourceReference & { quote: string }) | null;
+    evidence: { verdict: "supported" | "contradicted" | "unclear"; reason: string } | null;
+  }[];
+}
+
+export type EvidenceVerdict = "supported" | "contradicted" | "unclear";
+
+export interface EvidenceFeedback {
+  id: string;
+  documentId: string;
+  claim: string;
+  pageNumber: number;
+  quote: string;
+  aiVerdict: EvidenceVerdict;
+  correctedVerdict: EvidenceVerdict;
+  updatedAt: string;
 }
 
 export interface QuizRequest {

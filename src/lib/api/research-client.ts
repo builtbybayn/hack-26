@@ -1,6 +1,14 @@
+import { track } from "@/lib/agent-activity";
 import type { RecommendationsRequest, RecommendationsResponse } from "@/types/research";
 
-export async function requestRecommendations(
+export function requestRecommendations(
+  input: RecommendationsRequest,
+  signal?: AbortSignal,
+): Promise<RecommendationsResponse> {
+  return track("searching", "Finding related papers", () => fetchRecommendations(input, signal));
+}
+
+async function fetchRecommendations(
   input: RecommendationsRequest,
   signal?: AbortSignal,
 ): Promise<RecommendationsResponse> {

@@ -75,9 +75,31 @@ devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 
-**Confirmed.** KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+**Superseded by 19 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
 
-### 14. ElevenLabs over plain `fetch`, read one segment at a time
+### 14. Optional independent review for cross-paper conflicts
+
+**Provisional.** Gemini proposes claim comparisons from two to four documents. The server verifies each
+quoted source passage against its cited page. Only candidate conflicts go to Grok for an
+independent verdict through the xAI Responses API, using plain `fetch` and `store: false`.
+Without Grok agreement, a conflict remains unconfirmed. This adds no SDK or server persistence.
+
+### 15. Briefs reuse verified synthesis
+
+**Provisional.** The Research Brief is built in the browser from saved synthesis findings and the
+project's paper list. No second model call rewrites the evidence. Users can edit the question,
+notes, and finding summaries; edited summaries are visibly marked for source review. Briefs stay
+in the project's IndexedDB record and use a separate print page on the same origin.
+
+### 16. Gap ideas and paper links retain their provenance
+
+**Provisional.** Gap suggestions are derived from the project's verified synthesis and labeled as
+questions for further search. Saved ideas keep their evidence and reviewed document set. The paper
+graph shows synthesis-backed agreement or disagreement separately from inferred topic overlap.
+Citation edges use OpenAlex reference IDs when the provider supplies them; missing matches are
+treated as unknown, not evidence of no citation.
+
+### 17. ElevenLabs over plain `fetch`, read one segment at a time
 
 **Provisional.** Voice uses ElevenLabs' REST API through `fetch` (no SDK dependency) from a
 server-only module, so the key never reaches a client. Papers are cleaned and split in the browser,
@@ -86,3 +108,68 @@ credits are billed per character and a full paper is roughly 50,000 characters. 
 default model (fastest, cheapest); Multilingual v2 is the high-quality option. Equations and code
 are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
 fallback when no key is configured.
+
+### 18. Save topic search snapshots with browser projects
+
+**Provisional.** Each successful topic search made with a selected project stores its query,
+provider trail, and returned records on that project in IndexedDB. Reopening a search uses the
+snapshot, so the result is reproducible even when OpenAlex changes or is unavailable. Keep the
+newest 20 searches per project to bound browser storage; older project records need no migration.
+
+### 19. The vault looks and works like Obsidian
+
+**Confirmed.** The main UI (`/`) recreates Obsidian's default theme and layout: ribbon, file tree,
+tabbed and split work area, right sidebar, status bar, dark by default with a light option. Papers,
+notes, and AI chats are all files in one tree. The team chose this so the product feels like a
+familiar research vault rather than a dashboard. The editorial palette from decision 13 remains
+only in the classic workspace (`/classic`), which the vault replaces.
+
+### 20. Lucide icons
+
+**Confirmed.** `lucide-react` provides the vault's icons. It is the icon set Obsidian uses, so the
+look matches, and icons are tree-shaken per import.
+
+### 21. Annotations and chat stay in the browser
+
+**Provisional.** Highlights, comments, notes, and chats are stored in IndexedDB like everything
+else (decision 12). `/api/chat` receives the conversation and paper text per request and stores
+nothing. When the team's vault backend exists, these stores are what it syncs.
+
+### 22. Roadmap papers come from the provider, not the model
+
+**Confirmed.** A research roadmap's stages and concepts are AI-planned, but its papers are found
+by running the model's search queries against OpenAlex, so no listed paper can be invented. The
+note says which parts are AI-suggested.
+
+### 23. A pinned Gemini model with retry and fallback
+
+**Confirmed.** The default model is pinned (`gemini-3.5-flash`) rather than an alias, because
+`gemini-flash-latest` began hanging for new keys. Gemini returns 503 during demand spikes, so
+temporary errors are retried and then routed to a fallback model before failing.
+
+### 24. Research Core UI over the existing browser and API contracts
+
+**Confirmed by the requested UI integration.** The new main workspace uses the supplied Research
+Core interface and its Three.js blob effects. Its service adapter reuses existing vault records,
+the shared paper reader, browser persistence, and typed API clients. It does not create a second
+parser or server data store. Existing literature collections and extension chats remain accessible
+from Overview. Classic route styling remains separate. The workspace and extension now share the
+other UI's blob through the agent feature, per the user's direction to align both surfaces.
+The earlier silk-loop sprite remains available in `/sprite`.
+
+### 25. Preview only what the provider abstract supports
+
+**Provisional.** Study-at-a-glance cards use verbatim OpenAlex abstract sentences for methods,
+sample or data, measures, results, and limitations. The client groups clear keyword matches
+without generating claims or downloading PDFs. Missing matches are labeled as absent from the
+preview, and each excerpt links to the provider record. Full-paper fields can be added after a
+source-aware analysis path is available for each recommended paper.
+
+### 26. Analyze recommended PDFs only after explicit upload
+
+**Provisional.** A reader may upload a recommended paper's PDF for a deeper card preview. The
+server parses it through the shared ingestion module and uses Gemini to select page excerpts for
+five study fields. It removes quotes that do not match the cited parsed page. The card links to
+the user's local PDF during that session; no remote PDF fetching, server persistence, or claim
+that the uploaded file matches the provider record is added. Reject extracted text over 160,000
+characters so a preview never silently omits part of the PDF.

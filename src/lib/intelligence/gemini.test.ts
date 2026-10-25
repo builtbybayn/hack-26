@@ -43,7 +43,7 @@ const valid = JSON.stringify({
       description: "Calculus of fields",
       difficulty: "intermediate",
       estimatedMinutes: 45,
-      sourceReferences: [{ pageNumber: 1 }],
+      sourceReferences: [{ pageNumber: 1, quote: "Divergence and curl" }],
     },
     {
       id: "maxwell-equations",
@@ -51,7 +51,7 @@ const valid = JSON.stringify({
       description: "Field laws",
       difficulty: "advanced",
       estimatedMinutes: 60,
-      sourceReferences: [{ pageNumber: 1 }],
+      sourceReferences: [{ pageNumber: 1, quote: "electric and magnetic fields" }],
     },
   ],
   dependencies: [
@@ -72,6 +72,7 @@ describe("Gemini analysis", () => {
     );
     expect(calls).toBe(3);
     expect(result.graph.topologicalOrder).toEqual(["vector-calculus", "maxwell-equations"]);
+    expect(result.graph.concepts[0].sourceReferences).toHaveLength(1);
   });
 
   it("fails meaningfully after bounded malformed responses", async () => {

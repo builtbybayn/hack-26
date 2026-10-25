@@ -3,7 +3,7 @@ import { ExtensionPanel } from "@/features/extension-panel/ExtensionPanel";
 
 export const metadata: Metadata = { title: "KnowBefore · Panel" };
 
-/** Compact page loaded inside the Chrome extension's side panel. Temporary test UI. */
+/** The Chrome extension's side panel (loaded in an iframe by extension/sidepanel.html). */
 export default function PanelPage() {
   return <ExtensionPanel />;
 }

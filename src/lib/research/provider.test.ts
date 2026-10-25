@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import fixture from "../../../tests/fixtures/research/openalex.json";
 import bookReview from "../../../tests/fixtures/research/openalex-book-review.json";
 import { MOCK_RECOMMENDATIONS } from "@/lib/api/research-mock";
-import { openAlex, reconstructAbstract } from "./provider";
+import { fetchOpenAlexReferences, openAlex, reconstructAbstract } from "./provider";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -41,6 +41,26 @@ describe("OpenAlex adapter", () => {
     vi.stubGlobal("fetch", fetchMock);
     expect(await openAlex.search("vector calculus review", { limit: 5 })).toEqual([]);
     expect(fetchMock.mock.calls[0][0].searchParams.get("select")).toContain("type");
+  });
+
+  it("normalizes provider reference IDs and batch refreshes saved papers", async () => {
+    const record = {
+      ...fixture.results[0],
+      referenced_works: ["https://openalex.org/W2098940483", "bad-reference"],
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ results: [record] }))
+      .mockResolvedValueOnce(
+        Response.json({ results: [{ id: record.id, referenced_works: record.referenced_works }] }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const papers = await openAlex.search("vectors", { limit: 5 });
+    expect(papers[0].referencedWorkIds).toEqual(["openalex:W2098940483"]);
+    expect(fetchMock.mock.calls[0][0].searchParams.get("select")).toContain("referenced_works");
+    const references = await fetchOpenAlexReferences([papers[0].id]);
+    expect(references[papers[0].id]).toEqual(["openalex:W2098940483"]);
+    expect(fetchMock.mock.calls[1][0].searchParams.get("filter")).toBe("openalex:W47667379");
   });
 
   it("works without a key and refuses unsafe provider PDF links", async () => {

@@ -1,6 +1,16 @@
+import { track } from "@/lib/agent-activity";
 import type { ContradictionRequest, ContradictionResponse } from "@/types/contradictions";
 
-export async function requestContradictions(
+export function requestContradictions(
+  input: ContradictionRequest,
+  signal?: AbortSignal,
+): Promise<ContradictionResponse> {
+  return track("comparing", `Comparing ${input.documents.length} papers`, () =>
+    fetchContradictions(input, signal),
+  );
+}
+
+async function fetchContradictions(
   input: ContradictionRequest,
   signal?: AbortSignal,
 ): Promise<ContradictionResponse> {
