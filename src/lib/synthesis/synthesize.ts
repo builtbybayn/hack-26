@@ -1,6 +1,6 @@
 import "server-only";
 
-import { GoogleGenAI } from "@google/genai";
+import { generateText } from "@/lib/ai/llm";
 import { z } from "zod";
 import { IntelligenceError } from "@/lib/intelligence/errors";
 import { evidencePassage, quoteAppearsOnPage } from "@/lib/intelligence/source-evidence";
@@ -186,21 +186,18 @@ export async function checkSynthesisFindings(
   return { findings: checkedFindings, warnings };
 }
 
+/** The shared model call (Luminal, with Gemini as fallback). */
 async function generateSynthesis(prompt: string): Promise<string> {
-  if (!process.env.GEMINI_API_KEY)
-    throw new IntelligenceError("AI_NOT_CONFIGURED", "Gemini is not configured on the server.");
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL ?? "gemini-3.8-flash",
-      contents: prompt,
-      config: { responseMimeType: "application/json", maxOutputTokens: 6000, temperature: 0.2 },
-    });
-    if (!response.text) throw new Error("Empty synthesis response");
-    return response.text;
+    return await generateText(prompt, { json: true, maxOutputTokens: 6_000, temperature: 0.2 });
   } catch (error) {
-    throw new IntelligenceError("PROVIDER_ERROR", "Gemini could not generate the synthesis.", {
-      cause: error,
-    });
+    if (error instanceof IntelligenceError) throw error;
+    throw new IntelligenceError(
+      "PROVIDER_ERROR",
+      "The AI model could not generate the synthesis.",
+      {
+        cause: error,
+      },
+    );
   }
 }

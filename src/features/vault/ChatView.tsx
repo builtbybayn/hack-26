@@ -22,6 +22,8 @@ interface ChatViewProps {
   compact?: boolean;
   /** Extra controls beside the attached papers (e.g. the panel's "Use this page"). */
   contextActions?: ReactNode;
+  /** A first question to send right away (e.g. from the panel's start screen). */
+  initialMessage?: string | null;
 }
 
 const SUGGESTIONS = [
@@ -41,6 +43,7 @@ export function ChatView({
   onOpenPage,
   compact = false,
   contextActions,
+  initialMessage,
 }: ChatViewProps) {
   const [text, setText] = useState("");
   const [waiting, setWaiting] = useState(false);
@@ -143,6 +146,16 @@ export function ChatView({
       ],
     });
   };
+
+  // Send the question handed over by the start screen, once.
+  const sentInitial = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialMessage || sentInitial.current === initialMessage) return;
+    sentInitial.current = initialMessage;
+    void Promise.resolve().then(() => send(initialMessage));
+    // `send` is recreated each render; the ref makes this run once per message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialMessage]);
 
   const retry = () => {
     const lastUser = [...chat.messages].reverse().find((message) => message.role === "user");

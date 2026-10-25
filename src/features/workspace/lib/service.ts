@@ -37,6 +37,10 @@ export interface ResearchService {
   saveConcept(concept: Omit<Concept, "id">): Promise<Concept>;
   setFindingSaved(id: ID, saved: boolean): Promise<void>;
   saveDraft(patch: Partial<Draft>): Promise<void>;
+  /** Starts an empty chat; the current one (if it has messages) moves to the chat history. */
+  newChat(): Promise<void>;
+  /** Makes an earlier chat current again. */
+  openChat(id: ID): Promise<void>;
   ask(
     question: string,
     scope: AssistantMessage["scope"],

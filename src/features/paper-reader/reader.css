@@ -498,8 +498,16 @@
   background: var(--background-modifier-hover);
 }
 
-.selection-action.is-ai svg {
-  color: var(--text-accent);
+/* Ask AI is the main action: the same gold pill as the reader's Read aloud button. */
+.selection-action.is-ai {
+  margin-right: 2px;
+  border-radius: 999px;
+  background: #d4af67;
+  color: #1e1e1e;
+  font-weight: 600;
+}
+.selection-action.is-ai:hover {
+  background: #e2c07c;
 }
 
 .swatches {

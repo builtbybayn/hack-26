@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText } from "@/lib/ai/gemini";
+import { generateText } from "@/lib/ai/llm";
 import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import { IntelligenceError } from "./errors";

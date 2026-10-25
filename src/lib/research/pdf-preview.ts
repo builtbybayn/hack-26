@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { generateJson } from "@/lib/ai/gemini";
+import { generateJson } from "@/lib/ai/llm";
 import { IntelligenceError } from "@/lib/intelligence/errors";
 import { quoteAppearsOnPage } from "@/lib/intelligence/source-evidence";
 import type { ParsedDocument } from "@/types/ingestion";

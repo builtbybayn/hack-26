@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText as generateGeminiText } from "@/lib/ai/gemini";
+import { generateText as generateGeminiText } from "@/lib/ai/llm";
 import { z } from "zod";
 import type {
   Concept,

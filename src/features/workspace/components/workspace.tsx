@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Columns2,
-  Folder,
   FilePenLine,
   FileText,
   MessageCircle,
@@ -28,7 +27,8 @@ import {
   type WorkspaceTab as Tab,
 } from "@/features/workspace/lib/workspace-panels";
 import { WorkspaceItemScope, useWorkspace } from "@/features/workspace/lib/workspace-context";
-import { ExplorerGroup, navigation } from "./workspace-navigation";
+import { copyText, toBibtex } from "@/features/workspace/lib/bibtex";
+import { ExplorerGroup, TreeFolder, navigation } from "./workspace-navigation";
 import { RailTooltip } from "./rail-tooltip";
 import { FluidResearchLogo } from "./fluid-research-logo";
 import { useAIActivity } from "@/features/workspace/lib/ai-activity";
@@ -353,6 +353,13 @@ export default function Workspace() {
     }
   }
   const documents = data.documents.filter((item) => item.projectId === data.activeProjectId);
+  // Explorer folders the user opened or closed; the rest use their default (see isFolderOpen).
+  const [folderState, setFolderState] = useState<Record<string, boolean>>({});
+  const isFolderOpen = (key: string, fallback: boolean) => folderState[key] ?? fallback;
+  const setFolderOpen = (key: string, open: boolean) =>
+    setFolderState((current) => ({ ...current, [key]: open }));
+  const toggleFolder = (key: string, fallback: boolean) =>
+    setFolderOpen(key, !isFolderOpen(key, fallback));
   function toggleExplorer() {
     if (window.matchMedia("(max-width: 1023px)").matches) {
       setSidebarOpen(true);
@@ -413,18 +420,20 @@ export default function Workspace() {
             </Link>
           </RailTooltip>
           <div className="rail-tools">
-            {navigation.map(({ id, label, icon: Icon }) => (
-              <RailTooltip key={id} label={label}>
-                <Link
-                  href={`/${id}`}
-                  className={`rail-button ${currentTab?.section === id ? "is-active" : ""}`}
-                  aria-label={label}
-                  aria-current={currentTab?.section === id ? "page" : undefined}
-                >
-                  <Icon size={21} strokeWidth={1.65} />
-                </Link>
-              </RailTooltip>
-            ))}
+            {navigation
+              .filter((item) => item.rail)
+              .map(({ id, label, icon: Icon }) => (
+                <RailTooltip key={id} label={label}>
+                  <Link
+                    href={`/${id}`}
+                    className={`rail-button ${currentTab?.section === id ? "is-active" : ""}`}
+                    aria-label={label}
+                    aria-current={currentTab?.section === id ? "page" : undefined}
+                  >
+                    <Icon size={21} strokeWidth={1.65} />
+                  </Link>
+                </RailTooltip>
+              ))}
           </div>
           <RailTooltip
             label={assistantOpen ? "Close Research Assistant" : "Open Research Assistant"}
@@ -480,13 +489,30 @@ export default function Workspace() {
         >
           <div className="explorer-scroll">
             <ExplorerGroup title="Projects" count={data.projects.length}>
-              {data.projects.map((item) => (
-                <details
-                  key={item.id}
-                  className="project-folder"
-                  open={item.id === data.activeProjectId}
-                >
-                  <summary
+              {data.projects.map((item) => {
+                const active = item.id === data.activeProjectId;
+                const vaultFolder = (name: string) =>
+                  data.folders?.find(
+                    (folder) => folder.parentId === item.id && folder.name.toLowerCase() === name,
+                  );
+                const activate = () => {
+                  if (!active)
+                    void service
+                      .setActiveProject(item.id)
+                      .catch((error) => setNotice(error.message));
+                };
+                return (
+                  <TreeFolder
+                    key={item.id}
+                    label={item.name}
+                    open={isFolderOpen(item.id, active)}
+                    onToggle={() => {
+                      if (active) toggleFolder(item.id, true);
+                      else {
+                        setFolderOpen(item.id, true);
+                        activate();
+                      }
+                    }}
                     onContextMenu={(event) =>
                       showExplorerMenu(event, {
                         id: item.id,
@@ -496,149 +522,104 @@ export default function Workspace() {
                       })
                     }
                   >
-                    <Folder size={14} />
-                    <button
-                      className={item.id === data.activeProjectId ? "selected-project" : ""}
-                      onClick={() =>
-                        void service
-                          .setActiveProject(item.id)
-                          .catch((error) => setNotice(error.message))
+                    <TreeFolder
+                      label="Sources"
+                      open={isFolderOpen(`${item.id}:sources`, true)}
+                      onToggle={() => toggleFolder(`${item.id}:sources`, true)}
+                      action={
+                        active && (
+                          <Link
+                            href="/library"
+                            className="explorer-group-action"
+                            aria-label="Add source"
+                            title="Add source"
+                          >
+                            <Plus size={14} />
+                          </Link>
+                        )
                       }
+                      onContextMenu={(event) => {
+                        const folder = vaultFolder("papers");
+                        if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
+                      }}
                     >
-                      {item.name}
-                    </button>
-                  </summary>
-                  <Link
-                    className="explorer-item project-child"
-                    href="/overview"
-                    onClick={() =>
-                      void service
-                        .setActiveProject(item.id)
-                        .catch((error) => setNotice(error.message))
-                    }
-                  >
-                    <FileText size={13} />
-                    <span>Project overview</span>
-                  </Link>
-                  {(data.folders ?? [])
-                    .filter((folder) => folder.parentId === item.id)
-                    .map((folder) => (
-                      <Link
-                        key={folder.id}
-                        className="explorer-item project-child"
-                        href={
-                          folder.name.toLowerCase().startsWith("notes")
-                            ? "/notes"
-                            : folder.name.toLowerCase().startsWith("papers")
-                              ? "/library"
-                              : "/overview"
-                        }
-                        onClick={() =>
-                          void service
-                            .setActiveProject(item.id)
-                            .catch((error) => setNotice(error.message))
-                        }
-                        onContextMenu={(event) =>
-                          showExplorerMenu(event, {
-                            id: folder.id,
-                            name: folder.name,
-                            kind: "folder",
-                            projectId: item.id,
-                          })
-                        }
-                      >
-                        <Folder size={13} />
-                        <span>{folder.name}</span>
-                      </Link>
-                    ))}
-                </details>
-              ))}
-              <button className="explorer-new" onClick={() => setCreating(true)}>
-                <Plus size={13} /> New project
-              </button>
-            </ExplorerGroup>
-            <ExplorerGroup
-              title="Sources"
-              count={documents.length}
-              onContextMenu={(event) => {
-                const folder = data.folders?.find(
-                  (item) =>
-                    item.parentId === data.activeProjectId && item.name.toLowerCase() === "papers",
+                      {data.documents
+                        .filter((doc) => doc.projectId === item.id)
+                        .map((doc) => (
+                          <Link
+                            key={doc.id}
+                            href={`/reader?doc=${encodeURIComponent(doc.id)}`}
+                            title={doc.title}
+                            onContextMenu={(event) =>
+                              showExplorerMenu(event, {
+                                id: doc.id,
+                                name: doc.title,
+                                kind: "source",
+                                projectId: doc.projectId,
+                              })
+                            }
+                            onClick={() => {
+                              activate();
+                              setActiveDocumentId(doc.id);
+                              setMenuOpen(false);
+                            }}
+                            className={`explorer-item source-item ${currentTab?.documentId === doc.id ? "is-active" : ""}`}
+                          >
+                            <FileText size={14} />
+                            <span>{doc.title}</span>
+                          </Link>
+                        ))}
+                    </TreeFolder>
+                    <TreeFolder
+                      label="Notes"
+                      open={isFolderOpen(`${item.id}:notes`, true)}
+                      onToggle={() => toggleFolder(`${item.id}:notes`, true)}
+                      action={
+                        active && (
+                          <button
+                            className="explorer-group-action"
+                            aria-label="New note"
+                            title="New note (Alt+N)"
+                            onClick={() => void createNote()}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        )
+                      }
+                      onContextMenu={(event) => {
+                        const folder = vaultFolder("notes");
+                        if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
+                      }}
+                    >
+                      {data.notes
+                        .filter((note) => note.projectId === item.id)
+                        .map((note) => (
+                          <Link
+                            key={note.id}
+                            href={`/notes?note=${encodeURIComponent(note.id)}`}
+                            title={note.title}
+                            onContextMenu={(event) =>
+                              showExplorerMenu(event, {
+                                id: note.id,
+                                name: note.title,
+                                kind: "note",
+                                projectId: note.projectId,
+                              })
+                            }
+                            onClick={() => {
+                              activate();
+                              setMenuOpen(false);
+                            }}
+                            className={`explorer-item source-item ${currentTab?.noteId === note.id ? "is-active" : ""}`}
+                          >
+                            <FilePenLine size={14} />
+                            <span>{note.title}</span>
+                          </Link>
+                        ))}
+                    </TreeFolder>
+                  </TreeFolder>
                 );
-                if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
-              }}
-            >
-              {documents.map((doc) => (
-                <Link
-                  key={doc.id}
-                  href={`/reader?doc=${encodeURIComponent(doc.id)}`}
-                  title={doc.title}
-                  onContextMenu={(event) =>
-                    showExplorerMenu(event, {
-                      id: doc.id,
-                      name: doc.title,
-                      kind: "source",
-                      projectId: doc.projectId,
-                    })
-                  }
-                  onClick={() => {
-                    setActiveDocumentId(doc.id);
-                    setMenuOpen(false);
-                  }}
-                  className={`explorer-item source-item ${currentTab?.documentId === doc.id ? "is-active" : ""}`}
-                >
-                  <FileText size={14} />
-                  <span>{doc.title}</span>
-                </Link>
-              ))}
-              {!documents.length && <p className="explorer-empty">No sources in this project.</p>}
-              <Link href="/library" className="explorer-new">
-                <Plus size={13} /> Add source
-              </Link>
-            </ExplorerGroup>
-            <ExplorerGroup
-              title="Notes"
-              count={data.notes.filter((note) => note.projectId === data.activeProjectId).length}
-              onContextMenu={(event) => {
-                const folder = data.folders?.find(
-                  (item) =>
-                    item.parentId === data.activeProjectId && item.name.toLowerCase() === "notes",
-                );
-                if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
-              }}
-            >
-              {data.notes
-                .filter((note) => note.projectId === data.activeProjectId)
-                .map((note) => (
-                  <Link
-                    key={note.id}
-                    href={`/notes?note=${encodeURIComponent(note.id)}`}
-                    title={note.title}
-                    onContextMenu={(event) =>
-                      showExplorerMenu(event, {
-                        id: note.id,
-                        name: note.title,
-                        kind: "note",
-                        projectId: note.projectId,
-                      })
-                    }
-                    onClick={() => setMenuOpen(false)}
-                    className={`explorer-item source-item ${currentTab?.noteId === note.id ? "is-active" : ""}`}
-                  >
-                    <FilePenLine size={14} />
-                    <span>{note.title}</span>
-                  </Link>
-                ))}
-              <button
-                className="explorer-new"
-                title="New note (Alt+N)"
-                onClick={() => void createNote()}
-              >
-                <Plus size={13} /> New note
-              </button>
-              <Link href="/notes" className="explorer-new">
-                Browse notes
-              </Link>
+              })}
             </ExplorerGroup>
           </div>
           <div className="sidebar-assistant">
@@ -656,7 +637,7 @@ export default function Workspace() {
                 />
               </span>
             </button>
-            {process.env.NODE_ENV === "development" && (
+            {process.env.NODE_ENV === "development" && params.has("devtools") && (
               <details className="dev-controls">
                 <summary>AI Animation Testing</summary>
                 <p role="status">
@@ -967,29 +948,9 @@ export default function Workspace() {
                           fallback={<p className="text-sm text-muted">Opening research view…</p>}
                         >
                           {tab.section === "empty" ? (
-                            <NewTab
-                              onBrowse={() => {
-                                setSidebarOpen(true);
-                                if (compactViewport) setMenuOpen(true);
-                              }}
-                            />
+                            <NewTab />
                           ) : tab.section === "reader" ? (
-                            <ReaderView
-                              passageId={tab.passageId}
-                              documentId={tab.documentId}
-                              onOpenDocument={(documentId) => {
-                                openTab(
-                                  {
-                                    id: `${data.activeProjectId}:reader:${documentId}`,
-                                    section: "reader",
-                                    projectId: data.activeProjectId,
-                                    documentId,
-                                  },
-                                  target,
-                                );
-                                setActiveDocumentId(documentId);
-                              }}
-                            />
+                            <ReaderView passageId={tab.passageId} documentId={tab.documentId} />
                           ) : tab.section === "graph" ? (
                             <KnowledgeGraph
                               mode={tab.graphMode || "project"}
@@ -1075,12 +1036,7 @@ export default function Workspace() {
                   style={{ gridArea: `body${target}` }}
                   onPointerDown={() => setPanel(target)}
                 >
-                  <NewTab
-                    onBrowse={() => {
-                      setSidebarOpen(true);
-                      if (compactViewport) setMenuOpen(true);
-                    }}
-                  />
+                  <NewTab />
                 </div>
               ))}
           </main>
@@ -1132,6 +1088,20 @@ export default function Workspace() {
             menu={explorerMenu}
             onClose={closeExplorerMenu}
             onOpen={() => void openExplorerItem(explorerMenu.target)}
+            onCopyCitation={
+              explorerMenu.target.kind === "source"
+                ? () => {
+                    const source = data.documents.find(
+                      (item) => item.id === explorerMenu.target.id,
+                    );
+                    setExplorerMenu(null);
+                    if (!source) return;
+                    copyText(toBibtex(source))
+                      .then(() => setNotice("BibTeX citation copied."))
+                      .catch((error: Error) => setNotice(error.message));
+                  }
+                : undefined
+            }
             onDelete={() => {
               const target = explorerMenu.target;
               setExplorerMenu(null);

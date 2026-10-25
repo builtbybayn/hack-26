@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useWorkspace } from "@/features/workspace/lib/workspace-context";
 import { useKnowledge } from "@/features/workspace/lib/knowledge-context";
 import { overlaps, shortLabel, type LabelRect } from "@/features/workspace/lib/graph-labels";
@@ -20,6 +21,8 @@ export function KnowledgeGraph({
   onModeChange: (mode: "project" | "brain") => void;
   onOpen: (node: KnowledgeNode, other: boolean) => void;
 }) {
+  // Development test data appears only with ?devtools in the URL.
+  const devtools = useSearchParams().has("devtools");
   const { data, service, setNotice } = useWorkspace(),
     { graph, busy, status, rebuild, review, cancel, analyzeDemo, setAnalyzeDemo } = useKnowledge();
   const layout = useRef<GraphLayout | null>(null),
@@ -379,57 +382,28 @@ export function KnowledgeGraph({
             className={mode === "project" ? "active" : ""}
             onClick={() => setMode("project")}
           >
-            Project Graph
+            This project
           </button>
           <button
             aria-pressed={mode === "brain"}
             className={mode === "brain" ? "active" : ""}
             onClick={() => setMode("brain")}
           >
-            Second Brain
+            All projects
           </button>
         </div>
         <input
           className="input"
           aria-label="Search graph"
-          placeholder="Search knowledge…"
+          placeholder="Search…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select
-          className="input"
-          aria-label="Relationship type"
-          value={relation}
-          onChange={(e) => setRelation(e.target.value)}
-        >
-          <option value="">All relationships</option>
-          {[...new Set(graph.edges.map((e) => e.relationshipType))].map((t) => (
-            <option key={t}>{t}</option>
-          ))}
-        </select>
-        <label>
-          <input
-            type="checkbox"
-            checked={suggestions}
-            onChange={(e) => setSuggestions(e.target.checked)}
-          />{" "}
-          Suggestions
-        </label>
-        <button
-          className="btn"
-          onClick={() => {
-            layout.current = createGraphLayout(visible);
-            points.current = layout.current.points;
-            centerGraph();
-            tick.current = 0;
-            setFocus("");
-          }}
-        >
-          Reset layout
-        </button>
-        <button className="btn" disabled={busy} onClick={() => void rebuild(true)}>
-          Rebuild Knowledge Graph
-        </button>
+        {process.env.NEXT_PUBLIC_RESEARCH_API_BASE && (
+          <button className="btn" disabled={busy} onClick={() => void rebuild(true)}>
+            Rebuild
+          </button>
+        )}
         {busy && (
           <button className="btn" onClick={cancel}>
             Cancel
@@ -437,12 +411,7 @@ export function KnowledgeGraph({
         )}
       </div>
       <p className="graph-status" role="status">
-        {visible.length} nodes · {links.length} connections ·{" "}
-        {status ||
-          (!process.env.NEXT_PUBLIC_RESEARCH_API_BASE
-            ? "Explicit relationships. Connect an AI research backend for semantic discovery."
-            : "Stored relationships and reviewable semantic suggestions.")}{" "}
-        Dashed lines are suggestions; seeded examples are manually authored TEST DATA.
+        {visible.length} nodes · {links.length} connections{status ? ` · ${status}` : ""}
       </p>
       <div className="graph-stage">
         <canvas
@@ -525,6 +494,38 @@ export function KnowledgeGraph({
             <div>
               <select
                 className="input"
+                aria-label="Relationship type"
+                value={relation}
+                onChange={(e) => setRelation(e.target.value)}
+              >
+                <option value="">All relationships</option>
+                {[...new Set(graph.edges.map((e) => e.relationshipType))].map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={suggestions}
+                  onChange={(e) => setSuggestions(e.target.checked)}
+                />{" "}
+                Suggestions
+              </label>
+              <button
+                className="btn"
+                onClick={() => {
+                  layout.current = createGraphLayout(visible);
+                  points.current = layout.current.points;
+                  centerGraph();
+                  tick.current = 0;
+                  setFocus("");
+                }}
+              >
+                Reset layout
+              </button>
+
+              <select
+                className="input"
                 aria-label="Node type"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
@@ -557,18 +558,10 @@ export function KnowledgeGraph({
               centerGraph();
             }}
           >
-            Reset View
-          </button>
-          <button
-            className="btn"
-            onClick={() => {
-              centerGraph();
-            }}
-          >
-            Center Graph
+            Center
           </button>
           <button className="btn" aria-pressed={labels} onClick={() => setLabels(!labels)}>
-            {labels ? "Hide" : "Show"} Labels
+            Labels
           </button>
           <button
             className="btn"
@@ -712,7 +705,7 @@ export function KnowledgeGraph({
           </button>
         ))}
       </details>
-      {process.env.NODE_ENV === "development" && (
+      {process.env.NODE_ENV === "development" && devtools && (
         <details className="dev-controls">
           <summary>Development Test Data</summary>
           <span>Fictional DEMO records · removable · no verified citations.</span>

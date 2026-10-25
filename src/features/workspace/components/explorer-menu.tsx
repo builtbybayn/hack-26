@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { ExternalLink, RotateCcw, Trash2, X } from "lucide-react";
+import { ExternalLink, Quote, RotateCcw, Trash2, X } from "lucide-react";
 import type { TrashItem } from "../lib/models";
 import "./explorer-menu.css";
 
@@ -42,11 +42,14 @@ export function ExplorerContextMenu({
   onClose,
   onOpen,
   onDelete,
+  onCopyCitation,
 }: {
   menu: ExplorerMenuState;
   onClose: () => void;
   onOpen: () => void;
   onDelete: () => void;
+  /** Sources only: copy a BibTeX citation. */
+  onCopyCitation?: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -92,6 +95,11 @@ export function ExplorerContextMenu({
         <button role="menuitem" onClick={onOpen}>
           <ExternalLink size={14} /> Open
         </button>
+        {onCopyCitation && (
+          <button role="menuitem" onClick={onCopyCitation}>
+            <Quote size={14} /> Copy citation (BibTeX)
+          </button>
+        )}
         <hr />
         <button role="menuitem" className="explorer-menu-delete" onClick={onDelete}>
           <Trash2 size={14} /> Delete

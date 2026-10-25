@@ -27,16 +27,8 @@ export function RoadmapView({ conceptId }: { conceptId?: string } = {}) {
       <>
         <PageHeading
           eyebrow="KNOWLEDGE ROADMAP"
-          title={
-            plannedRoadmap
-              ? `${project?.name || "Research"} · Roadmap`
-              : "Discover the prerequisites."
-          }
-          description={
-            plannedRoadmap
-              ? "Your learning path, from foundations to the research frontier."
-              : "Prerequisite analysis appears here when a source has been processed."
-          }
+          title={plannedRoadmap ? `${project?.name || "Research"} · Roadmap` : "Roadmap"}
+          description={plannedRoadmap ? "From foundations to the research frontier." : ""}
         />
         {plannedRoadmap ? (
           <section className="surface workspace-note-card workspace-roadmap-card">
@@ -51,7 +43,7 @@ export function RoadmapView({ conceptId }: { conceptId?: string } = {}) {
         ) : (
           <Empty
             title="No concepts yet"
-            detail="Add a source to this project. Backend prerequisite analysis will create a located learning path."
+            detail="They appear once a paper in this project is analyzed."
           />
         )}
       </>
@@ -60,7 +52,7 @@ export function RoadmapView({ conceptId }: { conceptId?: string } = {}) {
     <>
       <PageHeading
         eyebrow="KNOWLEDGE ROADMAP"
-        title="Knowledge roadmap"
+        title="Roadmap"
         description=""
         action={
           <div className="flex gap-2">
@@ -282,7 +274,7 @@ export function EvidenceView({
   }
   return (
     <>
-      <PageHeading eyebrow="ASSUMPTIONS & EVIDENCE" title="Assumptions & evidence" description="" />
+      <PageHeading eyebrow="ASSUMPTIONS & EVIDENCE" title="Evidence" description="" />
       {selected ? (
         <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="surface h-fit rounded-xl p-4">
@@ -389,7 +381,7 @@ export function EvidenceView({
         </section>
       ) : (
         <div className="surface rounded-xl p-8 text-sm text-muted">
-          No findings yet. Add sources and ask the assistant to compare a claim.
+          No findings yet. Possible conflicts appear once papers on the same topic are analyzed.
         </div>
       )}
     </>

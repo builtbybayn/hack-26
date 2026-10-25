@@ -87,7 +87,7 @@ export function NotesView({ noteId }: { noteId?: string } = {}) {
     <>
       <PageHeading
         eyebrow="NOTES & QUESTIONS"
-        title="Notes & questions"
+        title="Notes"
         description=""
         action={
           <button className="btn btn-primary" onClick={() => void createNote()}>
@@ -180,7 +180,7 @@ export function NotesView({ noteId }: { noteId?: string } = {}) {
           <div className="lg:col-span-2">
             <Empty
               title={query ? "No notes match your search" : "No notes yet"}
-              detail="Create a note or save a finding from the evidence view."
+              detail="Notes you write, and findings you save, appear here."
               action={
                 <button className="btn btn-primary" onClick={() => void createNote()}>
                   Create a note
@@ -387,7 +387,7 @@ export function WritingView() {
       <div className="no-print">
         <PageHeading
           eyebrow="WRITING WORKSPACE"
-          title="Writing workspace"
+          title="Writing"
           description=""
           action={
             <div className="flex gap-2 rounded-lg border border-line bg-surface p-1">
@@ -417,26 +417,37 @@ export function WritingView() {
           {saveError
             ? "Couldn't save — edit again to retry"
             : saved === "saved"
-              ? "Saved locally"
-              : "Saving…"}{" "}
-          <span>· APA 7 initial style</span>
+              ? "Saved"
+              : "Saving…"}
         </div>
         <div className="flex gap-2">
-          <button className="btn" onClick={() => setSide(!side)}>
-            <BookOpen size={14} />
-            {side ? "Hide sources" : "Show sources"}
-          </button>
-          <button className="btn" onClick={() => setCitationOpen(true)}>
-            <Quote size={14} /> Insert citation
+          <button
+            className="btn btn-quiet"
+            aria-pressed={side}
+            aria-label={side ? "Hide sources" : "Show sources"}
+            title={side ? "Hide sources" : "Show sources"}
+            onClick={() => setSide(!side)}
+          >
+            <BookOpen size={16} />
           </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-quiet"
+            aria-label="Insert citation"
+            title="Insert citation"
+            onClick={() => setCitationOpen(true)}
+          >
+            <Quote size={16} />
+          </button>
+          <button
+            className="btn btn-quiet"
+            aria-label="Print or save as PDF"
+            title="Print or save as PDF"
             onClick={() => {
               setMode("final");
               setTimeout(() => window.print(), 100);
             }}
           >
-            <Printer size={14} /> Print / PDF
+            <Printer size={16} />
           </button>
         </div>
       </div>
@@ -445,14 +456,13 @@ export function WritingView() {
           {mode === "draft" ? (
             <div className="surface rounded-xl p-5 sm:p-8">
               <div className="mx-auto max-w-[720px]">
-                <label className="block text-xs text-muted">
-                  Paper title
-                  <input
-                    className="mt-2 w-full border-0 border-b border-line bg-transparent pb-3 text-2xl font-semibold outline-none focus:border-neutral"
-                    value={local.title}
-                    onChange={(event) => change("title", event.target.value)}
-                  />
-                </label>
+                <input
+                  aria-label="Paper title"
+                  placeholder="Untitled paper"
+                  className="w-full border-0 border-b border-line bg-transparent pb-3 text-2xl font-semibold outline-none focus:border-neutral"
+                  value={local.title}
+                  onChange={(event) => change("title", event.target.value)}
+                />
                 <details className="research-details">
                   <summary>Authors & abstract</summary>
                   <label className="mt-5 block text-xs text-muted">
@@ -505,9 +515,6 @@ export function WritingView() {
                   >
                     <List size={16} />
                   </button>
-                  <span className="ml-auto self-center text-[11px] text-muted">
-                    Markdown formatting
-                  </span>
                 </div>
                 <label className="sr-only" htmlFor={bodyId}>
                   Paper body
@@ -656,73 +663,26 @@ export function WritingView() {
 }
 
 export function ExtensionView() {
-  const { data, service, setNotice } = useWorkspace();
-  const [quick, setQuick] = useState("");
-  const [saving, setSaving] = useState(false);
-  async function saveQuickNote() {
-    if (!quick.trim() || saving) return;
-    setSaving(true);
-    try {
-      await service.saveNote({
-        projectId: data.activeProjectId,
-        title: "Browser research note",
-        body: quick.trim(),
-        question: false,
-        resolved: false,
-      });
-      setQuick("");
-      setNotice("Note saved to this project.");
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Could not save note.");
-    } finally {
-      setSaving(false);
-    }
-  }
   return (
     <>
       <PageHeading
         eyebrow="BROWSER COMPANION"
-        title="Browser companion"
-        description="Read, capture, and discuss papers alongside the pages you visit."
+        title="Extension"
+        description="Analyze a PDF from any tab and send it to your workspace."
       />
-      <section className="surface rounded-xl p-6">
-        <h2 className="text-lg font-semibold">Open the research assistant</h2>
-        <p className="mt-3 text-sm leading-7 text-muted">
-          The Fluid Research browser extension opens the assistant beside your current tab. It can
-          save an accessible page or PDF, analyze its concepts, and open the saved paper in this
-          workspace. The panel and workspace share this browser’s saved data when they use the same
-          app address.
-        </p>
-        <Link className="btn btn-primary mt-5" href="/panel" target="_blank">
-          Open assistant panel <ArrowRight size={14} />
-        </Link>
-        <p className="mt-3 text-xs text-muted">
-          Capturing the current browser tab requires the installed extension. The standalone panel
-          supports chat and file uploads.
-        </p>
-      </section>
-      <section className="surface mt-5 rounded-xl p-6">
-        <h2 className="text-lg font-semibold">Capture a research note</h2>
-        <p className="mt-2 text-xs text-muted">
-          Saved to {data.projects.find((project) => project.id === data.activeProjectId)?.name}.
-        </p>
-        <label className="mt-4 block text-sm">
-          Note
-          <textarea
-            className="input mt-2 min-h-32"
-            value={quick}
-            onChange={(event) => setQuick(event.target.value)}
-            placeholder="Capture a thought from your reading…"
-          />
-        </label>
-        <button
-          className="btn btn-primary mt-3"
-          onClick={() => void saveQuickNote()}
-          disabled={saving || !quick.trim()}
-        >
-          <Save size={14} /> {saving ? "Saving…" : "Save note"}
-        </button>
-      </section>
+      <ol className="extension-steps">
+        <li>
+          Open <code>chrome://extensions</code> and turn on Developer mode.
+        </li>
+        <li>
+          Choose <strong>Load unpacked</strong> and select the project’s <code>extension</code>{" "}
+          folder.
+        </li>
+        <li>Pin Fluid Research and click its icon to open the side panel.</li>
+      </ol>
+      <Link className="btn mt-6" href="/panel" target="_blank">
+        Preview the panel <ArrowRight size={14} />
+      </Link>
     </>
   );
 }

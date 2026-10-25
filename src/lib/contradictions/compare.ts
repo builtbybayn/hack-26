@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { generateJson as geminiJson } from "@/lib/ai/gemini";
+import { generateJson as geminiJson } from "@/lib/ai/llm";
 import { generateJson as grokJson, isGrokConfigured } from "@/lib/ai/grok";
 import type {
   Claim,

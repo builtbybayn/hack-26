@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { generateJson } from "@/lib/ai/gemini";
+import { generateJson } from "@/lib/ai/llm";
 import type { Roadmap, RoadmapRequest, RoadmapResult, RoadmapStage } from "@/types/roadmap";
 import { openAlex, type ResearchProvider } from "./provider";
 

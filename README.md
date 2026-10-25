@@ -35,28 +35,30 @@ Open `http://localhost:3000` for the research vault. Standard PDF extraction wor
 
 ## Environment configuration
 
-| Variable                             | Purpose                                                       |
-| ------------------------------------ | ------------------------------------------------------------- |
-| `GEMINI_API_KEY`                     | Server-only Google AI Studio API key                          |
-| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-3.5-flash`        |
-| `GEMINI_FALLBACK_MODEL`              | Used when the main model is overloaded; `gemini-2.5-flash`    |
-| `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review       |
-| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                            |
-| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget           |
-| `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
-| `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
-| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
-| `XAI_API_KEY` / `XAI_MODEL`          | Optional Grok check of candidate cross-paper conflicts        |
-| `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
-| `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
-| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen          |
-| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality            |
+| Variable                             | Purpose                                                                     |
+| ------------------------------------ | --------------------------------------------------------------------------- |
+| `LUMINAL_API_KEY`                    | Main AI provider (Luminal, OpenAI-compatible); server-only                  |
+| `LUMINAL_BASE_URL`, `LUMINAL_MODEL`  | Default `https://flash.luminal.cloud/v1`, `deepseek-ai/DeepSeek-V4.1-Flash` |
+| `GEMINI_API_KEY`                     | Fallback AI provider (Google AI Studio); server-only                        |
+| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-3.5-flash`                      |
+| `GEMINI_FALLBACK_MODEL`              | Used when the main model is overloaded; `gemini-2.5-flash`                  |
+| `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review                     |
+| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                                          |
+| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget                         |
+| `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                                 |
+| `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest`               |
+| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                                             |
+| `XAI_API_KEY` / `XAI_MODEL`          | Optional Grok check of candidate cross-paper conflicts                      |
+| `PDF_PARSER`                         | Deployment default (`auto` is recommended)                                  |
+| `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                                 |
+| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen                        |
+| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality                          |
 
 Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
 
 ### Gemini setup
 
-Create a key in Google AI Studio, set `GEMINI_API_KEY`, and choose a currently supported model through `GEMINI_MODEL`. The backend uses the official `@google/genai` SDK, JSON response schemas, Zod validation, and at most three attempts for malformed model output.
+Luminal is the main AI provider: set `LUMINAL_API_KEY` (an OpenAI-compatible bearer token). Gemini is the fallback when Luminal is busy or not configured. For Gemini, create a key in Google AI Studio, set `GEMINI_API_KEY`, and choose a currently supported model through `GEMINI_MODEL`. The backend uses the official `@google/genai` SDK, JSON response schemas, Zod validation, and at most three attempts for malformed model output.
 
 ### Mistral OCR setup
 
@@ -188,7 +190,7 @@ Do not expose this backend publicly without adding authentication, authorization
 
 ## Troubleshooting
 
-- **Gemini is not configured:** set `GEMINI_API_KEY` in `.env.local` and restart Next.js.
+- **No AI provider is configured:** set `LUMINAL_API_KEY` (or `GEMINI_API_KEY`) in `.env.local` and restart Next.js.
 - **OCR is not configured:** add the selected provider credentials or use Standard parsing.
 - **Consent required:** check the external-processing control before Advanced OCR.
 - **Low extraction quality:** use Automatic with consent or Advanced OCR; Mathpix is often preferable for dense equations.

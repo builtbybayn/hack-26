@@ -52,8 +52,8 @@ export function FullPdfPreview() {
     <details className={styles.pdfPreview}>
       <summary>Analyze full PDF with page citations</summary>
       <p>
-        Upload this paper&apos;s PDF. Its extracted text is sent to Gemini for analysis. Check that
-        the file matches the record above.
+        Upload this paper&apos;s PDF. Its extracted text is sent to the AI model for analysis. Check
+        that the file matches the record above.
       </p>
       <label>
         PDF file

@@ -738,3 +738,161 @@ body:has(.ext) {
     animation: none;
   }
 }
+
+/* ---- Start screen (off a PDF): one prompt, project or ask ----------------------------------- */
+
+.ext-start {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 16px 20px;
+  overflow-y: auto;
+}
+
+.ext-start-title {
+  margin: 4px 0 6px;
+  color: var(--text-normal);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.ext-start-subtitle {
+  margin: 0 auto 20px;
+  max-width: 300px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.ext-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 12px 8px;
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 12px;
+  background: var(--background-primary);
+  transition: border-color 120ms ease;
+}
+
+.ext-composer:focus-within {
+  border-color: var(--interactive-accent);
+}
+
+.ext-composer textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 15px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+.ext-composer textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.ext-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ext-switch {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--background-secondary);
+}
+
+.ext-switch button {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ext-switch button[aria-checked="true"] {
+  background: var(--background-modifier-active);
+  color: var(--text-normal);
+}
+
+.ext-send-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.ext-send-button:disabled {
+  background: var(--background-modifier-active);
+  color: var(--text-faint);
+}
+
+.ext-suggestions {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ext-suggestions button {
+  display: block;
+  width: 100%;
+  padding: 8px 4px;
+  border: 0;
+  border-top: 1px solid var(--background-modifier-border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.ext-suggestions li:first-child button {
+  border-top: 0;
+}
+
+.ext-suggestions button:hover {
+  color: var(--text-normal);
+}
+
+.ext-continue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 13px;
+  text-align: left;
+}
+
+.ext-continue small {
+  display: block;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.ext-continue:hover {
+  border-color: var(--interactive-accent);
+}

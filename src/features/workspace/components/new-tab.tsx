@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
 import { useWorkspace } from "@/features/workspace/lib/workspace-context";
 
-export function NewTab({ onBrowse }: { onBrowse: () => void }) {
+export function NewTab() {
   const { service, setAssistantOpen } = useWorkspace();
   const router = useRouter();
   const promptId = useId();
@@ -40,7 +40,7 @@ export function NewTab({ onBrowse }: { onBrowse: () => void }) {
   return (
     <section className="new-tab-screen" aria-label="New Tab">
       <div className="new-tab-inner">
-        <h1>Let’s get started</h1>
+        <h1>What are you researching?</h1>
         <form
           className="project-prompt"
           aria-busy={busy}
@@ -54,7 +54,7 @@ export function NewTab({ onBrowse }: { onBrowse: () => void }) {
           </label>
           <textarea
             id={promptId}
-            placeholder="Write a prompt to start a project…"
+            placeholder="Describe a topic or question. You’ll get a project with a roadmap of what to learn and read."
             value={prompt}
             disabled={busy || created}
             onChange={(event) => setPrompt(event.target.value)}
@@ -66,16 +66,12 @@ export function NewTab({ onBrowse }: { onBrowse: () => void }) {
             }}
           />
           <div className="prompt-toolbar">
-            <span>⌘ / Ctrl + Enter</span>
-            <button className="btn" disabled={!prompt.trim() || busy || created}>
-              {busy ? "Planning your roadmap…" : "Create project"}
+            <span>{busy ? "Planning takes about a minute." : ""}</span>
+            <button className="btn btn-primary" disabled={!prompt.trim() || busy || created}>
+              {busy ? "Planning…" : "Start project"}
             </button>
           </div>
         </form>
-        <p className="prompt-help">
-          Describe your research. We’ll give it a concise name and create a Roadmap note with the
-          concepts to learn and real papers to read, in order. Planning takes about a minute.
-        </p>
         {error && (
           <div className="prompt-error" role="alert">
             {error}
@@ -95,10 +91,9 @@ export function NewTab({ onBrowse }: { onBrowse: () => void }) {
             )}
           </div>
         )}
-        <nav className="new-tab-actions" aria-label="Research quick actions">
-          <button onClick={onBrowse}>Browse Projects</button>
-          <Link href="/library">Research Library</Link>
-          <Link href="/graph?mode=brain">Second Brain</Link>
+        <nav className="new-tab-links" aria-label="Shortcuts">
+          <Link href="/library">Library</Link>
+          <Link href="/graph?mode=brain">Graph</Link>
           <button onClick={() => setAssistantOpen(true)}>Ask AI</button>
         </nav>
       </div>

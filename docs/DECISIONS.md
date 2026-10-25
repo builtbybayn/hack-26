@@ -173,3 +173,10 @@ five study fields. It removes quotes that do not match the cited parsed page. Th
 the user's local PDF during that session; no remote PDF fetching, server persistence, or claim
 that the uploaded file matches the provider record is added. Reject extracted text over 160,000
 characters so a preview never silently omits part of the PDF.
+
+### 27. Luminal is the main AI provider, Gemini the fallback
+
+**Confirmed.** Gemini rate-limited us, so model calls go to Luminal's OpenAI-compatible API
+(DeepSeek V4.1 Flash) through one entry point, `src/lib/ai/llm.ts`. It is called with plain
+`fetch` (no new SDK), server-only, with the key in `LUMINAL_API_KEY`. Gemini remains as an
+automatic fallback, so a Luminal outage or rate limit doesn't stop the app.

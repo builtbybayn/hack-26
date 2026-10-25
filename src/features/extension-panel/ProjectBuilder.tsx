@@ -29,10 +29,16 @@ const STORAGE_KEY = "panelProject";
 export function ProjectBuilder({
   onOpenEntry,
   onActiveChange,
+  initialIdea,
+  onExit,
 }: {
   onOpenEntry: (entryId: string, projectId?: string) => void;
   /** Whether a project is being shaped, so the panel can give it more room. */
   onActiveChange?: (active: boolean) => void;
+  /** An idea from the start screen: planning starts right away. */
+  initialIdea?: string | null;
+  /** Leave for the start screen (after "New project"). */
+  onExit?: () => void;
 }) {
   const [project, setProject] = useState<Project | null>(null);
   const [draft, setDraft] = useState("");
@@ -162,6 +168,16 @@ export function ProjectBuilder({
     }
   }
 
+  // Plan the idea handed over by the start screen, once.
+  const startedIdea = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialIdea || startedIdea.current === initialIdea) return;
+    startedIdea.current = initialIdea;
+    void Promise.resolve().then(() => create(initialIdea));
+    // `create` is recreated each render; the ref makes this run once per idea.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIdea]);
+
   const submit = () => {
     const text = draft.trim();
     if (!text || working) return;
@@ -233,6 +249,7 @@ export function ProjectBuilder({
                 onClick={() => {
                   remember(null);
                   setError(null);
+                  onExit?.();
                 }}
                 disabled={working}
               >

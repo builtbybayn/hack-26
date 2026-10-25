@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { VOICE_ID_PATTERN } from "@/lib/voice/presets";
 import { BROWSER_VOICE_ID, type VoiceOption } from "@/types/voice";
 import {
@@ -21,7 +21,6 @@ export function VoicePicker() {
   const [customOpen, setCustomOpen] = useState(false);
   const [customId, setCustomId] = useState("");
   const [customError, setCustomError] = useState<string | null>(null);
-  const previewRef = useRef<HTMLAudioElement | null>(null);
 
   const data = catalog?.ok ? catalog.data : null;
   const configured = data?.configured ?? false;
@@ -52,13 +51,6 @@ export function VoicePicker() {
     updateVoicePreferences({ voice: { id, name: `Voice ${id.slice(0, 6)}…` } });
   };
 
-  const preview = () => {
-    if (!selected?.previewUrl) return;
-    previewRef.current?.pause();
-    previewRef.current = new Audio(selected.previewUrl);
-    void previewRef.current.play().catch(() => undefined);
-  };
-
   return (
     <div className="voice-picker">
       <label>
@@ -84,15 +76,10 @@ export function VoicePicker() {
             <option value={CUSTOM} disabled={!configured}>
               Paste a voice ID…
             </option>
-            <option value={BROWSER_VOICE_ID}>Browser voice (offline, not ElevenLabs)</option>
+            <option value={BROWSER_VOICE_ID}>Browser voice</option>
           </optgroup>
         </select>
       </label>
-      {selected?.previewUrl && (
-        <button type="button" className="secondary" onClick={preview}>
-          Preview
-        </button>
-      )}
       {customOpen && (
         <div className="voice-custom">
           <label>
@@ -108,16 +95,13 @@ export function VoicePicker() {
           <button type="button" className="primary" onClick={applyCustom}>
             Use voice
           </button>
-          <small id="voice-custom-hint">
-            {customError ??
-              "Find it in ElevenLabs under My Voices. Library voices must be added to the account first."}
-          </small>
+          <small id="voice-custom-hint">{customError ?? "From ElevenLabs › My Voices."}</small>
         </div>
       )}
       {catalog && !configured && (
         <small className="voice-note">
           {catalog.ok
-            ? "ElevenLabs isn't configured on the server, so the browser voice is used."
+            ? "Using the browser voice (ElevenLabs isn't configured)."
             : catalog.error.message}
         </small>
       )}
@@ -126,13 +110,9 @@ export function VoicePicker() {
 }
 
 function VoiceOptionItem({ option, disabled }: { option: VoiceOption; disabled: boolean }) {
-  const description =
-    option.description && option.description.length > 48
-      ? `${option.description.slice(0, 47)}…`
-      : option.description;
   return (
-    <option value={option.id} disabled={disabled}>
-      {description ? `${option.name} · ${description}` : option.name}
+    <option value={option.id} disabled={disabled} title={option.description ?? undefined}>
+      {option.name}
     </option>
   );
 }

@@ -13,6 +13,7 @@ const blank = () =>
     annotations: [],
     drafts: {},
     conversations: {},
+    chatHistory: {},
     uploads: [],
     activeProjectId: "real",
     draft: {

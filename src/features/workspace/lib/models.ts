@@ -161,6 +161,8 @@ export interface WorkspaceData {
   drafts: Record<ID, Draft>;
   conversation: Conversation;
   conversations: Record<ID, Conversation>;
+  /** Earlier chats per project, newest first. The current chat is in `conversations`. */
+  chatHistory: Record<ID, Conversation[]>;
   uploads: UploadJob[];
   activeProjectId: ID;
 }

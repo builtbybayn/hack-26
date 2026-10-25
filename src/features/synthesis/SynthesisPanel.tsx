@@ -105,7 +105,7 @@ export function SynthesisPanel({
       <h2 id="synthesis-heading">Across the literature</h2>
       <p>
         Select two to four analyzed documents attached to this project. Their excerpts are sent to
-        Gemini. Page quotes and the interpretation of each finding are checked before display.
+        the AI model. Page quotes and the interpretation of each finding are checked before display.
       </p>
       <div className={styles.selection}>
         {records.map((item) => (

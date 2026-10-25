@@ -6,7 +6,8 @@
  */
 import { useId, useState } from "react";
 import Link from "next/link";
-import { BookOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Check, Headphones, PanelRightClose, PanelRightOpen, Quote, X } from "lucide-react";
+import { copyText, toBibtex } from "@/features/workspace/lib/bibtex";
 import { PaperView, type PaperFocus } from "@/features/paper-reader/PaperView";
 import { useSettings } from "@/features/vault/use-settings";
 import { usePaperRecord } from "@/features/workspace/lib/use-paper-record";
@@ -21,20 +22,14 @@ import "./reader.css";
 export function ReaderView({
   documentId,
   passageId,
-  onOpenDocument,
-}: { documentId?: string; passageId?: string; onOpenDocument?: (id: string) => void } = {}) {
-  const {
-    data,
-    service,
-    activeDocumentId,
-    setActiveDocumentId,
-    setSelection,
-    setScope,
-    setAssistantOpen,
-  } = useWorkspace();
+}: { documentId?: string; passageId?: string } = {}) {
+  const { data, service, activeDocumentId, setSelection, setScope, setAssistantOpen, setNotice } =
+    useWorkspace();
   const fieldId = useId();
   const settings = useSettings();
   const [sideOpen, setSideOpen] = useState(false);
+  const [listenOpen, setListenOpen] = useState(false);
+  const [cited, setCited] = useState(false);
   const [tagText, setTagText] = useState("");
 
   const documents = data.documents.filter(
@@ -135,17 +130,48 @@ export function ReaderView({
               author={settings.authorName}
               focus={focus}
               toolbarActions={
-                <button
-                  type="button"
-                  className="clickable-icon"
-                  aria-label={sideOpen ? "Hide document context" : "Show document context"}
-                  aria-expanded={sideOpen}
-                  aria-controls={`${fieldId}-context`}
-                  title={sideOpen ? "Hide document context" : "Show document context"}
-                  onClick={() => setSideOpen(!sideOpen)}
-                >
-                  {sideOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    className="reader-listen-button"
+                    aria-pressed={listenOpen}
+                    aria-controls={`${fieldId}-listen`}
+                    disabled={!record}
+                    title="Read this paper aloud"
+                    onClick={() => setListenOpen(!listenOpen)}
+                  >
+                    <Headphones size={16} aria-hidden />
+                    <span>{listenOpen ? "Listening" : "Read aloud"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="reader-cite-button"
+                    title="Copy a BibTeX citation"
+                    onClick={() =>
+                      void copyText(toBibtex(doc))
+                        .then(() => {
+                          setCited(true);
+                          setNotice("BibTeX citation copied.");
+                          setTimeout(() => setCited(false), 2000);
+                        })
+                        .catch((error: Error) => setNotice(error.message))
+                    }
+                  >
+                    {cited ? <Check size={15} aria-hidden /> : <Quote size={15} aria-hidden />}
+                    <span>{cited ? "Copied" : "Cite"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="clickable-icon"
+                    aria-label={sideOpen ? "Hide document context" : "Show document context"}
+                    aria-expanded={sideOpen}
+                    aria-controls={`${fieldId}-context`}
+                    title={sideOpen ? "Hide document context" : "Show document context"}
+                    onClick={() => setSideOpen(!sideOpen)}
+                  >
+                    {sideOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                  </button>
+                </>
               }
               onAskAi={(passage) => {
                 setSelection({
@@ -156,10 +182,38 @@ export function ReaderView({
                 });
                 setScope("selection");
                 setAssistantOpen(true);
+                // Each "Ask AI" starts a fresh chat; earlier ones stay under "Select chat".
+                if (data.conversation.messages.length) void service.newChat();
               }}
             />
           )}
         </div>
+
+        {listenOpen && record && (
+          <aside
+            id={`${fieldId}-listen`}
+            className="reader-listen theme-obsidian"
+            data-theme="dark"
+            aria-label="Read aloud"
+          >
+            <header className="reader-context-heading">
+              <h2>Read aloud</h2>
+              <button
+                className="icon-button"
+                aria-label="Close read aloud"
+                onClick={() => setListenOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </header>
+            <ReadAloudPanel
+              document={record.document}
+              onOpenPage={(pageNumber) =>
+                setFocus({ documentId: doc.id, pageNumber, nonce: Date.now() })
+              }
+            />
+          </aside>
+        )}
 
         {sideOpen && (
           <aside
@@ -168,7 +222,7 @@ export function ReaderView({
             aria-label="Document context"
           >
             <header className="reader-context-heading">
-              <h2>Document context</h2>
+              <h2>Info</h2>
               <button
                 className="icon-button"
                 aria-label="Close document context"
@@ -177,61 +231,135 @@ export function ReaderView({
                 <PanelRightClose size={18} />
               </button>
             </header>
-            <div className="space-y-3">
-              <label className="block text-xs text-muted" htmlFor={`${fieldId}-reader-doc`}>
-                Source
-              </label>
-              <select
-                id={`${fieldId}-reader-doc`}
-                className="input text-xs"
-                value={doc.id}
-                onChange={(event) => {
-                  if (onOpenDocument) onOpenDocument(event.target.value);
-                  else setActiveDocumentId(event.target.value);
-                }}
-              >
-                {documents.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.title}
-                  </option>
-                ))}
-              </select>
-              <p className="text-xs text-muted">
-                {doc.authors.join(", ") || "Author metadata missing"}
-                {doc.venue ? ` · ${doc.venue}` : ""}
-              </p>
-              <label className="block text-xs text-muted" htmlFor={`${fieldId}-reading`}>
-                Reading status
-              </label>
-              <select
-                id={`${fieldId}-reading`}
-                className="input text-xs"
-                value={doc.reading}
-                onChange={(event) =>
-                  void service.updateDocument(doc.id, {
-                    reading: event.target.value as Document["reading"],
-                  })
-                }
-              >
-                <option value="unread">Unread</option>
-                <option value="reading">In progress</option>
-                <option value="read">Read</option>
-              </select>
-            </div>
-            {record && (
-              <details
-                className="research-details workspace-research-tools theme-obsidian"
-                data-theme="dark"
-              >
-                <summary>Read aloud</summary>
-                <ReadAloudPanel
-                  document={record.document}
-                  onOpenPage={(pageNumber) =>
-                    setFocus({ documentId: doc.id, pageNumber, nonce: Date.now() })
+            <dl className="reader-props">
+              {doc.authors.length > 0 && (
+                <>
+                  <dt>Authors</dt>
+                  <dd>{doc.authors.join(", ")}</dd>
+                </>
+              )}
+              {doc.venue && (
+                <>
+                  <dt>Venue</dt>
+                  <dd>{doc.venue}</dd>
+                </>
+              )}
+              <dt>
+                <label htmlFor={`${fieldId}-reading`}>Status</label>
+              </dt>
+              <dd>
+                <select
+                  id={`${fieldId}-reading`}
+                  value={doc.reading}
+                  onChange={(event) =>
+                    void service.updateDocument(doc.id, {
+                      reading: event.target.value as Document["reading"],
+                    })
                   }
-                />
-              </details>
+                >
+                  <option value="unread">Unread</option>
+                  <option value="reading">Reading</option>
+                  <option value="read">Read</option>
+                </select>
+              </dd>
+              {doc.summary && (
+                <>
+                  <dt>Size</dt>
+                  <dd>{doc.summary}</dd>
+                </>
+              )}
+              <dt>
+                <label htmlFor={`${fieldId}-source-tag`}>Tags</label>
+              </dt>
+              <dd className="reader-tags">
+                {doc.tags.map((tag) => (
+                  <button
+                    key={tag}
+                    className="tag"
+                    title={`Remove ${tag}`}
+                    onClick={() =>
+                      void service.updateDocument(doc.id, {
+                        tags: doc.tags.filter((item) => item !== tag),
+                      })
+                    }
+                  >
+                    {tag}
+                  </button>
+                ))}
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const value = tagText.trim();
+                    if (value && !doc.tags.includes(value))
+                      void service.updateDocument(doc.id, { tags: [...doc.tags, value] });
+                    setTagText("");
+                  }}
+                >
+                  <input
+                    id={`${fieldId}-source-tag`}
+                    placeholder="Add…"
+                    value={tagText}
+                    onChange={(event) => setTagText(event.target.value)}
+                  />
+                </form>
+              </dd>
+            </dl>
+
+            {gaps.length > 0 && (
+              <section className="reader-section">
+                <h3>Know before reading</h3>
+                <p>
+                  {gaps
+                    .slice(0, 3)
+                    .map((item) => item.name)
+                    .join(", ")}
+                </p>
+                <Link href="/roadmap" className="reader-section-link">
+                  Open roadmap
+                </Link>
+              </section>
             )}
+
+            <section className="reader-section">
+              <h3>Highlights{annotations.length > 0 && <span>{annotations.length}</span>}</h3>
+              {annotations.length ? (
+                annotations.map((item) => (
+                  <button
+                    key={item.id}
+                    className="reader-annotation"
+                    onClick={() =>
+                      item.location.page &&
+                      setFocus({
+                        documentId: doc.id,
+                        pageNumber: item.location.page,
+                        annotationId: item.id,
+                        nonce: Date.now(),
+                      })
+                    }
+                  >
+                    <span>
+                      {item.kind === "note" ? "Comment" : "Highlight"} · p.{" "}
+                      {item.location.page || "?"}
+                    </span>
+                    {item.text}
+                  </button>
+                ))
+              ) : (
+                <p className="reader-empty">Select text in the paper to highlight it.</p>
+              )}
+            </section>
+
+            {relatedNotes.length > 0 && (
+              <section className="reader-section">
+                <h3>Notes</h3>
+                {relatedNotes.map((item) => (
+                  <p key={item.id} className="reader-note">
+                    {item.title}
+                  </p>
+                ))}
+              </section>
+            )}
+
             {record?.analysis && (
               <details
                 className="research-details workspace-research-tools theme-obsidian"
@@ -248,114 +376,6 @@ export function ReaderView({
                   }}
                 />
               </details>
-            )}
-            <section className="surface rounded-xl p-4">
-              <p className="eyebrow">SOURCE DETAILS</p>
-              <p className="mt-3 text-xs leading-relaxed text-muted">{doc.summary}</p>
-              <p className="mt-3 text-xs">Tags</p>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {doc.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    className="tag hover:border-neutral"
-                    title={`Remove ${tag} tag`}
-                    onClick={() =>
-                      void service.updateDocument(doc.id, {
-                        tags: doc.tags.filter((item) => item !== tag),
-                      })
-                    }
-                  >
-                    {tag} ×
-                  </button>
-                ))}
-              </div>
-              <form
-                className="mt-3 flex gap-1"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const value = tagText.trim();
-                  if (value && !doc.tags.includes(value))
-                    void service.updateDocument(doc.id, { tags: [...doc.tags, value] });
-                  setTagText("");
-                }}
-              >
-                <label className="sr-only" htmlFor={`${fieldId}-source-tag`}>
-                  Add tag
-                </label>
-                <input
-                  id={`${fieldId}-source-tag`}
-                  className="input min-w-0 flex-1 text-xs"
-                  placeholder="Add tag"
-                  value={tagText}
-                  onChange={(event) => setTagText(event.target.value)}
-                />
-                <button className="btn px-2 text-xs" type="submit">
-                  Add
-                </button>
-              </form>
-            </section>
-            <section className="surface rounded-xl p-4">
-              <p className="eyebrow">HIGHLIGHTS & COMMENTS</p>
-              {annotations.length ? (
-                <div className="mt-4 space-y-3">
-                  {annotations.map((item) => (
-                    <button
-                      key={item.id}
-                      className="block w-full border-l-2 border-neutral pl-3 text-left"
-                      onClick={() =>
-                        item.location.page &&
-                        setFocus({
-                          documentId: doc.id,
-                          pageNumber: item.location.page,
-                          annotationId: item.id,
-                          nonce: Date.now(),
-                        })
-                      }
-                    >
-                      <span className="text-[10px] text-neutral uppercase">
-                        {item.kind === "note" ? "comment" : "highlight"} · p.{" "}
-                        {item.location.page || "?"}
-                      </span>
-                      <p className="mt-1 text-xs leading-relaxed">{item.text}</p>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="mt-4 text-xs leading-relaxed text-muted">
-                  Select text in the paper to highlight it, comment, or ask the assistant.
-                </p>
-              )}
-            </section>
-            <section className="surface rounded-xl p-4">
-              <p className="eyebrow">RELATED NOTES</p>
-              {relatedNotes.length ? (
-                relatedNotes.map((item) => (
-                  <div key={item.id} className="mt-3 border-b border-line pb-2 text-xs">
-                    <p className="font-semibold">{item.title}</p>
-                    <p className="mt-1 text-muted">{item.body}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="mt-3 text-xs text-muted">No linked notes yet.</p>
-              )}
-            </section>
-            {gaps.length > 0 && (
-              <section className="rounded-xl border border-[#363636] bg-[#1e1e1e] p-4">
-                <p className="eyebrow">KNOW BEFORE READING</p>
-                <p className="mt-2 text-sm">
-                  {gaps
-                    .slice(0, 3)
-                    .map((item) => item.name)
-                    .join(", ")}
-                </p>
-                <p className="mt-1 text-xs text-muted">Needed to read this source confidently.</p>
-                <Link
-                  href="/roadmap"
-                  className="mt-3 inline-flex items-center gap-1 text-xs text-neutral"
-                >
-                  <BookOpen size={13} /> Open roadmap
-                </Link>
-              </section>
             )}
           </aside>
         )}

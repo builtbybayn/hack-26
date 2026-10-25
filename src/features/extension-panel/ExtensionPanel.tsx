@@ -7,7 +7,15 @@
  * Uses the workspace's liquid blob and visual conventions through scoped panel tokens.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, FilePenLine, FileText, Globe, LoaderCircle, SquarePen } from "lucide-react";
+import {
+  ExternalLink,
+  FilePenLine,
+  FileText,
+  Globe,
+  House,
+  LoaderCircle,
+  SquarePen,
+} from "lucide-react";
 import { AgentSprite } from "@/features/agent/AgentSprite";
 import { ChatView } from "@/features/vault/ChatView";
 import { CHATS_FOLDER, ensureFolder, newId, uniqueName } from "@/features/vault/vault-tree";
@@ -33,6 +41,8 @@ import {
 } from "./bridge";
 import { Conflicts, RelatedPapers } from "./PaperResults";
 import { ProjectBuilder } from "./ProjectBuilder";
+import { StartPage } from "./StartPage";
+import { loadLocal } from "@/features/vault/use-settings";
 import "@/components/theme/obsidian-theme.css";
 import "./extension-panel.css";
 
@@ -71,7 +81,15 @@ export function ExtensionPanel() {
   /** Bumped by "New chat" to reset the chat view. */
   const [chatGeneration, setChatGeneration] = useState(0);
   /** Off a PDF: start a research project, or ask the assistant. */
-  const [mode, setMode] = useState<"project" | "ask">("project");
+  /** Off a PDF: the start screen, a project being planned, or a chat. */
+  const [view, setView] = useState<"start" | "project" | "chat">("start");
+  const [startIdea, setStartIdea] = useState<string | null>(null);
+  const [startQuestion, setStartQuestion] = useState<string | null>(null);
+  const [savedProject, setSavedProject] = useState<string | null>(null);
+  // A project being shaped earlier can be continued from the start screen.
+  useEffect(() => {
+    void Promise.resolve().then(() => setSavedProject(storedProjectName()));
+  }, []);
   const [projectActive, setProjectActive] = useState(false);
   const intent = useRef<Intent>({ kind: "analyze" });
   const pipelineAbort = useRef<AbortController | null>(null);
@@ -252,7 +270,14 @@ export function ExtensionPanel() {
   const recordMap = new Map(records.map((entry) => [entry.id, entry]));
   const pendingPaper = bridge.pending === "kb:get-paper";
   const status = error ?? busy ?? (pendingPaper ? "Getting the paper from this tab…" : null);
-  const chatting = !onPdf && mode === "ask";
+  const chatting = !onPdf && view === "chat";
+  const goHome = () => {
+    setView("start");
+    setStartIdea(null);
+    setStartQuestion(null);
+    setError(null);
+    setSavedProject(storedProjectName());
+  };
   async function openEntry(entryId: string, projectId?: string) {
     const standaloneWindow = !tab ? window.open("about:blank", "_blank") : null;
     try {
@@ -300,6 +325,17 @@ export function ExtensionPanel() {
   return (
     <main className="ext theme-obsidian" data-theme="dark">
       <header className="ext-topbar">
+        {!onPdf && view !== "start" && (
+          <button
+            type="button"
+            className="clickable-icon"
+            aria-label="Back to start"
+            title="Back to start"
+            onClick={goHome}
+          >
+            <House size={16} />
+          </button>
+        )}
         <span className="ext-vault-name">Fluid Research</span>
         <button
           type="button"
@@ -317,7 +353,10 @@ export function ExtensionPanel() {
             className="clickable-icon"
             aria-label="New chat"
             title="New chat"
-            onClick={newChat}
+            onClick={() => {
+              newChat();
+              goHome();
+            }}
           >
             <SquarePen size={16} />
           </button>
@@ -337,42 +376,27 @@ export function ExtensionPanel() {
         className="ext-hero"
         data-compact={
           (chatting && shownChat.messages.length > 0) ||
-          (!onPdf && mode === "project" && projectActive) ||
+          (!onPdf && view === "project" && projectActive) ||
           undefined
         }
       >
         <AgentSprite
           greeting={
-            onPdf ? "Ready when you are" : chatting ? "Ask me anything" : "What will you research?"
+            onPdf
+              ? "Ready when you are"
+              : view === "start"
+                ? null
+                : chatting
+                  ? "Ask me anything"
+                  : "Planning"
           }
         />
       </section>
 
-      {tab && (
+      {tab && onPdf && (
         <div className="ext-tab" title={tab.url}>
           {onPdf ? <FileText size={14} aria-hidden /> : <Globe size={14} aria-hidden />}
           <span>{tab.title || "Untitled tab"}</span>
-        </div>
-      )}
-
-      {!onPdf && (
-        <div className="ext-modes" role="tablist" aria-label="What to do">
-          {(
-            [
-              ["project", "New project"],
-              ["ask", "Ask"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={mode === id}
-              onClick={() => setMode(id)}
-            >
-              {label}
-            </button>
-          ))}
         </div>
       )}
 
@@ -464,10 +488,29 @@ export function ExtensionPanel() {
             tell extensions where you are, so set the page you&apos;re on.
           </p>
         </section>
-      ) : mode === "project" ? (
-        <ProjectBuilder onOpenEntry={openEntry} onActiveChange={setProjectActive} />
+      ) : view === "start" ? (
+        <StartPage
+          continueProject={savedProject}
+          onContinueProject={() => setView("project")}
+          onStartProject={(idea) => {
+            setStartIdea(idea);
+            setView("project");
+          }}
+          onAsk={(question) => {
+            setStartQuestion(question);
+            setView("chat");
+          }}
+        />
+      ) : view === "project" ? (
+        <ProjectBuilder
+          onOpenEntry={openEntry}
+          onActiveChange={setProjectActive}
+          initialIdea={startIdea}
+          onExit={goHome}
+        />
       ) : (
         <ChatView
+          initialMessage={startQuestion}
           key={chatGeneration}
           compact
           chat={shownChat}
@@ -524,5 +567,13 @@ function Summary({ record }: { record: DocumentRecord }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/** The project the panel was last shaping (see ProjectBuilder), if any. */
+function storedProjectName(): string | null {
+  return (
+    loadLocal<{ roadmap?: { projectName?: string } } | null>("panelProject", null)?.roadmap
+      ?.projectName ?? null
   );
 }

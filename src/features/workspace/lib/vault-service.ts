@@ -78,6 +78,8 @@ interface StoredState {
   documents: Record<ID, { reading?: Document["reading"]; tags?: string[] }>;
   drafts: Record<ID, Draft>;
   conversations: Record<ID, Conversation>;
+  /** Earlier chats per project, newest first. */
+  chatHistory?: Record<ID, Conversation[]>;
   /** Prerequisites added from the assistant (analysis concepts come from the papers). */
   concepts: Concept[];
   savedFindings: ID[];
@@ -119,6 +121,7 @@ export const EMPTY_WORKSPACE: WorkspaceData = {
   drafts: {},
   conversation: { id: "loading", projectId: "loading", messages: [] },
   conversations: {},
+  chatHistory: {},
   uploads: [],
   activeProjectId: "loading",
 };
@@ -771,6 +774,26 @@ export class VaultResearchService implements ResearchService {
     });
   }
 
+  async newChat() {
+    const projectId = this.projectId;
+    await this.saveState((state) => {
+      archiveCurrentChat(state, projectId);
+      state.conversations[projectId] = { id: newId(), projectId, messages: [] };
+    });
+  }
+
+  async openChat(id: ID) {
+    const projectId = this.projectId;
+    await this.saveState((state) => {
+      const history = state.chatHistory?.[projectId] ?? [];
+      const chat = history.find((item) => item.id === id);
+      if (!chat) return;
+      state.chatHistory![projectId] = history.filter((item) => item.id !== id);
+      archiveCurrentChat(state, projectId);
+      state.conversations[projectId] = chat;
+    });
+  }
+
   /** Answers with /api/chat, grounded in the project's papers, the open paper, or a passage. */
   async ask(
     question: string,
@@ -883,6 +906,13 @@ export class VaultResearchService implements ResearchService {
           })),
       );
   }
+}
+
+function archiveCurrentChat(state: StoredState, projectId: ID) {
+  const current = state.conversations[projectId];
+  if (!current?.messages.length) return;
+  state.chatHistory ??= {};
+  state.chatHistory[projectId] = [current, ...(state.chatHistory[projectId] ?? [])].slice(0, 50);
 }
 
 function conversationOf(state: StoredState, projectId: ID): Conversation {
@@ -1126,6 +1156,7 @@ export function buildSnapshot(
     drafts,
     conversation: conversations[activeProjectId] ?? EMPTY_WORKSPACE.conversation,
     conversations,
+    chatHistory: state.chatHistory ?? {},
     uploads,
     activeProjectId,
   };

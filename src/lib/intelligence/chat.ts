@@ -1,6 +1,6 @@
 import "server-only";
 
-import { generateText } from "@/lib/ai/gemini";
+import { generateText } from "@/lib/ai/llm";
 import type { ChatPaperContext, ChatRequest, ChatResult } from "@/types/chat";
 
 /** Characters of paper text sent to the model, shared across all attached papers. */

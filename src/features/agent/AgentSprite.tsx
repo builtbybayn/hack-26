@@ -4,7 +4,8 @@ import { AGENT_STATES, useAgentActivity } from "@/lib/agent-activity";
 import GlassAssistant from "./GlassAssistant";
 import "./agent-sprite.css";
 
-export function AgentSprite({ greeting }: { greeting?: string }) {
+/** `greeting` replaces the idle label; `null` hides the label while idle. */
+export function AgentSprite({ greeting }: { greeting?: string | null }) {
   const snapshot = useAgentActivity();
   const info = AGENT_STATES[snapshot.state];
   const idle = snapshot.state === "idle";
@@ -16,7 +17,9 @@ export function AgentSprite({ greeting }: { greeting?: string }) {
           state={idle ? "idle" : snapshot.state === "error" ? "error" : "researching"}
         />
       </div>
-      <p className="agent-sprite-label">{idle && greeting ? greeting : info.label}</p>
+      {!(idle && greeting === null) && (
+        <p className="agent-sprite-label">{idle && greeting ? greeting : info.label}</p>
+      )}
       {!idle && snapshot.detail && <p className="agent-sprite-detail">{snapshot.detail}</p>}
     </div>
   );

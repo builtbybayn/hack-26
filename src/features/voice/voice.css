@@ -1,174 +1,194 @@
-/* Voice feature styles. Uses the app's tokens from globals.css (--paper, --forest, …). */
+/* Voice: the read-aloud player and the inline Listen button. Uses the surrounding theme tokens. */
 
 .read-aloud {
-  margin-top: 22px;
-  padding: 27px;
-  border: 1px solid var(--line);
-  background: var(--white);
-}
-.read-aloud .panel-heading {
-  align-items: end;
-}
-.read-aloud h2 {
-  margin: 7px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 29px;
-  font-weight: 400;
-}
-.read-aloud-meta {
-  max-width: 420px;
-  margin: 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: 8px;
 }
 
-.read-aloud-controls {
+/* One quiet row: previous, play, next, speed, settings. */
+.player {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 14px 16px;
-  margin-top: 20px;
-}
-.read-aloud-controls label,
-.voice-picker label {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-.read-aloud-controls select {
-  min-width: 120px;
-}
-.transport {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
-.transport .primary {
-  min-width: 96px;
+.player-icon,
+.player-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  min-width: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted, #999);
 }
-.transport button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
+.player-icon:hover,
+.player-rate:hover {
+  background: var(--background-modifier-hover, #2a2a2a);
+  color: var(--text-normal, #ddd);
+}
+.player-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  background: #d4af67;
+  color: #1e1e1e;
+}
+.player-play:hover {
+  background: #e2c07c;
+}
+.player-rate {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.player-settings {
+  margin-left: auto;
+}
+.player-settings[aria-expanded="true"] {
+  color: #d4af67;
+}
+.player-spin {
+  animation: player-spin 0.9s linear infinite;
+}
+@keyframes player-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.voice-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 8px;
+.player-progress {
+  height: 2px;
+  border-radius: 1px;
+  background: var(--background-modifier-border, #333);
+  overflow: hidden;
 }
-.voice-picker select {
-  min-width: 240px;
-  max-width: 340px;
+.player-progress span {
+  display: block;
+  height: 100%;
+  background: #d4af67;
+  transition: width 200ms ease;
+}
+.player-status {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-faint, #888);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-status.failed {
+  color: var(--background-modifier-error, #e58a8a);
+  white-space: normal;
+}
+
+/* Settings, hidden until asked for. */
+.player-settings-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0 4px;
+  border-top: 1px solid var(--background-modifier-border, #333);
+}
+.player-settings-panel label,
+.voice-picker label {
+  display: grid;
+  gap: 4px;
+  color: var(--text-faint, #888);
+  font-size: 11px;
+}
+.player-settings-panel select,
+.voice-picker select,
+.voice-custom input {
+  width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--background-modifier-border, #333);
+  border-radius: 6px;
+  background: var(--background-primary, #1e1e1e);
+  color: var(--text-normal, #ddd);
+  font-size: 13px;
+}
+.voice-picker {
+  display: grid;
+  gap: 8px;
 }
 .voice-custom {
-  display: flex;
-  flex-basis: 100%;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 8px;
+  display: grid;
+  gap: 6px;
 }
-.voice-custom input {
-  width: 260px;
-  height: 42px;
-  padding: 0 12px;
-  border: 1px solid #bbb8af;
-  background: var(--white);
-  color: var(--ink);
-  font-family: ui-monospace, Menlo, Consolas, monospace;
+.voice-custom .primary {
+  justify-self: start;
 }
 .voice-custom small,
 .voice-note {
-  flex-basis: 100%;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
+  color: var(--text-faint, #888);
+  font-size: 11px;
 }
 .voice-custom input[aria-invalid] + small,
 .voice-custom input[aria-invalid] {
-  border-color: var(--clay);
+  color: var(--background-modifier-error, #e58a8a);
 }
 
-.read-aloud-status {
-  margin: 16px 0 0;
-  padding: 11px 14px;
-  background: #e8ece8;
-  color: #385447;
-  font-size: 13px;
-  font-weight: 700;
-}
-.read-aloud-status.failed {
-  background: #f5dfd4;
-  color: #7a351e;
-}
-
-/* The transcript: the paper as it is read, with the current paragraph marked. */
+/* The text, read paragraph by paragraph. */
 .transcript {
-  position: relative;
-  max-height: 520px;
-  margin: 16px 0 0;
-  padding: 8px 0;
+  flex: 1;
+  min-height: 0;
+  margin: 4px 0 0;
+  padding: 0;
   overflow-y: auto;
   list-style: none;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
 }
 .transcript li {
-  display: grid;
-  border-left: 3px solid transparent;
-  transition:
-    background 160ms,
-    border-color 160ms;
+  position: relative;
+  padding: 6px 0 6px 12px;
+  border-left: 2px solid transparent;
 }
 .transcript li button:first-child {
-  padding: 10px 18px;
-  border: 0;
-  background: none;
-  color: var(--ink);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 17px;
-  line-height: 1.65;
-  text-align: left;
-  white-space: pre-line;
-}
-.transcript li:hover {
-  background: #f8f6ef;
-}
-.transcript li.current {
-  border-left-color: var(--forest);
-  background: var(--forest-soft);
-}
-.transcript-heading button:first-child {
-  padding-top: 22px !important;
-  font-family: Arial, Helvetica, sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.transcript-notice button:first-child {
-  color: var(--muted) !important;
-  font-size: 15px !important;
-  font-style: italic;
-}
-.transcript .open-page {
-  justify-self: start;
-  margin: -4px 0 10px 18px;
+  display: block;
+  width: 100%;
   padding: 0;
   border: 0;
   background: none;
-  color: var(--clay);
+  color: var(--text-muted, #aaa);
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: left;
+}
+.transcript li:hover button:first-child {
+  color: var(--text-normal, #ddd);
+}
+.transcript li.current {
+  border-left-color: #d4af67;
+}
+.transcript li.current button:first-child {
+  color: var(--text-normal, #eee);
+}
+.transcript-heading button:first-child {
+  margin-top: 10px;
+  color: var(--text-normal, #ddd) !important;
+  font-size: 15px !important;
+  font-weight: 600;
+}
+.transcript-notice button:first-child {
+  font-size: 12px !important;
+  font-style: italic;
+}
+.transcript .open-page {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #d4af67;
   font-size: 12px;
-  font-weight: 700;
-  text-decoration: underline;
 }
 
-/* Listen button for explanations and other generated text. */
 .listen {
   display: flex;
   flex-wrap: wrap;

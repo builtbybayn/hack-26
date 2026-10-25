@@ -414,7 +414,7 @@ the named project and Roadmap note together through `newProjectEntries`. It does
 truncated prompt as a provisional folder name. The active project changes only after this write;
 failed planning leaves the description available to retry without creating an empty project.
 
-Drafts, per-project conversations, reading flags, saved links, and active project live in the
+Drafts, per-project conversations (the current chat plus earlier ones), reading flags, saved links, and active project live in the
 `workspace` IndexedDB store. `updateWorkspaceState` performs read/modify/write atomically within
 one transaction; service mutations are serialized and refreshes requested during a load are
 queued. Draft editors preserve dirty text across unrelated refreshes and debounce saves.
@@ -431,12 +431,16 @@ revision sends the previous roadmap and the discussion back; stages whose query 
 their papers. The browser formats the roadmap as Markdown (`roadmap-markdown.ts`) and files it as
 `<Project>/Notes/Roadmap` with a `Papers` folder (`newProjectEntries` in `vault-tree.ts`).
 
-### Gemini calls
+### AI calls (Luminal, with Gemini as fallback)
 
-`src/lib/ai/gemini.ts` pins the model (`gemini-3.5-flash`; the `-latest` alias stopped answering
-for new keys) and bounds every call with a two-minute timeout. Temporary failures (503 overloaded,
-429, 500) are retried with backoff and then sent to `GEMINI_FALLBACK_MODEL`; if all fail, the user
-sees "Gemini is busy right now". Provider reasons are logged on the server, never the key.
+Every model call goes through `src/lib/ai/llm.ts` (`generateText`, `generateJson`). It uses
+Luminal (`src/lib/ai/luminal.ts`: an OpenAI-compatible chat completions API, model
+`deepseek-ai/DeepSeek-V4.1-Flash`, called with `fetch`) when `LUMINAL_API_KEY` is set, and falls
+back to Gemini (`src/lib/ai/gemini.ts`) when Luminal is busy, failing, or not configured. Luminal
+calls retry 429 and 5xx responses with backoff and time out after two minutes; JSON requests use
+`response_format: json_object`, put any JSON Schema into the prompt (the API doesn't enforce one),
+and are validated with Zod. Gemini keeps its pinned model, timeout, retries, and fallback model.
+Provider reasons are logged on the server, never keys.
 
 ### The extension panel (`/panel`)
 
