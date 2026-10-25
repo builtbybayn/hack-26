@@ -76,3 +76,25 @@ devices; that requires accounts and server storage.
 ### 13. Product visual language
 
 **Confirmed.** KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+
+### 14. Optional independent review for cross-paper conflicts
+
+**Provisional.** Gemini proposes claim comparisons from two documents. The server verifies each
+quoted source passage against its cited page. Only candidate conflicts go to Grok for an
+independent verdict through the xAI Responses API, using plain `fetch` and `store: false`.
+Without Grok agreement, a conflict remains unconfirmed. This adds no SDK or server persistence.
+
+### 15. Briefs reuse verified synthesis
+
+**Provisional.** The Research Brief is built in the browser from saved synthesis findings and the
+project's paper list. No second model call rewrites the evidence. Users can edit the question,
+notes, and finding summaries; edited summaries are visibly marked for source review. Briefs stay
+in the project's IndexedDB record and use a separate print page on the same origin.
+
+### 16. Gap ideas and paper links retain their provenance
+
+**Provisional.** Gap suggestions are derived from the project's verified synthesis and labeled as
+questions for further search. Saved ideas keep their evidence and reviewed document set. The paper
+graph shows synthesis-backed agreement or disagreement separately from inferred topic overlap.
+Citation edges use OpenAlex reference IDs when the provider supplies them; missing matches are
+treated as unknown, not evidence of no citation.

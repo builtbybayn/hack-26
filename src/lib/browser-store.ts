@@ -6,13 +6,69 @@
  * its own database, so the web app and an extension page that loads it share data; a separately
  * bundled extension page would not.
  */
-import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
+import type { DocumentAnalysis, EvidenceFeedback, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
+import type { PaperRecord } from "@/types/research";
+import type { SynthesisReport } from "@/types/synthesis";
+import type { ResearchBrief } from "@/types/brief";
+import type { ResearchGap } from "@/types/gaps";
 
 const DB_NAME = "knowbefore";
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
+const PROJECT_STORE = "projects";
+const EVIDENCE_FEEDBACK_STORE = "evidence-feedback";
+
+export interface ResearchProject {
+  id: string;
+  name: string;
+  notes: string;
+  papers: PaperRecord[];
+  documentIds: string[];
+  synthesis?: SynthesisReport;
+  brief?: ResearchBrief;
+  gapIdeas?: ResearchGap[];
+  dismissedGapIds?: string[];
+  updatedAt: string;
+}
+
+export async function listProjects(): Promise<ResearchProject[]> {
+  const projects = await request<ResearchProject[]>(PROJECT_STORE, "readonly", (store) =>
+    store.getAll(),
+  );
+  return projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function getProject(projectId: string): Promise<ResearchProject | null> {
+  const project = await request<ResearchProject | undefined>(PROJECT_STORE, "readonly", (store) =>
+    store.get(projectId),
+  );
+  return project ?? null;
+}
+
+export async function saveProject(project: ResearchProject): Promise<void> {
+  await request(PROJECT_STORE, "readwrite", (store) => store.put(project));
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  await request(PROJECT_STORE, "readwrite", (store) => store.delete(projectId));
+}
+
+export async function listEvidenceFeedback(documentId: string): Promise<EvidenceFeedback[]> {
+  const records = await request<EvidenceFeedback[]>(EVIDENCE_FEEDBACK_STORE, "readonly", (store) =>
+    store.getAll(),
+  );
+  return records.filter((record) => record.documentId === documentId);
+}
+
+export async function saveEvidenceFeedback(feedback: EvidenceFeedback): Promise<void> {
+  await request(EVIDENCE_FEEDBACK_STORE, "readwrite", (store) => store.put(feedback));
+}
+
+export async function deleteEvidenceFeedback(id: string): Promise<void> {
+  await request(EVIDENCE_FEEDBACK_STORE, "readwrite", (store) => store.delete(id));
+}
 
 interface MasteryRecord {
   conceptId: string;
@@ -97,6 +153,10 @@ function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore(MASTERY_STORE, { keyPath: "conceptId" });
       if (!db.objectStoreNames.contains(DOCUMENT_STORE))
         db.createObjectStore(DOCUMENT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(PROJECT_STORE))
+        db.createObjectStore(PROJECT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(EVIDENCE_FEEDBACK_STORE))
+        db.createObjectStore(EVIDENCE_FEEDBACK_STORE, { keyPath: "id" });
       // Version 2 kept a single "latest" session; documents now live in DOCUMENT_STORE.
       if (db.objectStoreNames.contains("sessions")) db.deleteObjectStore("sessions");
     };

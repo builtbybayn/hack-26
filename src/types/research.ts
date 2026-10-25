@@ -14,6 +14,8 @@ export interface PaperRecord {
   url: string;
   openAccessPdfUrl?: string;
   citationCount?: number;
+  /** Provider-scoped IDs of works this paper cites, when supplied by OpenAlex. */
+  referencedWorkIds?: string[];
   provider: "openalex" | "semantic-scholar";
 }
 
@@ -46,4 +48,13 @@ export type ResearchErrorCode = "SEARCH_PROVIDER_ERROR" | "SEARCH_RATE_LIMITED";
 export type RecommendationsResponse = ApiResponse<
   RecommendationsResult,
   ResearchErrorCode | IntelligenceErrorCode | CommonErrorCode
+>;
+
+export interface CitationReferencesRequest {
+  paperIds: string[];
+}
+
+export type CitationReferencesResponse = ApiResponse<
+  { references: Record<string, string[]> },
+  ResearchErrorCode | CommonErrorCode
 >;

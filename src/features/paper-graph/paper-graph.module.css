@@ -1,0 +1,104 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.panel h2 {
+  margin: 10px 0;
+  font:
+    400 29px Georgia,
+    "Times New Roman",
+    serif;
+}
+.panel p {
+  line-height: 1.55;
+}
+.flow {
+  height: 480px;
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.analyzed {
+  border: 1px solid var(--forest) !important;
+  border-radius: 2px !important;
+  background: var(--forest-soft) !important;
+  color: var(--ink) !important;
+}
+.saved {
+  border: 1px solid var(--clay) !important;
+  border-radius: 2px !important;
+  background: #f7e9df !important;
+  color: var(--ink) !important;
+}
+.listGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px;
+}
+.listGrid h3,
+.detail h3 {
+  font:
+    400 22px Georgia,
+    "Times New Roman",
+    serif;
+}
+.listGrid ul {
+  padding: 0;
+  list-style: none;
+}
+.listGrid li {
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.listGrid button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--forest);
+  text-align: left;
+  text-decoration: underline;
+}
+.listGrid small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+.detail {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.detail a {
+  color: var(--forest);
+}
+.detail details {
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+}
+.detail summary {
+  cursor: pointer;
+  color: var(--forest);
+}
+.detail pre {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font:
+    12px/1.5 Arial,
+    sans-serif;
+}
+@media (max-width: 900px) {
+  .listGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 540px) {
+  .panel {
+    padding: 20px;
+  }
+  .flow {
+    height: 380px;
+  }
+}

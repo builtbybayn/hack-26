@@ -7,6 +7,7 @@ import { IntelligenceError } from "./errors";
 import { validateGraph } from "./graph";
 import { buildLearningPath } from "./learning-path";
 import { MODEL_ANALYSIS_JSON_SCHEMA, modelAnalysisSchema } from "./schema";
+import { verifyAnalysisReferences } from "./source-evidence";
 
 export type GenerateJson = (prompt: string) => Promise<string>;
 
@@ -42,11 +43,11 @@ ${chunks.map((chunk, index) => `--- EXCERPT ${index + 1} ---\n${chunk}`).join("\
         concepts: parsed.concepts,
         dependencies: parsed.dependencies,
       });
-      return {
+      return verifyAnalysisReferences(document, {
         understanding: parsed.understanding,
         graph,
         learningPath: buildLearningPath(graph, mastery),
-      };
+      });
     } catch (error) {
       // Configuration and provider failures won't fix themselves; only malformed output is retried.
       if (error instanceof IntelligenceError) throw error;
