@@ -9,7 +9,7 @@ flowchart LR
     Page["Pages<br/>src/app/**/page.tsx"]
     Feature["Features<br/>src/features/*"]
     Client["API clients + mocks<br/>src/lib/api"]
-    Store["IndexedDB: documents, analyses, mastery<br/>src/lib/browser-store.ts"]
+    Store["IndexedDB: papers, vault, annotations<br/>src/lib/browser-store.ts"]
   end
 
   subgraph Server
@@ -172,6 +172,12 @@ real output.
 | `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                                                                          |
 | `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path.                                              |
 | `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                                         |
+| `POST /api/chat`              | JSON `{ messages, papers }` (`src/types/chat.ts`); returns `{ reply }` (Markdown, cites pages).                                               |
+| `POST /api/roadmap`           | JSON `{ idea, previous?, conversation? }` (`src/types/roadmap.ts`); returns `{ roadmap, reply, warnings }`.                                   |
+
+`/api/chat` is stateless like the rest: each request carries the whole conversation and the text
+of the attached papers. The server keeps quoted pages first and trims the rest to a shared
+character budget (`src/lib/intelligence/chat.ts`).
 
 Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
 
@@ -309,6 +315,137 @@ two, sends neighbouring text for smooth intonation, and caches audio in IndexedD
 free. Without an ElevenLabs key it falls back to the browser's built-in voice. Any feature can read
 text aloud with `<ListenButton text={…} />`.
 
+### Agent activity states (for the sprite)
+
+`src/lib/agent-activity.ts` holds what the assistant is doing, for the animated sprite. API
+clients report their own work through `track()`, so features get states without extra code:
+
+| State             | Reported by                                   |
+| ----------------- | --------------------------------------------- |
+| `reading`         | `parseDocument` (PDF/text extraction)         |
+| `analyzing`       | `analyzeDocument` (Gemini concept analysis)   |
+| `searching`       | `requestRecommendations` (related papers)     |
+| `comparing`       | `requestContradictions` (contradiction check) |
+| `thinking`        | `requestExplanation`, `requestQuiz`           |
+| `preparing-voice` | the speech player while audio is generated    |
+| `speaking`        | the speech player while audio plays           |
+| `error`           | any failed call, for 6 seconds                |
+| `idle`            | nothing running (after a 400 ms grace period) |
+
+When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
+React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
+event. The `/sprite` preview uses
+`src/features/agent/FluidMatter.tsx`. Its native WebGL renderer blends nine mathematical surface
+fields through one continuous clock and reflective liquid material. Idle uses the silk loop;
+the activity forms retain slow deformation and rounded edges. State transitions blend from the
+currently visible form, including interrupted transitions. The renderer pauses when hidden or
+offscreen, respects reduced motion, and shows a static fallback when WebGL is unavailable.
+`/sprite` provides a local preview of every form, including the panel and compact sizes.
+New features call `track(state, detail, work)`. Synthesis and evidence checks report comparing or
+analyzing; citation lookup reports searching.
+
+The workspace and extension use the supplied UI's Three.js glass/liquid blob in
+`src/features/agent/glass-sprite`, hosted by `src/features/agent/GlassAssistant.tsx`. Their activity adapters
+subscribes to this same canonical activity store: idle and error remain distinct, while active
+operations map to researching. Pointer deformation, reflective material, and the supplied morph
+effects remain intact. The wrapper dynamically loads the renderer and disposes it on unmount.
+
+### "Analyze this paper" pipeline
+
+`runPaperPipeline` (`src/lib/paper-pipeline.ts`, browser) saves the paper and its original file,
+runs Gemini analysis (reused if saved), then finds related papers, then runs the contradiction
+check. The check compares the paper with up to three others: at most two saved, analyzed papers
+whose topics overlap, and published papers from the related-papers search (closest work first),
+compared by their abstracts (`src/lib/research/literature-document.ts`). It is skipped only when
+there is neither. The report's `sources` names each compared paper and links published ones. Each
+step's status (`src/types/pipeline.ts`) and result is saved on the paper's record, so the vault
+can read `recommendations`, `contradictions`, and `pipeline` directly, and re-running resumes
+rather than repeating finished work.
+
+### The research workspace (`/`)
+
+`src/features/workspace` is the main UI. The imported Research Core interface is backed by
+`VaultResearchService`, which reads existing browser records and calls the app's typed API
+clients. Top-level vault folders are workspace projects; papers, notes, annotations, and mastery
+retain their existing IDs and stores. Uploads use the existing parser and paper pipeline.
+
+| Part                         | Where                                             |
+| ---------------------------- | ------------------------------------------------- |
+| Tree, notes, chats (types)   | `src/types/vault.ts`                              |
+| Tree logic (pure, tested)    | `src/features/vault/vault-tree.ts`                |
+| Tabs and split panes         | `src/features/workspace/lib/workspace-panels.ts`  |
+| Workspace data and imports   | `src/features/workspace/lib/vault-service.ts`     |
+| URL and legacy deep links    | `src/features/workspace/lib/workspace-routing.ts` |
+| PDF reader and annotations   | `src/features/paper-reader/*`                     |
+| Highlight and margin layout  | `src/features/paper-reader/geometry.ts`           |
+| Markdown (notes, AI replies) | `src/features/vault/Markdown.tsx`                 |
+
+The reader renders the stored PDF with PDF.js in the browser (canvas plus PDF.js's selectable text
+layer); papers saved from web pages show their extracted text on fixed-width sheets instead.
+Highlights are stored as rectangles in fractions of the unrotated page, so they stay in place at
+any zoom or rotation. Papers saved by the extension are filed in the first project's
+"Papers" folder (`defaultPaperFolder` in `vault-tree.ts`) and appear live. The extension's "Open in
+vault" opens `/?paper=<document id>&page=<n>`; the adapter also accepts
+`/reader?doc=<id>&passage=p<n>` and legacy note links. Explicit missing sources show an error
+instead of opening an unrelated paper. Internal section navigation updates the browser URL.
+The original single-page
+workspace (concept map, quizzes) remains at `/classic`.
+
+Research projects (`src/features/projects`: topic search, synthesis, brief, gaps, paper graph) open
+in the Overview's expandable saved literature collections section, receiving the current paper
+as context. These projects remain separate from vault folders (`projects` store), preserving
+existing synthesis, briefs, gap ideas, and topic searches. A second section restores saved
+extension/vault chats through the shared `ChatView`.
+
+`src/app/(workspace)` supplies the new layout and known section routes. Route children always
+render, while the client shell gates browser storage hydration separately; dynamic section
+validation and URL hooks sit beneath Suspense for Next's instant navigation rules.
+`src/app/(classic)` isolates the earlier global styles for `/classic`, `/brief`, and `/sprite`.
+
+Prompt-based creation waits for the existing roadmap API's `projectName` and plan, then writes
+the named project and Roadmap note together through `newProjectEntries`. It does not save a
+truncated prompt as a provisional folder name. The active project changes only after this write;
+failed planning leaves the description available to retry without creating an empty project.
+
+Drafts, per-project conversations, reading flags, saved links, and active project live in the
+`workspace` IndexedDB store. `updateWorkspaceState` performs read/modify/write atomically within
+one transaction; service mutations are serialized and refreshes requested during a load are
+queued. Draft editors preserve dirty text across unrelated refreshes and debounce saves.
+Graph decisions use a separate keyed record in the same store. Explicit graph relationships
+work locally; optional semantic discovery requires an external configured backend and is not an
+implemented API route in this app. No new database, auth service, or AI SDK was added.
+
+### Research roadmaps
+
+`/api/roadmap` (`src/lib/research/roadmap.ts`) asks Gemini for an ordered plan: stages, concepts
+with reasons, and one scholarly search query per stage. The model never names papers: the server
+runs each query against OpenAlex and attaches the top results, so every listed paper is real. A
+revision sends the previous roadmap and the discussion back; stages whose query is unchanged keep
+their papers. The browser formats the roadmap as Markdown (`roadmap-markdown.ts`) and files it as
+`<Project>/Notes/Roadmap` with a `Papers` folder (`newProjectEntries` in `vault-tree.ts`).
+
+### Gemini calls
+
+`src/lib/ai/gemini.ts` pins the model (`gemini-3.5-flash`; the `-latest` alias stopped answering
+for new keys) and bounds every call with a two-minute timeout. Temporary failures (503 overloaded,
+429, 500) are retried with backoff and then sent to `GEMINI_FALLBACK_MODEL`; if all fail, the user
+sees "Gemini is busy right now". Provider reasons are logged on the server, never the key.
+
+### The extension panel (`/panel`)
+
+`src/features/extension-panel` uses scoped Research Core tokens over the shared controls
+(`src/components/theme`) and the vault's `ChatView`. The dark surfaces, serif headings, compact
+controls, readable Markdown, and shared Three.js blob match the workspace. A New note action
+lazily loads the same browser service adapter, creates an untitled note in the active project,
+and opens its autosaving editor. The adapter singleton lives in `workspace/lib/service-instance.ts`.
+On a PDF tab it runs the analyze pipeline and sends the paper to the workspace at a
+page; elsewhere it is a chat whose conversations are filed in the vault's "Chats" folder. The
+fluid sprite is `src/features/agent/AgentSprite.tsx`.
+
+Chrome's PDF viewer runs inside another extension's frame (in a closed shadow root), so neither
+the scroll position nor the selection can be read by our extension. The page to open comes from the
+URL's `#page=` or the page box in the panel.
+
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
@@ -318,8 +455,13 @@ they do not duplicate parsed document content.
 Clients send whatever a request needs (the document, a concept, a quiz) in the body. A restart loses
 nothing, and re-uploading the same file reuses its stored analysis instead of calling Gemini again.
 
-Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
+A paper's record also holds its pipeline results, and a `files` store keeps the original upload
+(the PDF) for the vault. Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
 are evicted past 400 entries) and per-document reading positions.
+
+The vault adds a `vault` store (folders, notes, paper placements, and chats with their messages)
+and an `annotations` store (highlights and comments, indexed by document). Writes are announced on
+a `BroadcastChannel`, so an open vault updates when the extension saves a paper.
 
 IndexedDB is per origin. An extension side panel that loads a page from this app shares the web
 app's storage; a page bundled inside the extension would have its own. Learning paths are derived

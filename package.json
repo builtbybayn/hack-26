@@ -21,11 +21,13 @@
   "dependencies": {
     "@google/genai": "^2.31.0",
     "@xyflow/react": "^12.12.0",
+    "lucide-react": "^1.61.0",
     "next": "16.4.3",
     "pdfjs-dist": "^6.4.299",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "three": "^0.180.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -33,6 +35,7 @@
     "@types/node": "^22.20.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.180.0",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "prettier": "^3.9.10",

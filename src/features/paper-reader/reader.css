@@ -1,0 +1,548 @@
+/*
+ * The paper reader: PDF.js pages, highlights, margin comments, and the selection toolbar.
+ * Colors come from the Obsidian theme tokens (src/components/theme/obsidian-theme.css), so the
+ * reader is wrapped in `.theme-obsidian`.
+ */
+
+.paper-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.view-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--header-height);
+  padding: 0 10px;
+  flex: none;
+  background: var(--background-primary);
+}
+
+.view-header-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---- Paper reader ------------------------------------------------------------------------- */
+
+.paper-view {
+  position: relative;
+  outline: none;
+}
+
+.paper-toolbar {
+  gap: 2px;
+  background: var(--pdf-toolbar);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.paper-toolbar .view-header-title {
+  flex: 1;
+  margin: 0 8px 0 6px;
+  font-size: 14px;
+}
+
+.paper-page-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.paper-page-input input,
+.paper-zoom-input {
+  height: 26px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-size: 13px;
+  text-align: center;
+}
+
+.paper-page-input input {
+  width: 38px;
+}
+
+.paper-zoom-input {
+  width: 56px;
+}
+
+.paper-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: var(--pdf-background);
+}
+
+.paper-thumbs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 168px;
+  padding: 16px 0 32px;
+  overflow-y: auto;
+  flex: none;
+  border-right: 1px solid var(--background-modifier-border);
+}
+
+.paper-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.paper-thumb-frame {
+  display: block;
+  width: 120px;
+  background: #fff;
+  border: 3px solid transparent;
+  outline: 1px solid rgb(0 0 0 / 0.3);
+  overflow: hidden;
+}
+
+.paper-thumb[aria-current="page"] .paper-thumb-frame {
+  border-color: var(--interactive-accent);
+}
+
+.paper-thumb:hover .paper-thumb-frame {
+  border-color: var(--background-modifier-border-hover);
+}
+
+.paper-thumb[aria-current="page"] .paper-thumb-label {
+  color: var(--text-normal);
+}
+
+.pdf-thumb-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.paper-scroll {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+
+.paper-status {
+  margin: 48px auto;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.paper-stack {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  width: max-content;
+  min-width: 100%;
+  padding: 0 24px;
+}
+
+.paper-pages {
+  position: relative;
+  flex: none;
+}
+
+.paper-page {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  box-shadow: var(--page-shadow);
+  overflow: hidden;
+}
+
+.pdf-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.highlight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.highlight-rect {
+  position: absolute;
+  border-radius: 1px;
+  background: rgb(255 214 0 / 0.5);
+}
+
+.highlight-rect[data-color="green"] {
+  background: rgb(98 215 120 / 0.45);
+}
+
+.highlight-rect[data-color="blue"] {
+  background: rgb(84 190 255 / 0.45);
+}
+
+.highlight-rect[data-color="pink"] {
+  background: rgb(255 120 185 / 0.42);
+}
+
+.highlight-rect[data-active] {
+  box-shadow: 0 2px 0 0 rgb(0 0 0 / 0.45);
+  filter: saturate(1.6);
+}
+
+/* PDF.js text layer: transparent text over the canvas, so pages can be selected and copied. */
+.paper-page .textLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+
+.paper-page .textLayer[data-main-rotation="90"] {
+  transform: rotate(90deg) translateY(-100%);
+}
+
+.paper-page .textLayer[data-main-rotation="180"] {
+  transform: rotate(180deg) translate(-100%, -100%);
+}
+
+.paper-page .textLayer[data-main-rotation="270"] {
+  transform: rotate(270deg) translateX(-100%);
+}
+
+.paper-page .textLayer :is(span, br) {
+  position: absolute;
+  color: transparent;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+
+.paper-page .textLayer > :not(.markedContent),
+.paper-page .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.paper-page .textLayer .markedContent {
+  display: contents;
+}
+
+.paper-page .textLayer span[role="img"] {
+  user-select: none;
+  cursor: default;
+}
+
+.paper-page .textLayer ::selection {
+  background: rgb(0 120 255 / 0.3);
+}
+
+.paper-page .textLayer br::selection {
+  background: transparent;
+}
+
+/* Papers saved from web pages: their text on a fixed-width sheet. */
+.paper-page.is-text {
+  overflow: hidden;
+}
+
+.text-sheet {
+  position: relative;
+  z-index: 2;
+  padding: 72px 80px;
+  transform-origin: 0 0;
+  color: #1a1a1a;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.text-sheet h2 {
+  margin: 0 0 18px;
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.text-sheet p {
+  margin: 0 0 14px;
+}
+
+.text-sheet ::selection {
+  background: rgb(0 120 255 / 0.3);
+}
+
+/* Margin comments, beside their highlights. */
+.paper-margin {
+  position: relative;
+  width: 280px;
+  flex: none;
+}
+
+.paper-stack.is-narrow .paper-margin {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.paper-stack.is-narrow .margin-comment {
+  pointer-events: auto;
+}
+
+.paper-stack.is-narrow .margin-comment:not([data-active]) {
+  opacity: 0.92;
+}
+
+.margin-comment {
+  position: absolute;
+  left: 0;
+  right: 0;
+  padding: 12px 14px;
+  border-left: 3px solid #e8c13c;
+  border-radius: var(--radius-s);
+  background: var(--comment-background);
+  color: var(--comment-text);
+  box-shadow: var(--shadow-s);
+  transition:
+    top 160ms ease,
+    transform 160ms ease;
+  cursor: default;
+}
+
+.margin-comment[data-color="green"] {
+  border-left-color: #4fb966;
+}
+
+.margin-comment[data-color="blue"] {
+  border-left-color: #3ea6f0;
+}
+
+.margin-comment[data-color="pink"] {
+  border-left-color: #f06aa9;
+}
+
+.margin-comment[data-active] {
+  transform: translateX(-8px);
+  box-shadow: var(--shadow-l);
+  z-index: 1;
+}
+
+.margin-comment header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.margin-comment .avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: #e0457b;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.margin-comment-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.25;
+}
+
+.margin-comment-meta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.margin-comment-meta time {
+  color: var(--comment-muted);
+  font-size: 12px;
+}
+
+.margin-comment-menu {
+  position: relative;
+}
+
+.margin-comment-menu .clickable-icon {
+  color: var(--comment-muted);
+}
+
+.margin-comment-menu .clickable-icon:hover {
+  background: rgb(0 0 0 / 0.07);
+  color: var(--comment-text);
+}
+
+.margin-comment-menu .menu {
+  right: 0;
+  top: 30px;
+}
+
+.margin-comment-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.comment-editor textarea {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #c7cbd1;
+  border-radius: var(--radius-s);
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 14px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.comment-editor textarea:focus {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -1px;
+}
+
+.comment-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-editor-actions .mod-muted {
+  background: transparent;
+  border-color: #c7cbd1;
+  color: #1f1f1f;
+}
+
+/* The toolbar that floats above selected text. */
+.selection-toolbar {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-l);
+  transform: translate(-50%, calc(-100% - 8px));
+  white-space: nowrap;
+}
+
+.selection-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.selection-action:hover {
+  background: var(--background-modifier-hover);
+}
+
+.selection-action.is-ai svg {
+  color: var(--text-accent);
+}
+
+.swatches {
+  display: inline-flex;
+  gap: 4px;
+  padding: 0 4px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: #ffd600;
+}
+
+.swatch[data-color="green"] {
+  background: #62d778;
+}
+
+.swatch[data-color="blue"] {
+  background: #54beff;
+}
+
+.swatch[data-color="pink"] {
+  background: #ff78b9;
+}
+
+.swatch:hover,
+.swatch[aria-pressed="true"] {
+  border-color: var(--text-normal);
+}
+
+@media (max-width: 768px) {
+  .paper-thumbs {
+    display: none;
+  }
+  .paper-toolbar .view-header-title,
+  .paper-toolbar .toolbar-divider {
+    display: none;
+  }
+  .paper-toolbar {
+    overflow-x: auto;
+  }
+}

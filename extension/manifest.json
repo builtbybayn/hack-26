@@ -1,11 +1,21 @@
 {
   "manifest_version": 3,
   "name": "KnowBefore",
-  "version": "0.3.0",
-  "description": "KnowBefore reading companion (barebones development build). Requires the app at http://localhost:3000.",
+  "version": "0.5.0",
+  "description": "Read research papers with an AI companion: analyze PDFs, find related and conflicting work, and send papers to your KnowBefore vault.",
   "minimum_chrome_version": "114",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
   "action": {
-    "default_title": "Open KnowBefore"
+    "default_title": "Open KnowBefore",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "side_panel": {
     "default_path": "sidepanel.html"

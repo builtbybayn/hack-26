@@ -31,14 +31,15 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis, tutoring, and cross-paper comparison. Grok provides an optional independent contradiction review.
+Open `http://localhost:3000` for the research vault. Standard PDF extraction works without provider keys. Gemini is required for concept analysis, tutoring, and cross-paper comparison. Grok provides an optional independent contradiction review.
 
 ## Environment configuration
 
 | Variable                             | Purpose                                                       |
 | ------------------------------------ | ------------------------------------------------------------- |
 | `GEMINI_API_KEY`                     | Server-only Google AI Studio API key                          |
-| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-flash-latest`     |
+| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-3.5-flash`        |
+| `GEMINI_FALLBACK_MODEL`              | Used when the main model is overloaded; `gemini-2.5-flash`    |
 | `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review       |
 | `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                            |
 | `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget           |
@@ -65,7 +66,31 @@ Create a Mistral API key and set `MISTRAL_API_KEY`. The adapter sends one base64
 
 Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-heavy documents; its asynchronous PDF conversion is polled with a bounded timeout and converted from Markdown/LaTeX to the same canonical shape.
 
-## PDF upload flow
+## The research vault
+
+The app opens on an Obsidian-style vault ([docs/DESIGN.md](docs/DESIGN.md)):
+
+1. **Import a paper** with the upload button (or drag a PDF onto the window). It is saved in this
+   browser and analyzed automatically: concepts and prerequisites, related papers, and a
+   contradiction check against saved papers on the same topics and published papers found by
+   the search (compared by abstract).
+2. **Read and annotate.** Select text to highlight it (four colors), add a comment that appears in
+   the margin beside it, or **Ask AI** about the passage. The highlighter button highlights as you
+   select. Ctrl+Z / Ctrl+Shift+Z undo and redo.
+3. **Chat.** Ask AI opens a chat beside the paper with the passage quoted; answers cite pages.
+   Chats are files in the tree, like notes, and can include several papers.
+4. **Notes** are Markdown with `[[wikilinks]]` to other notes, papers, and chats; Ctrl+E toggles
+   reading view. The right sidebar shows the open paper's analysis, highlights, related papers,
+   contradiction check, read-aloud, and backlinks.
+5. **Research projects** (flask icon in the ribbon) opens a tab for topic-first paper search,
+   projects, cross-paper synthesis, the research brief, gap ideas, and the paper graph. The paper
+   you're viewing is offered as context.
+6. Ctrl+O opens the quick switcher; Ctrl+Shift+F searches the text of every paper, note, and chat.
+
+Everything stays in this browser (IndexedDB). The original single-page workspace with the concept
+map and quizzes is at `/classic`.
+
+## PDF upload flow (classic workspace)
 
 1. Choose a PDF (maximum 25 MB).
 2. Choose Automatic, Standard, or Advanced OCR.
@@ -80,30 +105,41 @@ Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-he
 ## Chrome extension development
 
 `extension/` is a Manifest V3 side panel. It holds no secrets and almost no UI: the panel is the
-app's `/panel` page in an iframe, so it shares the app's code, API, and browser storage (papers,
-analyses, cached audio, reading positions). `extension/sidepanel.js` only bridges what needs
-Chrome APIs: the active tab, the selection on it, and the paper it shows. The panel's flow is
-in place; its visual design is provisional (**barebones build**).
+app's `/panel` page in an iframe, so it shares the app's code, API, theme, and browser storage
+(the whole vault). `extension/sidepanel.js` only bridges what needs Chrome APIs: the active tab,
+the paper it shows, and opening the vault tab.
 
 1. Run `npm run dev` (the extension expects `http://localhost:3000`).
 2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
 3. Select the repository's `extension` directory. Chrome 114 or newer is required.
 4. Pin KnowBefore and click its icon to open the side panel.
 
-The flow:
+The panel follows the active tab. At the top is the assistant (a placeholder sprite whose motion
+and color follow the agent state; see "Agent activity states" in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)). Below it:
 
-1. Open a paper: a PDF (for example an arXiv PDF) or an article page.
-2. The panel shows **This tab** with **Use this PDF** or **Use this page**. Chrome asks once per
-   site for access. PDFs are downloaded and parsed; pages are parsed from their main text.
-3. The paper opens in five views: **Overview** (analyze with Gemini), **Prerequisites** (concepts
-   to know first, mastery, explanations), **Explain** (bring over text selected on the page and
-   hear it; the AI explanation of a passage is Track A's, shown as a placeholder), **Related**
-   (Track B's recommendations), and **Listen** (read-aloud).
-4. Switching tabs follows along: a paper used before reopens automatically.
+- **On a PDF:** **Analyze this paper** saves it to the vault and runs the analysis (concepts and
+  prerequisites, then related papers and a contradiction check), step by step. **Open in vault**
+  opens the paper in the vault at the page in the **Page** box, reusing an open vault tab and
+  saving the paper first if needed. The page starts from the link (`…pdf#page=4`); Chrome's PDF
+  viewer doesn't tell extensions which page you scrolled to, so set it before sending.
+- **Anywhere else:** **New project** or **Ask**.
+  - **New project:** describe what you want to research. It creates a project folder in the vault
+    (`Notes/Roadmap`, `Papers`) whose Roadmap note lists, in order, the concepts to learn and real
+    papers to read (from OpenAlex), from foundations to the research frontier. Keep shaping it in
+    the panel ("skip the basics", "add a stage on…"); each reply rewrites the note. **Open roadmap
+    in vault** opens it.
+  - **Ask:** a chat with the assistant. **Use this page** adds the page's text to the chat. Chats
+    are saved in the vault's "Chats" folder.
+- After an analysis, the panel lists possible conflicts (with quotes and linked sources) and
+  related papers (with links and open-access PDFs).
 
-Chrome's built-in PDF viewer doesn't share text selections with extensions; use the
-Listen view or the paper's text instead. After changing files in `extension/`, click the reload
-icon on the extension's card in `chrome://extensions`. Changes to `/panel` only need a panel reload.
+Papers sent from the extension are filed in the first project's "Papers" folder (the first
+top-level folder A to Z, other than "Papers" and "Chats"), created if needed; with no project yet,
+a top-level "Papers" folder. They appear in an open vault right away.
+
+After changing files in `extension/`, click the reload icon on the extension's card in
+`chrome://extensions`. Changes to `/panel` only need a panel reload.
 
 ## API
 
@@ -112,6 +148,8 @@ icon on the extension's card in `chrome://extensions`. Changes to `/panel` only 
 - `POST /api/contradictions` — page-verified claims compared across two to four papers
 - `POST /api/recommendations` — background and related papers from OpenAlex
 - `POST /api/explain` — contextual concept tutoring
+- `POST /api/chat` — research chat grounded in the attached papers
+- `POST /api/roadmap` — research roadmap (stages, concepts, real papers) for an idea, and revisions
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
 - `POST /api/contradictions` — evidence-checked comparison of two stored papers

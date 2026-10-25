@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local archives (e.g. UI handoffs); never commit them.
+*.zip

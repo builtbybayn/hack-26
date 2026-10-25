@@ -17,6 +17,7 @@ import styles from "./recommendations.module.css";
 export function RecommendationsPanel({
   document,
   analysis,
+  initialResult = null,
   onSavePaper,
   onSaveSearch,
   history = [],
@@ -24,12 +25,14 @@ export function RecommendationsPanel({
 }: {
   document?: ParsedDocument;
   analysis?: DocumentAnalysis;
+  /** Results found earlier (e.g. by the analyze pipeline), shown without searching again. */
+  initialResult?: RecommendationsResult | null;
   onSavePaper?: (paper: PaperRecord) => Promise<void>;
   onSaveSearch?: (topic: string, result: RecommendationsResult) => Promise<boolean>;
   history?: SavedTopicSearch[];
   savedPaperIds?: string[];
 }) {
-  const [result, setResult] = useState<RecommendationsResult | null>(null);
+  const [result, setResult] = useState<RecommendationsResult | null>(initialResult);
   const [topic, setTopic] = useState("");
   const [topicResult, setTopicResult] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);

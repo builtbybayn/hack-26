@@ -1,3 +1,4 @@
+import { track } from "@/lib/agent-activity";
 import type {
   AnalyzeDocumentResponse,
   AnalyzeRequest,
@@ -21,22 +22,32 @@ export async function parseDocument(
   body.append("mode", options.mode ?? "automatic");
   body.append("ocrProvider", options.ocrProvider ?? "mistral");
   body.append("allowExternalProcessing", String(options.allowExternalProcessing ?? false));
-  return requestJson("/api/documents/parse", { method: "POST", body, signal });
+  return track("reading", `Reading ${file.name}`, () =>
+    requestJson("/api/documents/parse", { method: "POST", body, signal }),
+  );
 }
 
 export function analyzeDocument(
   input: AnalyzeRequest,
   signal?: AbortSignal,
 ): Promise<AnalyzeDocumentResponse> {
-  return requestJson("/api/documents/analyze", jsonRequest(input, signal));
+  return track(
+    "analyzing",
+    `Analyzing ${input.document.title ?? input.document.source.fileName}`,
+    () => requestJson("/api/documents/analyze", jsonRequest(input, signal)),
+  );
 }
 
 export function requestExplanation(input: ExplainRequest): Promise<ExplainResponse> {
-  return requestJson("/api/explain", jsonRequest(input));
+  return track("thinking", `Explaining ${input.concept.name}`, () =>
+    requestJson("/api/explain", jsonRequest(input)),
+  );
 }
 
 export function requestQuiz(concept: Concept): Promise<QuizResponse> {
-  return requestJson("/api/quiz", jsonRequest({ concept }));
+  return track("thinking", `Writing a quiz on ${concept.name}`, () =>
+    requestJson("/api/quiz", jsonRequest({ concept })),
+  );
 }
 
 export function evaluateAnswers(input: EvaluateRequest): Promise<EvaluateResponse> {
