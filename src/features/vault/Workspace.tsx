@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { PanelRight, Plus, X } from "lucide-react";
+import { FlaskConical, PanelRight, Plus, X } from "lucide-react";
 import type { VaultEntry } from "@/types/vault";
 import { KindIcon } from "./SidePanes";
-import type { WorkspaceAction, WorkspaceState } from "./workspace-state";
+import { RESEARCH_VIEW_ID, type WorkspaceAction, type WorkspaceState } from "./workspace-state";
 
 interface WorkspaceProps {
   state: WorkspaceState;
@@ -12,7 +12,8 @@ interface WorkspaceProps {
   byId: Map<string, VaultEntry>;
   rightOpen: boolean;
   onToggleRight: () => void;
-  renderView: (entry: VaultEntry | null, paneId: string) => ReactNode;
+  /** `entryId` is set without `entry` for built-in views such as research projects. */
+  renderView: (entry: VaultEntry | null, paneId: string, entryId: string | null) => ReactNode;
 }
 
 /** The work area: one or two panes, each with Obsidian-style tabs. */
@@ -44,7 +45,9 @@ export function Workspace({
               <div className="workspace-tab-header-container-inner" role="tablist">
                 {pane.tabs.map((tab) => {
                   const entry = tab.entryId ? byId.get(tab.entryId) : undefined;
-                  const title = entry?.name ?? "New tab";
+                  const title =
+                    entry?.name ??
+                    (tab.entryId === RESEARCH_VIEW_ID ? "Research projects" : "New tab");
                   return (
                     <div
                       key={tab.id}
@@ -65,6 +68,7 @@ export function Workspace({
                       }}
                     >
                       {entry && <KindIcon entry={entry} />}
+                      {tab.entryId === RESEARCH_VIEW_ID && <FlaskConical size={14} aria-hidden />}
                       <span className="workspace-tab-header-inner-title">{title}</span>
                       <button
                         type="button"
@@ -103,7 +107,9 @@ export function Workspace({
                 </button>
               )}
             </div>
-            <div className="workspace-leaf-content">{renderView(activeEntry, pane.id)}</div>
+            <div className="workspace-leaf-content">
+              {renderView(activeEntry, pane.id, activeTab?.entryId ?? null)}
+            </div>
           </section>
         );
       })}

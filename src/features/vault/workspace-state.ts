@@ -33,6 +33,9 @@ export type WorkspaceAction =
 
 const MAX_PANES = 2;
 
+/** A tab that shows a built-in view instead of a vault entry: research projects. */
+export const RESEARCH_VIEW_ID = "view:research";
+
 const id = (prefix: string) => `${prefix}-${crypto.randomUUID()}`;
 
 function emptyPane(): WorkspacePane {

@@ -80,7 +80,10 @@ The app opens on an Obsidian-style vault ([docs/DESIGN.md](docs/DESIGN.md)):
 4. **Notes** are Markdown with `[[wikilinks]]` to other notes, papers, and chats; Ctrl+E toggles
    reading view. The right sidebar shows the open paper's analysis, highlights, related papers,
    contradiction check, read-aloud, and backlinks.
-5. Ctrl+O opens the quick switcher; Ctrl+Shift+F searches the text of every paper, note, and chat.
+5. **Research projects** (flask icon in the ribbon) opens a tab for topic-first paper search,
+   projects, cross-paper synthesis, the research brief, gap ideas, and the paper graph. The paper
+   you're viewing is offered as context.
+6. Ctrl+O opens the quick switcher; Ctrl+Shift+F searches the text of every paper, note, and chat.
 
 Everything stays in this browser (IndexedDB). The original single-page workspace with the concept
 map and quizzes is at `/classic`.

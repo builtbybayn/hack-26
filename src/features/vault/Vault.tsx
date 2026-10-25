@@ -14,8 +14,10 @@ import {
   Settings,
   SquarePen,
   FileSearch,
+  FlaskConical,
 } from "lucide-react";
 import { AgentStatus } from "@/features/agent/AgentStatus";
+import { ResearchProjects } from "@/features/projects/ResearchProjects";
 import type { Annotation, ChatPassage, VaultChat, VaultEntry, VaultPaper } from "@/types/vault";
 import { ChatView } from "./ChatView";
 import { FileExplorer } from "./FileExplorer";
@@ -28,7 +30,12 @@ import { loadLocal, saveLocal, useSettings } from "./use-settings";
 import { useVault } from "./use-vault";
 import { collectDescendants, findByName, type SortOrder } from "./vault-tree";
 import { Workspace } from "./Workspace";
-import { initialWorkspace, restoreWorkspace, workspaceReducer } from "./workspace-state";
+import {
+  initialWorkspace,
+  RESEARCH_VIEW_ID,
+  restoreWorkspace,
+  workspaceReducer,
+} from "./workspace-state";
 import "@/components/theme/obsidian-theme.css";
 import "./vault.css";
 
@@ -68,7 +75,10 @@ export function Vault() {
   // Restore the previous layout once the vault has loaded (first render with entries).
   if (!restored && vault.entries) {
     setRestored(true);
-    const saved = restoreWorkspace(loadLocal("workspace", null), new Set(byId.keys()));
+    const saved = restoreWorkspace(
+      loadLocal("workspace", null),
+      new Set([...byId.keys(), RESEARCH_VIEW_ID]),
+    );
     if (saved) dispatch({ type: "restore", state: saved });
     setCollapsed(new Set(loadLocal<string[]>("collapsedFolders", [])));
     setSortOrder(loadLocal<SortOrder>("sortOrder", "name-asc"));
@@ -242,7 +252,18 @@ export function Vault() {
     return () => window.removeEventListener("keydown", listener);
   }, []);
 
-  const renderView = (entry: VaultEntry | null, paneId: string) => {
+  const openResearch = () => dispatch({ type: "open", entryId: RESEARCH_VIEW_ID, newTab: true });
+
+  const renderView = (entry: VaultEntry | null, paneId: string, entryId: string | null) => {
+    if (entryId === RESEARCH_VIEW_ID)
+      return (
+        <div className="research-view">
+          <ResearchProjects
+            document={insightRecord?.document ?? null}
+            analysis={insightRecord?.analysis ?? null}
+          />
+        </div>
+      );
     if (!vault.entries) return <div className="empty-state" />;
     if (!entry)
       return (
@@ -251,6 +272,7 @@ export function Vault() {
           onNewNote={() => newNote(selectedFolder())}
           onNewChat={() => newChat([])}
           onSwitcher={() => setModal({ type: "switcher" })}
+          onResearch={openResearch}
           onClose={() => {
             const pane = workspace.panes.find((candidate) => candidate.id === paneId);
             if (pane) dispatch({ type: "close", paneId, tabId: pane.activeTabId });
@@ -379,6 +401,15 @@ export function Vault() {
             onClick={() => newChat(insightRecord ? [insightRecord.id] : [], !!insightRecord)}
           >
             <MessagesSquare size={18} />
+          </button>
+          <button
+            type="button"
+            className="clickable-icon side-dock-ribbon-action"
+            aria-label="Research projects"
+            title="Research projects: topic search, synthesis, brief, gaps, paper graph"
+            onClick={openResearch}
+          >
+            <FlaskConical size={18} />
           </button>
           <a
             className="clickable-icon side-dock-ribbon-action"
@@ -613,12 +644,14 @@ function EmptyTab({
   onNewNote,
   onNewChat,
   onSwitcher,
+  onResearch,
   onClose,
 }: {
   onImport: () => void;
   onNewNote: () => void;
   onNewChat: () => void;
   onSwitcher: () => void;
+  onResearch: () => void;
   onClose: () => void;
 }) {
   return (
@@ -637,6 +670,9 @@ function EmptyTab({
           </button>
           <button type="button" className="empty-state-action" onClick={onSwitcher}>
             Go to file <kbd>Ctrl+O</kbd>
+          </button>
+          <button type="button" className="empty-state-action" onClick={onResearch}>
+            Research projects
           </button>
           <button type="button" className="empty-state-action" onClick={onClose}>
             Close

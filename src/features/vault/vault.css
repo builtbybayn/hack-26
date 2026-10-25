@@ -461,6 +461,30 @@
   padding: 32px 32px 30vh;
 }
 
+/* ---- Research projects tab (the projects feature, in the vault theme via the shared tokens) */
+
+.research-view {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px 32px 30vh;
+}
+
+.research-view :is(input, select, textarea) {
+  border-color: var(--background-modifier-border);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+}
+
+.research-view :is(input, textarea)::placeholder {
+  color: var(--text-faint);
+}
+
+.research-view > * {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
 /* ---- Empty tab ---------------------------------------------------------------------------- */
 
 .empty-state {

@@ -322,10 +322,15 @@ clients report their own work through `track()`, so features get states without 
 
 When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
 React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
-event. `src/features/agent/AgentSprite.tsx` (in the extension panel) is the placeholder blob to
-replace with the sprite: it maps `snapshot.state` to motion and color through `data-state`.
-`AgentStatus.tsx` is the compact version in the vault's status bar. New features call
-`track(state, detail, work)`.
+event. `AgentSprite.tsx` in the extension panel and `AgentStatus.tsx` in the vault both use
+`src/features/agent/FluidMatter.tsx`. Its native WebGL renderer blends nine mathematical surface
+fields through one continuous clock and reflective liquid material. Idle uses merging volumes;
+the activity forms retain slow deformation and rounded edges. State transitions blend from the
+currently visible form, including interrupted transitions. The renderer pauses when hidden or
+offscreen, respects reduced motion, and shows a static fallback when WebGL is unavailable.
+`/sprite` provides a local preview of every form, including the panel and compact sizes.
+New features call `track(state, detail, work)`. Synthesis and evidence checks report comparing or
+analyzing; citation lookup reports searching.
 
 ### "Analyze this paper" pipeline
 
@@ -362,12 +367,18 @@ vault" opens `/?paper=<document id>&page=<n>`, reusing an open vault tab; the re
 remembers where you were in each paper (per browser). The original single-page
 workspace (concept map, quizzes) remains at `/classic`.
 
+Research projects (`src/features/projects`: topic search, synthesis, brief, gaps, paper graph) open
+as a built-in workspace tab (`RESEARCH_VIEW_ID` in `workspace-state.ts`), receiving the paper in
+view as context. Their projects are stored separately from vault folders for now (`projects`
+store). The assistant sprite is `src/features/agent/FluidMatter.tsx`; `/sprite` previews every
+state.
+
 ### The extension panel (`/panel`)
 
 `src/features/extension-panel` uses the same Obsidian theme (`src/components/theme`) and the
 vault's `ChatView`. On a PDF tab it runs the analyze pipeline and sends the paper to the vault at a
 page; elsewhere it is a chat whose conversations are filed in the vault's "Chats" folder. The
-placeholder sprite is `src/features/agent/AgentSprite.tsx`.
+fluid sprite is `src/features/agent/AgentSprite.tsx`.
 
 Chrome's PDF viewer runs inside another extension's frame (in a closed shadow root), so neither
 the scroll position nor the selection can be read by our extension. The page to open comes from the
