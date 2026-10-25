@@ -145,11 +145,8 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
     <div className="radar-view">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">RESEARCH RADAR</p>
           <h1>News</h1>
-          <p className="mt-2 text-sm text-muted">
-            Recent technical ideas assessed against your current project and research literature.
-          </p>
+          <p className="mt-2 text-sm text-muted">Research signals for your project.</p>
         </div>
       </header>
       {!context ? (
@@ -165,7 +162,7 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
               <Radar size={22} aria-hidden="true" />
             </div>
             <label className="radar-label" htmlFor="radar-summary">
-              Project summary sent to research providers
+              Project context
             </label>
             <textarea
               id="radar-summary"
@@ -176,8 +173,8 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
               rows={3}
             />
             <p className="radar-muted">
-              Search also uses short project goals, concept names, and question titles. Document
-              pages and note bodies stay in your browser.
+              Goals, concepts, and questions also inform search. Notes and document pages stay in
+              your browser.
             </p>
             <label className="radar-consent">
               <input
@@ -185,8 +182,8 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
                 checked={consent}
                 onChange={(event) => setConsent(event.target.checked)}
               />{" "}
-              I approve sending this project context to xAI, claim text to OpenAlex, and evidence
-              assessments to the configured AI provider.
+              I agree to share this summary with xAI, claim text with OpenAlex, and assessments with
+              the configured AI provider.
             </label>
             <div className="radar-actions">
               <button
@@ -215,15 +212,15 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
               </p>
             )}
           </section>
-          <section className="surface radar-block" aria-label="Research overview">
+          <section className="surface radar-block radar-overview" aria-label="Research overview">
             <div className="radar-head">
-              <h2>Research overview</h2>
-              <span>Rolling seven days · UTC</span>
+              <h2>This week</h2>
+              <span>{current ? `Scanned ${date(current.scannedAt)}` : "Not scanned yet"}</span>
             </div>
             <div className="radar-stats">
               <div>
                 <strong>{current?.findings.length ?? 0}</strong>
-                <span>Relevant findings</span>
+                <span>Findings</span>
               </div>
               <div>
                 <strong>
@@ -233,7 +230,7 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
                     ),
                   ).length ?? 0}
                 </strong>
-                <span>Need investigation</span>
+                <span>Need review</span>
               </div>
               <div>
                 <strong>
@@ -243,13 +240,11 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
                       finding.projectImpact === "potential_risk",
                   ).length ?? 0}
                 </strong>
-                <span>Opportunities or risks</span>
+                <span>Opportunities / risks</span>
               </div>
             </div>
             <p className="radar-muted">
-              Last scan: {current ? date(current.scannedAt) : "Never"}. Sources searched:{" "}
-              {current?.sourcesSearched.join(", ") || "None"}. Reddit was not searched; access
-              requires separate authorization.
+              Sources: {current?.sourcesSearched.join(", ") || "None"}. Reddit is not included.
             </p>
             {current?.warnings.map((warning) => (
               <p className="radar-muted" key={warning}>
@@ -259,126 +254,102 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
           </section>
           {current && (
             <>
-              <section className="surface radar-block">
-                <h2>Weekly research summary</h2>
-                {current.findings.length ? (
-                  <p className="radar-muted">
-                    {current.findings.length} recent finding
-                    {current.findings.length === 1 ? "" : "s"} matched this project.{" "}
-                    {
-                      current.findings.filter((finding) =>
-                        finding.claims.some((claim) => claim.status === "supported"),
-                      ).length
-                    }{" "}
-                    have abstract-level supporting evidence;{" "}
-                    {
-                      current.findings.filter((finding) =>
-                        finding.claims.some((claim) =>
-                          ["mixed", "contradicted"].includes(claim.status),
-                        ),
-                      ).length
-                    }{" "}
-                    contain contradictory or mixed evidence. Recommendations below are project
-                    assessments, not established research findings.
-                  </p>
-                ) : (
-                  <p className="radar-muted">
-                    No recent, verifiable technical posts matched this project. Older posts were not
-                    substituted.
-                  </p>
-                )}
-              </section>
-              <section className="radar-filters" aria-label="Filter findings">
-                <select
-                  aria-label="Platform"
-                  value={platform}
-                  onChange={(event) => setPlatform(event.target.value)}
-                >
-                  <option value="all">All platforms</option>
-                  <option value="x">X</option>
-                  <option value="reddit">Reddit</option>
-                </select>
-                <select
-                  aria-label="Evidence"
-                  value={evidence}
-                  onChange={(event) => setEvidence(event.target.value)}
-                >
-                  <option value="all">All evidence</option>
-                  {[
-                    "supported",
-                    "partially_supported",
-                    "mixed",
-                    "contradicted",
-                    "insufficient_evidence",
-                    "not_empirically_testable",
-                  ].map((value) => (
-                    <option key={value} value={value}>
-                      {label(value)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Feasibility"
-                  value={feasibility}
-                  onChange={(event) => setFeasibility(event.target.value)}
-                >
-                  <option value="all">All feasibility</option>
-                  {["high", "moderate", "low", "unknown"].map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Project impact"
-                  value={impact}
-                  onChange={(event) => setImpact(event.target.value)}
-                >
-                  <option value="all">All impacts</option>
-                  {[
-                    "improvement_opportunity",
-                    "potential_risk",
-                    "alternative_approach",
-                    "existing_related_work",
-                    "further_investigation",
-                    "no_significant_impact",
-                  ].map((value) => (
-                    <option key={value} value={value}>
-                      {label(value)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Minimum relevance"
-                  value={minRelevance}
-                  onChange={(event) => setMinRelevance(Number(event.target.value))}
-                >
-                  <option value="0">Any relevance</option>
-                  <option value="40">40%+</option>
-                  <option value="70">70%+</option>
-                </select>
-                <select
-                  aria-label="Published within"
-                  value={newestAfter}
-                  onChange={(event) => setNewestAfter(Number(event.target.value))}
-                >
-                  <option value="7">Past 7 days</option>
-                  <option value="3">Past 3 days</option>
-                  <option value="1">Past 24 hours</option>
-                </select>
-                <select
-                  aria-label="Sort"
-                  value={sort}
-                  onChange={(event) => setSort(event.target.value)}
-                >
-                  <option value="relevance">Most relevant</option>
-                  <option value="newest">Newest first</option>
-                </select>
-              </section>
+              <details className="radar-filter-panel">
+                <summary>
+                  Filters <span>{findings.length} results</span>
+                </summary>
+                <section className="radar-filters" aria-label="Filter findings">
+                  <select
+                    aria-label="Platform"
+                    value={platform}
+                    onChange={(event) => setPlatform(event.target.value)}
+                  >
+                    <option value="all">All platforms</option>
+                    <option value="x">X</option>
+                    <option value="reddit">Reddit</option>
+                  </select>
+                  <select
+                    aria-label="Evidence"
+                    value={evidence}
+                    onChange={(event) => setEvidence(event.target.value)}
+                  >
+                    <option value="all">All evidence</option>
+                    {[
+                      "supported",
+                      "partially_supported",
+                      "mixed",
+                      "contradicted",
+                      "insufficient_evidence",
+                      "not_empirically_testable",
+                    ].map((value) => (
+                      <option key={value} value={value}>
+                        {label(value)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Feasibility"
+                    value={feasibility}
+                    onChange={(event) => setFeasibility(event.target.value)}
+                  >
+                    <option value="all">All feasibility</option>
+                    {["high", "moderate", "low", "unknown"].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Project impact"
+                    value={impact}
+                    onChange={(event) => setImpact(event.target.value)}
+                  >
+                    <option value="all">All impacts</option>
+                    {[
+                      "improvement_opportunity",
+                      "potential_risk",
+                      "alternative_approach",
+                      "existing_related_work",
+                      "further_investigation",
+                      "no_significant_impact",
+                    ].map((value) => (
+                      <option key={value} value={value}>
+                        {label(value)}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    aria-label="Minimum relevance"
+                    value={minRelevance}
+                    onChange={(event) => setMinRelevance(Number(event.target.value))}
+                  >
+                    <option value="0">Any relevance</option>
+                    <option value="40">40%+</option>
+                    <option value="70">70%+</option>
+                  </select>
+                  <select
+                    aria-label="Published within"
+                    value={newestAfter}
+                    onChange={(event) => setNewestAfter(Number(event.target.value))}
+                  >
+                    <option value="7">Past 7 days</option>
+                    <option value="3">Past 3 days</option>
+                    <option value="1">Past 24 hours</option>
+                  </select>
+                  <select
+                    aria-label="Sort"
+                    value={sort}
+                    onChange={(event) => setSort(event.target.value)}
+                  >
+                    <option value="relevance">Most relevant</option>
+                    <option value="newest">Newest first</option>
+                  </select>
+                </section>
+              </details>
               {findings.length ? (
                 <div className="radar-grid">
                   {findings.map((finding) => (
-                    <article className="surface radar-block" key={finding.id}>
+                    <article className="surface radar-block radar-finding" key={finding.id}>
                       <div className="radar-head">
                         <span className="eyebrow">
                           {finding.socialSources
@@ -405,10 +376,10 @@ function RadarContent({ context }: { context: ResearchContext | null }) {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          View Original Post <ExternalLink size={14} />
+                          Original <ExternalLink size={14} />
                         </a>
                         <button className="btn" onClick={() => setSelectedId(finding.id)}>
-                          View Research Sources
+                          Sources
                         </button>
                         <button
                           className="btn"
