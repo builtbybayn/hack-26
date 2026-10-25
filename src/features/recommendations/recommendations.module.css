@@ -122,6 +122,34 @@
 .preview dd a {
   white-space: nowrap;
 }
+.pdfPreview {
+  margin: 16px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.pdfPreview label {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+.pdfFields {
+  margin: 0;
+}
+.pdfFields > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.pdfFields dt {
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.pdfFields dd {
+  margin: 0;
+}
 .links {
   display: flex;
   flex-wrap: wrap;
@@ -152,5 +180,8 @@
   .preview dl > div {
     grid-template-columns: 1fr;
     gap: 2px;
+  }
+  .pdfFields > div {
+    grid-template-columns: 1fr;
   }
 }

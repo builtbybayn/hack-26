@@ -168,6 +168,7 @@ real output.
 | `POST /api/synthesis/check`   | JSON `{ documents, findings }`; rechecks one to twelve saved synthesis findings against their cited pages without regenerating text.          |
 | `POST /api/brief/check`       | JSON `{ documents, finding }`; checks a revised brief finding against its cited source pages and returns refreshed interpretation labels.     |
 | `POST /api/papers/citations`  | JSON `{ paperIds }` with one to twenty OpenAlex IDs; returns provider reference IDs for saved-paper citation links.                           |
+| `POST /api/papers/preview`    | Multipart uploaded PDF; returns five study fields as page-verified quotes or null, with extraction warnings.                                  |
 | `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                                                                          |
 | `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path.                                              |
 | `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                                         |
@@ -277,6 +278,12 @@ Each card also groups verbatim abstract sentences under methods, sample or data,
 results, and limitations when clear keyword matches exist. Every excerpt links to its OpenAlex
 record and is labeled as abstract evidence. Unmatched fields say no clear excerpt was found;
 they do not claim the full paper omits that information. The full abstract remains expandable.
+Readers can upload a recommended paper's PDF on its card for deeper screening. The route uses
+the shared ingestion pipeline, sends up to 160,000 extracted characters across all pages to
+Gemini, and verifies every returned quote against its cited page. Invalid citations are removed,
+and omitted fields remain explicit. The response includes no stored file; the card's page links
+open the user-selected local PDF for this session. Users must confirm the uploaded PDF matches
+the bibliographic record. Longer extracted documents are rejected rather than silently truncated.
 Successful topic searches in a selected project also save the query, timestamp, provider trail,
 warnings, and returned paper snapshot in that project's IndexedDB record. The newest 20 searches
 can be reopened without another provider request. Older projects simply have no history until a

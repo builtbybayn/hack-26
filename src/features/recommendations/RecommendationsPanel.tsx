@@ -10,6 +10,7 @@ import type {
   SavedTopicSearch,
 } from "@/types/research";
 import type { PaperRecord } from "@/types/research";
+import { FullPdfPreview } from "./FullPdfPreview";
 import { studyPreview } from "./study-preview";
 import styles from "./recommendations.module.css";
 
@@ -217,6 +218,7 @@ export function RecommendationsPanel({
                               <p className={styles.abstract}>{paper.abstract}</p>
                             </details>
                           )}
+                          <FullPdfPreview />
                           <button
                             className="secondary"
                             disabled={!onSavePaper || savedPaperIds.includes(paper.id)}

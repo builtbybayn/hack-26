@@ -123,3 +123,12 @@ sample or data, measures, results, and limitations. The client groups clear keyw
 without generating claims or downloading PDFs. Missing matches are labeled as absent from the
 preview, and each excerpt links to the provider record. Full-paper fields can be added after a
 source-aware analysis path is available for each recommended paper.
+
+### 20. Analyze recommended PDFs only after explicit upload
+
+**Provisional.** A reader may upload a recommended paper's PDF for a deeper card preview. The
+server parses it through the shared ingestion module and uses Gemini to select page excerpts for
+five study fields. It removes quotes that do not match the cited parsed page. The card links to
+the user's local PDF during that session; no remote PDF fetching, server persistence, or claim
+that the uploaded file matches the provider record is added. Reject extracted text over 160,000
+characters so a preview never silently omits part of the PDF.
