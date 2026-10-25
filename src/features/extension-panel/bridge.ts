@@ -82,6 +82,8 @@ export function useExtensionBridge(handlers: BridgeHandlers) {
       setPending("kb:get-paper");
       send("kb:get-paper");
     },
+    /** Opens (or reuses) the vault tab showing a vault entry, e.g. a project's roadmap note. */
+    openEntry: (entryId: string) => send("kb:open-app", { path: `/?entry=${entryId}` }),
     /** Opens (or reuses) the vault tab, showing a saved paper at a page when given one. */
     openApp: (documentId?: string, page?: number) =>
       send(

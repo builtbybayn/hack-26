@@ -7,6 +7,7 @@ import {
   collectDescendants,
   findByName,
   folderPath,
+  newProjectEntries,
   placeUnfiledPapers,
   uniqueName,
 } from "./vault-tree";
@@ -124,5 +125,24 @@ describe("tree operations", () => {
     expect(findByName(entries, "N")?.id).toBe("n");
     expect(findByName(entries, "a")).toBeNull(); // folders can't be linked
     expect(folderPath(entries, "n")).toEqual(["a", "b"]);
+  });
+});
+
+describe("newProjectEntries", () => {
+  it("creates the project with Notes/Roadmap and Papers, named uniquely", () => {
+    const { project, roadmap, created } = newProjectEntries(
+      [folder("existing", null, "Quantum RL")],
+      "Quantum RL",
+      "# Roadmap",
+    );
+    expect(project).toMatchObject({ name: "Quantum RL 1", parentId: null });
+    expect(created.map((entry) => `${entry.kind}:${entry.name}`)).toEqual([
+      "folder:Quantum RL 1",
+      "folder:Notes",
+      "folder:Papers",
+      "note:Roadmap",
+    ]);
+    expect(roadmap.body).toBe("# Roadmap");
+    expect(roadmap.parentId).toBe(created[1].id);
   });
 });

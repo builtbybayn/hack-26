@@ -92,6 +92,12 @@ export function Vault() {
     const paper = entries.find(
       (entry): entry is VaultPaper => entry.kind === "paper" && entry.documentId === paperId,
     );
+    // ?entry=<id> opens any vault entry, e.g. a roadmap note created by the extension.
+    const linked = byId.get(params.get("entry") ?? "");
+    if (linked && linked.kind !== "folder") {
+      dispatch({ type: "open", entryId: linked.id });
+      setSelectedId(linked.id);
+    }
     if (paper) {
       dispatch({ type: "open", entryId: paper.id });
       setSelectedId(paper.id);

@@ -169,7 +169,9 @@ window.addEventListener("message", (event) => {
 /** Shows the vault, reusing an open vault tab. Only the vault's own paper links are allowed. */
 async function openVault(path) {
   const safe =
-    typeof path === "string" && /^\/(\?paper=[\w-]+(&page=\d+)?)?$/.test(path) ? path : "/";
+    typeof path === "string" && /^\/(\?(paper=[\w-]+(&page=\d+)?|entry=[\w-]+))?$/.test(path)
+      ? path
+      : "/";
   const url = `${APP_ORIGIN}${safe}`;
   const tabs = await chrome.tabs.query({ url: `${APP_ORIGIN}/*` });
   const vaultTab = tabs.find((candidate) => new URL(candidate.url).pathname === "/");
@@ -186,3 +188,5 @@ fetch(`${APP_ORIGIN}/api/health`).catch(() => {
   document.getElementById("offline").hidden = false;
   frame.hidden = true;
 });
+
+document.getElementById("retry").addEventListener("click", () => location.reload());

@@ -3,7 +3,7 @@
 /**
  * The extension side panel, loaded at /panel inside the extension. It follows the active tab:
  * on a PDF it offers "Analyze this paper" and "Open in vault" (at the page you're reading);
- * anywhere else it's a chat with the research assistant. Same Obsidian theme as the vault.
+ * anywhere else it starts a research project (a roadmap filed in the vault) or chats. Same Obsidian theme as the vault.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, FileText, Globe, LoaderCircle, SquarePen } from "lucide-react";
@@ -31,6 +31,8 @@ import {
   useExtensionBridge,
   type TabPaper,
 } from "./bridge";
+import { Conflicts, RelatedPapers } from "./PaperResults";
+import { ProjectBuilder } from "./ProjectBuilder";
 import "@/components/theme/obsidian-theme.css";
 import "./extension-panel.css";
 
@@ -69,6 +71,9 @@ export function ExtensionPanel() {
   const [chat, setChat] = useState<VaultChat | null>(null);
   /** Bumped by "New chat" to reset the chat view. */
   const [chatGeneration, setChatGeneration] = useState(0);
+  /** Off a PDF: start a research project, or ask the assistant. */
+  const [mode, setMode] = useState<"project" | "ask">("project");
+  const [projectActive, setProjectActive] = useState(false);
   const intent = useRef<Intent>({ kind: "analyze" });
   const pipelineAbort = useRef<AbortController | null>(null);
   const chatRef = useRef<VaultChat | null>(null);
@@ -248,7 +253,9 @@ export function ExtensionPanel() {
   const recordMap = new Map(records.map((entry) => [entry.id, entry]));
   const pendingPaper = bridge.pending === "kb:get-paper";
   const status = error ?? busy ?? (pendingPaper ? "Getting the paper from this tab…" : null);
-  const chatting = !onPdf;
+  const chatting = !onPdf && mode === "ask";
+  const openEntry = (entryId: string) =>
+    tab ? bridge.openEntry(entryId) : window.open(`/?entry=${entryId}`, "_blank");
 
   return (
     <main className="ext theme-obsidian" data-theme={settings.theme}>
@@ -278,15 +285,44 @@ export function ExtensionPanel() {
 
       <section
         className="ext-hero"
-        data-compact={(chatting && shownChat.messages.length > 0) || undefined}
+        data-compact={
+          (chatting && shownChat.messages.length > 0) ||
+          (!onPdf && mode === "project" && projectActive) ||
+          undefined
+        }
       >
-        <AgentSprite greeting={onPdf ? "Ready when you are" : "Ask me anything"} />
+        <AgentSprite
+          greeting={
+            onPdf ? "Ready when you are" : chatting ? "Ask me anything" : "What will you research?"
+          }
+        />
       </section>
 
       {tab && (
         <div className="ext-tab" title={tab.url}>
           {onPdf ? <FileText size={14} aria-hidden /> : <Globe size={14} aria-hidden />}
           <span>{tab.title || "Untitled tab"}</span>
+        </div>
+      )}
+
+      {!onPdf && (
+        <div className="ext-modes" role="tablist" aria-label="What to do">
+          {(
+            [
+              ["project", "New project"],
+              ["ask", "Ask"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={mode === id}
+              onClick={() => setMode(id)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -311,7 +347,7 @@ export function ExtensionPanel() {
               </button>
               <p className="ext-hint">
                 Saves it to your vault, then finds what to know first, related papers, and conflicts
-                with papers you&apos;ve saved.
+                with the published literature and papers you&apos;ve saved.
               </p>
             </>
           ) : (
@@ -344,6 +380,8 @@ export function ExtensionPanel() {
                   </button>
                 )}
               {record.analysis && <Summary record={record} />}
+              <Conflicts record={record} />
+              <RelatedPapers record={record} />
             </>
           )}
 
@@ -376,6 +414,8 @@ export function ExtensionPanel() {
             extensions where you are, so set the page you&apos;re on.
           </p>
         </section>
+      ) : mode === "project" ? (
+        <ProjectBuilder onOpenEntry={openEntry} onActiveChange={setProjectActive} />
       ) : (
         <ChatView
           key={chatGeneration}

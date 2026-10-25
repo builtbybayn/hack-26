@@ -1,6 +1,6 @@
 import "server-only";
 
-import { GoogleGenAI } from "@google/genai";
+import { generateText as generateGeminiText } from "@/lib/ai/gemini";
 import { z } from "zod";
 import type {
   Concept,
@@ -167,24 +167,7 @@ export function evaluateQuiz(quiz: QuizResult, answers: Record<string, string>):
   };
 }
 
-async function generateText(
-  prompt: string,
-  maxOutputTokens: number,
-  json = false,
-): Promise<string> {
-  if (!process.env.GEMINI_API_KEY)
-    throw new IntelligenceError("AI_NOT_CONFIGURED", "Gemini is not configured on the server.");
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const response = await ai.models.generateContent({
-    model: process.env.GEMINI_MODEL ?? "gemini-flash-latest",
-    contents: prompt,
-    config: {
-      maxOutputTokens,
-      temperature: 0.3,
-      ...(json ? { responseMimeType: "application/json" } : {}),
-    },
-  });
-  if (!response.text)
-    throw new IntelligenceError("PROVIDER_ERROR", "Gemini returned an empty response.");
-  return response.text;
+/** The shared Gemini call, so the tutor gets the same model, timeout, and retries. */
+function generateText(prompt: string, maxOutputTokens: number, json = false): Promise<string> {
+  return generateGeminiText(prompt, { maxOutputTokens, temperature: 0.3, json });
 }

@@ -172,6 +172,7 @@ real output.
 | `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path.                                              |
 | `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                                         |
 | `POST /api/chat`              | JSON `{ messages, papers }` (`src/types/chat.ts`); returns `{ reply }` (Markdown, cites pages).                                               |
+| `POST /api/roadmap`           | JSON `{ idea, previous?, conversation? }` (`src/types/roadmap.ts`); returns `{ roadmap, reply, warnings }`.                                   |
 
 `/api/chat` is stateless like the rest: each request carries the whole conversation and the text
 of the attached papers. The server keeps quoted pages first and trims the rest to a shared
@@ -335,11 +336,14 @@ analyzing; citation lookup reports searching.
 ### "Analyze this paper" pipeline
 
 `runPaperPipeline` (`src/lib/paper-pipeline.ts`, browser) saves the paper and its original file,
-runs Gemini analysis (reused if saved), then related papers and the contradiction check in
-parallel. The check compares with up to three saved, analyzed papers whose topics overlap, and
-is skipped when none do. Each step's status (`src/types/pipeline.ts`) and result is saved on the
-paper's record, so the vault can read `recommendations`, `contradictions`, and `pipeline`
-directly, and re-running resumes rather than repeating finished work.
+runs Gemini analysis (reused if saved), then finds related papers, then runs the contradiction
+check. The check compares the paper with up to three others: at most two saved, analyzed papers
+whose topics overlap, and published papers from the related-papers search (closest work first),
+compared by their abstracts (`src/lib/research/literature-document.ts`). It is skipped only when
+there is neither. The report's `sources` names each compared paper and links published ones. Each
+step's status (`src/types/pipeline.ts`) and result is saved on the paper's record, so the vault
+can read `recommendations`, `contradictions`, and `pipeline` directly, and re-running resumes
+rather than repeating finished work.
 
 ### The research vault (`/`)
 
@@ -372,6 +376,22 @@ as a built-in workspace tab (`RESEARCH_VIEW_ID` in `workspace-state.ts`), receiv
 view as context. Their projects are stored separately from vault folders for now (`projects`
 store). The assistant sprite is `src/features/agent/FluidMatter.tsx`; `/sprite` previews every
 state.
+
+### Research roadmaps
+
+`/api/roadmap` (`src/lib/research/roadmap.ts`) asks Gemini for an ordered plan: stages, concepts
+with reasons, and one scholarly search query per stage. The model never names papers: the server
+runs each query against OpenAlex and attaches the top results, so every listed paper is real. A
+revision sends the previous roadmap and the discussion back; stages whose query is unchanged keep
+their papers. The browser formats the roadmap as Markdown (`roadmap-markdown.ts`) and files it as
+`<Project>/Notes/Roadmap` with a `Papers` folder (`newProjectEntries` in `vault-tree.ts`).
+
+### Gemini calls
+
+`src/lib/ai/gemini.ts` pins the model (`gemini-3.5-flash`; the `-latest` alias stopped answering
+for new keys) and bounds every call with a two-minute timeout. Temporary failures (503 overloaded,
+429, 500) are retried with backoff and then sent to `GEMINI_FALLBACK_MODEL`; if all fail, the user
+sees "Gemini is busy right now". Provider reasons are logged on the server, never the key.
 
 ### The extension panel (`/panel`)
 

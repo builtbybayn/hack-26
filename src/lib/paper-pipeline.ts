@@ -1,8 +1,9 @@
 /**
  * "Analyze this paper": save the paper, then run every analysis on it, saving each result.
  *
- *   saved ─▶ analysis ─┬▶ recommendations   (related papers, Track B)
- *                      └▶ contradictions    (vs. saved papers sharing its topics, Track A)
+ *   saved ─▶ analysis ─▶ recommendations ─▶ contradictions
+ *                        (related papers)    (vs. saved papers on its topics and the published
+ *                                             papers just found, compared by abstract)
  *
  * Runs in the browser because the browser owns stored papers. Each step's status is persisted on
  * the record, so closing the panel loses nothing and re-running skips finished work. Activity
@@ -19,12 +20,17 @@ import {
   updateDocumentRecord,
   type DocumentRecord,
 } from "@/lib/browser-store";
+import { literatureDocument } from "@/lib/research/literature-document";
+import type { ContradictionReport } from "@/types/contradictions";
 import type { DocumentAnalysis } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { PaperPipeline, PipelineStep, PipelineStepId } from "@/types/pipeline";
+import type { RecommendationsResult } from "@/types/research";
 
-/** At most this many other papers are compared in the contradiction check. */
+/** At most this many other papers are compared in the contradiction check (the API takes 4). */
 const MAX_COMPARED_PAPERS = 3;
+/** Saved papers get at most this many slots, so published work is always part of the check. */
+const MAX_SAVED_PAPERS = 2;
 
 export interface PipelineOptions {
   /** The original file, kept for the vault. */
@@ -82,11 +88,9 @@ export async function runPaperPipeline(
     await setStep("analysis", { status: "done" }, { analysis });
   }
 
-  // 3. Related papers and the contradiction check are independent; run them together.
-  await Promise.all([
-    findRelatedPapers(document, analysis, stored, setStep, signal),
-    checkContradictions(document, analysis, stored, setStep, signal),
-  ]);
+  // 3. Related papers, then the contradiction check against saved papers and those it found.
+  const related = await findRelatedPapers(document, analysis, stored, setStep, signal);
+  await checkContradictions(document, analysis, stored, related, setStep, signal);
   return record!;
 }
 
@@ -98,10 +102,10 @@ async function findRelatedPapers(
   stored: DocumentRecord,
   setStep: SetStep,
   signal?: AbortSignal,
-) {
+): Promise<RecommendationsResult | null> {
   if (stored.recommendations) {
     await setStep("recommendations", { status: "done", message: "Reused saved results." });
-    return;
+    return stored.recommendations;
   }
   await setStep("recommendations", { status: "running" });
   const result = await requestRecommendations({ document, analysis }, signal);
@@ -112,33 +116,53 @@ async function findRelatedPapers(
       { status: "done", message: `${count} paper${count === 1 ? "" : "s"} found.` },
       { recommendations: result.data },
     );
-  } else {
-    await setStep("recommendations", { status: "failed", message: result.error.message });
+    return result.data;
   }
+  await setStep("recommendations", { status: "failed", message: result.error.message });
+  return null;
 }
 
+/**
+ * Compares the paper with saved papers on the same topics and with published papers found by the
+ * related-papers search (by their abstracts), so conflicts with the wider literature show up too.
+ */
 async function checkContradictions(
   document: ParsedDocument,
   analysis: DocumentAnalysis,
   stored: DocumentRecord,
+  related: RecommendationsResult | null,
   setStep: SetStep,
   signal?: AbortSignal,
 ) {
-  const others = (await listDocumentRecords())
+  const saved = (await listDocumentRecords())
     .filter(
       (entry): entry is DocumentRecord & { analysis: DocumentAnalysis } =>
         entry.id !== document.id && !!entry.analysis && topicsOverlap(analysis, entry.analysis),
     )
-    .slice(0, MAX_COMPARED_PAPERS);
-  if (!others.length) {
+    .slice(0, MAX_SAVED_PAPERS);
+  const savedTitles = new Set(
+    [document, ...saved.map((entry) => entry.document)].map((item) => normalizeTitle(item.title)),
+  );
+  const literature = [...(related?.recommendations ?? [])]
+    // Closest work first; foundational background is less likely to make the same claims.
+    .sort((a, b) => Number(a.kind === "background") - Number(b.kind === "background"))
+    .filter(({ paper }) => !savedTitles.has(normalizeTitle(paper.title)))
+    .flatMap(({ paper }) => {
+      const asDocument = literatureDocument(paper);
+      return asDocument ? [{ paper, document: asDocument }] : [];
+    })
+    .slice(0, MAX_COMPARED_PAPERS - saved.length);
+
+  if (!saved.length && !literature.length) {
     await setStep("contradictions", {
       status: "skipped",
-      message: "No other saved paper shares its topics yet.",
+      message: "No saved or published papers with abstracts to compare with yet.",
     });
     return;
   }
+  const ids = [...saved.map((entry) => entry.id), ...literature.map(({ paper }) => paper.id)];
   const previous = stored.contradictions;
-  if (previous && others.every((entry) => previous.documentIds.includes(entry.id))) {
+  if (previous && ids.every((id) => previous.documentIds.includes(id))) {
     await setStep("contradictions", { status: "done", message: "Reused saved results." });
     return;
   }
@@ -146,24 +170,62 @@ async function checkContradictions(
   await setStep("contradictions", { status: "running" });
   const result = await requestContradictions(
     {
-      documents: [document, ...others.map((entry) => entry.document)],
-      analyses: [analysis, ...others.map((entry) => entry.analysis)],
+      documents: [
+        document,
+        ...saved.map((entry) => entry.document),
+        ...literature.map((entry) => entry.document),
+      ],
+      // Analyses must cover every document, and published papers only have abstracts.
+      ...(literature.length
+        ? {}
+        : { analyses: [analysis, ...saved.map((entry) => entry.analysis)] }),
     },
     signal,
   );
-  if (result.ok) {
-    const count = result.data.findings.length;
-    await setStep(
-      "contradictions",
-      {
-        status: "done",
-        message: `${count} possible conflict${count === 1 ? "" : "s"} across ${others.length + 1} papers.`,
-      },
-      { contradictions: result.data },
-    );
-  } else {
+  if (!result.ok) {
     await setStep("contradictions", { status: "failed", message: result.error.message });
+    return;
   }
+  const report: ContradictionReport = {
+    ...result.data,
+    sources: [
+      { documentId: document.id, title: document.title ?? document.source.fileName, kind: "saved" },
+      ...saved.map((entry) => ({
+        documentId: entry.id,
+        title: entry.document.title ?? entry.document.source.fileName,
+        kind: "saved" as const,
+      })),
+      ...literature.map(({ paper }) => ({
+        documentId: paper.id,
+        title: paper.title,
+        kind: "literature" as const,
+        url: paper.url,
+      })),
+    ],
+  };
+  const count = report.findings.length;
+  const compared = saved.length + literature.length;
+  const from = [
+    saved.length ? `${saved.length} saved` : null,
+    literature.length ? `${literature.length} published` : null,
+  ]
+    .filter(Boolean)
+    .join(" and ");
+  await setStep(
+    "contradictions",
+    {
+      status: "done",
+      message: `${count} possible conflict${count === 1 ? "" : "s"} with ${from} paper${compared === 1 ? "" : "s"}.`,
+    },
+    { contradictions: report },
+  );
+}
+
+function normalizeTitle(title: string | null): string {
+  return (title ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 const STOP_WORDS = new Set([

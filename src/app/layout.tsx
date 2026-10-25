@@ -3,8 +3,9 @@ import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KnowBefore · PDF Intelligence",
-  description: "Map the knowledge you need before complex material clicks.",
+  title: "KnowBefore",
+  description:
+    "A research vault for papers: read, annotate, and ask AI, with prerequisites, related work, and conflicts checked against the literature.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

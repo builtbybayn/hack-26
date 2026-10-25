@@ -134,3 +134,15 @@ look matches, and icons are tree-shaken per import.
 **Provisional.** Highlights, comments, notes, and chats are stored in IndexedDB like everything
 else (decision 12). `/api/chat` receives the conversation and paper text per request and stores
 nothing. When the team's vault backend exists, these stores are what it syncs.
+
+### 22. Roadmap papers come from the provider, not the model
+
+**Confirmed.** A research roadmap's stages and concepts are AI-planned, but its papers are found
+by running the model's search queries against OpenAlex, so no listed paper can be invented. The
+note says which parts are AI-suggested.
+
+### 23. A pinned Gemini model with retry and fallback
+
+**Confirmed.** The default model is pinned (`gemini-3.5-flash`) rather than an alias, because
+`gemini-flash-latest` began hanging for new keys. Gemini returns 503 during demand spikes, so
+temporary errors are retried and then routed to a fallback model before failing.

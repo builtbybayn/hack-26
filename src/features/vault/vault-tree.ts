@@ -1,6 +1,6 @@
 /** Pure helpers for the vault's file tree. No storage or React here, so they are easy to test. */
 import type { DocumentRecord } from "@/lib/browser-store";
-import type { VaultChat, VaultEntry, VaultFolder, VaultPaper } from "@/types/vault";
+import type { VaultChat, VaultEntry, VaultFolder, VaultNote, VaultPaper } from "@/types/vault";
 
 export type SortOrder = "name-asc" | "name-desc" | "modified-new" | "modified-old";
 
@@ -112,6 +112,38 @@ export function defaultPaperFolder(
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }),
     );
   return ensureFolder(entries, project?.id ?? null, PAPERS_FOLDER, now);
+}
+
+/**
+ * A new research project: a top-level folder with "Notes" (holding the roadmap note) and "Papers".
+ */
+export function newProjectEntries(
+  entries: VaultEntry[],
+  projectName: string,
+  roadmapBody: string,
+  now = new Date().toISOString(),
+): { project: VaultFolder; roadmap: VaultNote; created: VaultEntry[] } {
+  const folder = (name: string, parentId: string | null): VaultFolder => ({
+    id: newId(),
+    kind: "folder",
+    name,
+    parentId,
+    createdAt: now,
+    updatedAt: now,
+  });
+  const project = folder(uniqueName(entries, null, projectName.trim() || "New project"), null);
+  const notes = folder("Notes", project.id);
+  const papers = folder(PAPERS_FOLDER, project.id);
+  const roadmap: VaultNote = {
+    id: newId(),
+    kind: "note",
+    name: "Roadmap",
+    parentId: notes.id,
+    body: roadmapBody,
+    createdAt: now,
+    updatedAt: now,
+  };
+  return { project, roadmap, created: [project, notes, papers, roadmap] };
 }
 
 /** A new, empty chat filed in "Chats" (plus the folder, if it had to be created). */

@@ -37,7 +37,10 @@ export function ContradictionPanel({
           updatedAt: new Date().toISOString(),
         };
         setRecords([current, ...stored.filter((record) => record.id !== document.id)]);
-        setSelectedIds(initialReport?.documentIds ?? [document.id]);
+        const ids = new Set([current, ...stored].map((record) => record.id));
+        setSelectedIds(
+          (initialReport?.documentIds ?? [document.id]).filter((id) => ids.has(id)).slice(0, 4),
+        );
       })
       .catch(() => active && setError("Could not load saved papers from this browser."));
     return () => {
@@ -53,7 +56,7 @@ export function ContradictionPanel({
   }
 
   async function compare() {
-    const selected = selectedIds.map((id) => records.find((record) => record.id === id)!);
+    const selected = selectedIds.flatMap((id) => records.find((record) => record.id === id) ?? []);
     setLoading(true);
     setError(null);
     setReport(null);
@@ -108,6 +111,12 @@ export function ContradictionPanel({
             {report.comparedClaimCount} candidate pairs compared. {report.findings.length} possible
             conflicts found.
           </p>
+          {report.sources?.some((source) => source.kind === "literature") && (
+            <p className="contradiction-warning">
+              Includes published papers found by the related-papers search. Those are compared by
+              their abstracts only.
+            </p>
+          )}
           {report.warnings.map((warning) => (
             <p className="contradiction-warning" key={warning}>
               {warning}
@@ -123,11 +132,12 @@ export function ContradictionPanel({
               <div className="contradiction-claims">
                 {finding.claims.map((claim) => (
                   <blockquote key={`${finding.id}-${claim.documentId}`}>
-                    <strong>
-                      {records.find((record) => record.id === claim.documentId)?.document.title ??
-                        claim.documentId}{" "}
-                      · Page {claim.source.pageNumber}
-                    </strong>
+                    <ClaimSource
+                      report={report}
+                      records={records}
+                      documentId={claim.documentId}
+                      pageNumber={claim.source.pageNumber}
+                    />
                     <p>“{claim.source.quote}”</p>
                     <small>{claim.conditions}</small>
                   </blockquote>
@@ -146,5 +156,42 @@ export function ContradictionPanel({
         </div>
       )}
     </section>
+  );
+}
+
+/** Names a claim's paper: a saved paper by title, a published one by title with a link. */
+function ClaimSource({
+  report,
+  records,
+  documentId,
+  pageNumber,
+}: {
+  report: ContradictionReport;
+  records: DocumentRecord[];
+  documentId: string;
+  pageNumber: number;
+}) {
+  const source = report.sources?.find((entry) => entry.documentId === documentId);
+  if (source?.kind === "literature")
+    return (
+      <strong>
+        {source.url ? (
+          <a href={source.url} target="_blank" rel="noreferrer">
+            {source.title}
+          </a>
+        ) : (
+          source.title
+        )}{" "}
+        · Published paper, abstract
+      </strong>
+    );
+  const title =
+    records.find((record) => record.id === documentId)?.document.title ??
+    source?.title ??
+    documentId;
+  return (
+    <strong>
+      {title} · Page {pageNumber}
+    </strong>
   );
 }

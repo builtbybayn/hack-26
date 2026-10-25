@@ -39,10 +39,25 @@ const analysis = (subject: string, topics: string[]) =>
     graph: { documentId: "x" },
   }) as unknown as DocumentAnalysis;
 
+const LONG_ABSTRACT = "We measure how attention heads change translation quality. ".repeat(6);
+const published = (id: string, kind: "related" | "background", abstract?: string) => ({
+  kind,
+  conceptIds: [],
+  reason: null,
+  paper: { id, title: `Published ${id}`, authors: [], url: `https://openalex.org/${id}`, abstract },
+});
+
 beforeEach(() => {
   store.clear();
   vi.resetAllMocks();
-  api.recommend.mockResolvedValue({ ok: true, data: { recommendations: [{}, {}], queries: [] } });
+  // No abstracts, so only saved papers can be compared unless a test supplies some.
+  api.recommend.mockResolvedValue({
+    ok: true,
+    data: {
+      recommendations: [published("W1", "related"), published("W2", "related")],
+      queries: [],
+    },
+  });
   api.contradict.mockResolvedValue({ ok: true, data: { documentIds: [], findings: [{}] } });
 });
 
@@ -65,11 +80,11 @@ describe("runPaperPipeline", () => {
       saved: { status: "done" },
       analysis: { status: "done" },
       recommendations: { status: "done", message: "2 papers found." },
-      contradictions: { status: "done", message: "1 possible conflict across 2 papers." },
+      contradictions: { status: "done", message: "1 possible conflict with 1 saved paper." },
     });
-    // Both concurrent results survive in the stored record.
+    // Both results survive in the stored record.
     expect(store.get("new")).toMatchObject({
-      recommendations: { recommendations: [{}, {}] },
+      recommendations: { recommendations: [{ paper: { id: "W1" } }, { paper: { id: "W2" } }] },
       contradictions: { findings: [{}] },
     });
     expect(api.contradict.mock.calls[0][0].documents.map((d: ParsedDocument) => d.id)).toEqual([
@@ -91,7 +106,42 @@ describe("runPaperPipeline", () => {
     expect(store.get("new")).toBeDefined(); // still saved to the vault
   });
 
-  it("skips the contradiction check when no saved paper shares a topic", async () => {
+  it("compares with published papers found by the search, by abstract", async () => {
+    api.analyze.mockResolvedValue({
+      ok: true,
+      data: { analysis: analysis("Transformers", ["attention"]) },
+    });
+    api.recommend.mockResolvedValue({
+      ok: true,
+      data: {
+        recommendations: [
+          published("B1", "background", LONG_ABSTRACT),
+          published("R1", "related", LONG_ABSTRACT),
+          published("R2", "related", "Too short to compare."),
+          published("R3", "related", LONG_ABSTRACT),
+        ],
+        queries: [],
+      },
+    });
+    const record = await runPaperPipeline(paper("new"));
+
+    const request = api.contradict.mock.calls[0][0];
+    // Closest work first, short abstracts skipped, up to three papers.
+    expect(request.documents.map((d: ParsedDocument) => d.id)).toEqual(["new", "R1", "R3", "B1"]);
+    expect(request.documents[1].pages).toEqual([{ pageNumber: 1, text: LONG_ABSTRACT.trim() }]);
+    expect(request.analyses).toBeUndefined(); // published papers have no analysis
+    expect(record.pipeline?.contradictions.message).toBe(
+      "1 possible conflict with 3 published papers.",
+    );
+    expect(record.contradictions?.sources?.[1]).toEqual({
+      documentId: "R1",
+      title: "Published R1",
+      kind: "literature",
+      url: "https://openalex.org/R1",
+    });
+  });
+
+  it("skips the contradiction check with nothing to compare against", async () => {
     store.set("other", {
       id: "other",
       document: paper("other"),
