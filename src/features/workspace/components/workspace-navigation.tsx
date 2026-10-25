@@ -11,6 +11,7 @@ import {
   LibraryBig,
   PanelsTopLeft,
   ShieldCheck,
+  Newspaper,
 } from "lucide-react";
 import type { ReactNode, MouseEventHandler } from "react";
 
@@ -21,6 +22,7 @@ import type { ReactNode, MouseEventHandler } from "react";
  */
 export const navigation = [
   { id: "overview", label: "Overview", icon: FolderKanban, rail: true },
+  { id: "news", label: "News", icon: Newspaper, rail: true },
   { id: "library", label: "Library", icon: LibraryBig, rail: true },
   { id: "notes", label: "Notes", icon: NotebookPen, rail: true },
   { id: "writing", label: "Writing", icon: FilePenLine, rail: true },

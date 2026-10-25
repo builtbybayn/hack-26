@@ -180,3 +180,21 @@ characters so a preview never silently omits part of the PDF.
 (DeepSeek V4.1 Flash) through one entry point, `src/lib/ai/llm.ts`. It is called with plain
 `fetch` (no new SDK), server-only, with the key in `LUMINAL_API_KEY`. Gemini remains as an
 automatic fallback, so a Luminal outage or rate limit doesn't stop the app.
+
+### 28. Research Radar provider access and persistence
+
+**Provisional.** Research Radar uses the existing single Next.js app and browser-owned
+project state. Grok X Search discovers recent public technical posts, OpenAlex supplies
+verified bibliographic records, and the browser saves results only after a user-initiated
+scan. The user approves the short project context before transmission. Reddit discovery
+remains disabled until the application's use case has authorized access; it will require
+its own adapter and deletion handling. The current literature assessment uses abstracts,
+which the UI labels, and does not claim full-text methodology verification.
+
+### 29. Optional Luminal assessment provider
+
+**Provisional.** Radar may use the app's Luminal/Gemini model pipeline for claim assessment
+and Deep Dive when `RADAR_ANALYSIS_PROVIDER=luminal`; Grok remains the X Search provider.
+The pipeline sends only claim and abstract context and validates JSON against the same Zod
+schemas as Grok. Luminal has no X discovery tool in this integration. Credentials stay
+in `.env.local` and are never sent to the browser.

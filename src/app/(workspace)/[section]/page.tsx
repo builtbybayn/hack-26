@@ -5,6 +5,7 @@ import type { Section } from "@/features/workspace/lib/models";
 const sections: Section[] = [
   "graph",
   "overview",
+  "news",
   "library",
   "reader",
   "roadmap",

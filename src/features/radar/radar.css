@@ -1,0 +1,144 @@
+.radar-view {
+  display: grid;
+  gap: 1rem;
+}
+.radar-block {
+  padding: 1.35rem;
+  border-radius: 0.9rem;
+  display: grid;
+  gap: 0.8rem;
+}
+.radar-block h2 {
+  font-size: 1.1rem;
+  font-weight: 650;
+}
+.radar-block h3 {
+  font-size: 0.96rem;
+  font-weight: 650;
+  margin-top: 0.65rem;
+}
+.radar-block h4 {
+  font-size: 0.85rem;
+  font-weight: 650;
+  margin-top: 0.5rem;
+}
+.radar-block p,
+.radar-block li {
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.radar-block ol {
+  padding-left: 1.2rem;
+  list-style: decimal;
+}
+.radar-head,
+.radar-actions,
+.radar-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.radar-head {
+  justify-content: space-between;
+}
+.radar-head > span,
+.radar-muted {
+  color: var(--muted, #aaa);
+  font-size: 0.8rem;
+}
+.radar-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.radar-textarea,
+.radar-filters select {
+  border: 1px solid #424242;
+  border-radius: 0.55rem;
+  background: #242424;
+  color: #eee;
+  padding: 0.6rem 0.7rem;
+}
+.radar-textarea {
+  width: 100%;
+  resize: vertical;
+}
+.radar-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  font-size: 0.82rem;
+}
+.radar-consent input {
+  margin-top: 0.2rem;
+}
+.radar-error {
+  color: #ffaaa1;
+}
+.radar-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.radar-stats > div {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid #383838;
+  border-radius: 0.6rem;
+  padding: 0.7rem;
+}
+.radar-stats strong {
+  font-size: 1.4rem;
+}
+.radar-stats span {
+  color: #aaa;
+  font-size: 0.72rem;
+}
+.radar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.radar-filters select {
+  font-size: 0.75rem;
+}
+.radar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 1rem;
+}
+.radar-tags span {
+  border: 1px solid #414141;
+  border-radius: 20px;
+  padding: 0.2rem 0.55rem;
+  color: #ccc;
+  font-size: 0.72rem;
+  text-transform: capitalize;
+}
+.radar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #c3dcff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 0.83rem;
+}
+.radar-claim,
+.radar-report {
+  border-top: 1px solid #393939;
+  padding-top: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+}
+.radar-paper {
+  border-left: 2px solid #4d6279;
+  padding: 0.25rem 0.7rem;
+  display: grid;
+  gap: 0.2rem;
+}
+@media (max-width: 620px) {
+  .radar-stats {
+    grid-template-columns: 1fr;
+  }
+}

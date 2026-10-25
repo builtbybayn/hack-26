@@ -8,6 +8,7 @@ export type Section =
   | "notes"
   | "writing"
   | "extension"
+  | "news"
   | "graph";
 export type SourceKind = "article" | "pdf" | "note" | "link";
 export type ProcessingState = "uploading" | "processing" | "ready" | "failed";

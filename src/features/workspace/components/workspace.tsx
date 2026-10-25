@@ -55,6 +55,7 @@ import {
   NotesView,
   WritingView,
   ExtensionView,
+  RadarView,
 } from "./workspace-views";
 
 const views: Record<Section, () => ReactNode> = {
@@ -66,6 +67,7 @@ const views: Record<Section, () => ReactNode> = {
   notes: NotesView,
   writing: WritingView,
   extension: ExtensionView,
+  news: RadarView,
   graph: () => null,
 };
 const subscribeHydration = () => () => {};

@@ -35,26 +35,42 @@ Open `http://localhost:3000` for the research vault. Standard PDF extraction wor
 
 ## Environment configuration
 
-| Variable                             | Purpose                                                                     |
-| ------------------------------------ | --------------------------------------------------------------------------- |
-| `LUMINAL_API_KEY`                    | Main AI provider (Luminal, OpenAI-compatible); server-only                  |
-| `LUMINAL_BASE_URL`, `LUMINAL_MODEL`  | Default `https://flash.luminal.cloud/v1`, `deepseek-ai/DeepSeek-V4.1-Flash` |
-| `GEMINI_API_KEY`                     | Fallback AI provider (Google AI Studio); server-only                        |
-| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-3.5-flash`                      |
-| `GEMINI_FALLBACK_MODEL`              | Used when the main model is overloaded; `gemini-2.5-flash`                  |
-| `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review                     |
-| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                                          |
-| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget                         |
-| `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                                 |
-| `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest`               |
-| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                                             |
-| `XAI_API_KEY` / `XAI_MODEL`          | Optional Grok check of candidate cross-paper conflicts                      |
-| `PDF_PARSER`                         | Deployment default (`auto` is recommended)                                  |
-| `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                                 |
-| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen                        |
-| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality                          |
+| Variable                             | Purpose                                                                      |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| `LUMINAL_API_KEY`                    | Main AI provider (Luminal, OpenAI-compatible); server-only                   |
+| `LUMINAL_BASE_URL`, `LUMINAL_MODEL`  | Default `https://flash.luminal.cloud/v1`, `deepseek-ai/DeepSeek-V4.1-Flash`  |
+| `GEMINI_API_KEY`                     | Fallback AI provider (Google AI Studio); server-only                         |
+| `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-3.5-flash`                       |
+| `GEMINI_FALLBACK_MODEL`              | Used when the main model is overloaded; `gemini-2.5-flash`                   |
+| `XAI_API_KEY`                        | Grok key; required for News and optional independent contradiction review    |
+| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                                           |
+| `RADAR_ANALYSIS_PROVIDER`            | Set to `luminal` to use the app's Luminal/Gemini provider for Radar analysis |
+| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget                          |
+| `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                                  |
+| `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest`                |
+| `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                                              |
+| `PDF_PARSER`                         | Deployment default (`auto` is recommended)                                   |
+| `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                                  |
+| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen                         |
+| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality                           |
 
 Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
+
+### News / Research Radar
+
+Open an existing project and select **News**. Review the short research summary, approve
+external transmission, and click **Scan for Research Updates**. Grok X Search discovers
+public technical posts, and the server validates their X IDs against the rolling seven-day
+UTC window. OpenAlex searches for literature related to each selected claim. Findings show
+source links, abstract-level evidence, uncertainty, feasibility, project impact, and an
+optional Deep Dive. Results are saved in browser IndexedDB and expire as their social
+sources pass the seven-day cutoff. Scanning requires `XAI_API_KEY`; `XAI_MODEL` selects the
+Grok model, and `OPENALEX_API_KEY` is optional. Reddit is not searched until this use case
+has approved access. No PDFs or note bodies are transmitted by this feature.
+
+For a Luminal assessment trial, set `RADAR_ANALYSIS_PROVIDER=luminal` in `.env.local`.
+Radar then uses the app's Luminal/Gemini model pipeline for evidence assessment and Deep Dive.
+Grok X Search still requires `XAI_API_KEY` to discover recent X posts.
 
 ### Gemini setup
 

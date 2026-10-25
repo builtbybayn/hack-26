@@ -16,6 +16,7 @@ flowchart LR
     Route["API routes<br/>src/app/api/*/route.ts"]
     Ingestion["Ingestion pipeline<br/>src/lib/ingestion"]
     Intelligence["Gemini + graph validation<br/>src/lib/intelligence"]
+    Radar["Research Radar<br/>src/lib/radar"]
   end
 
   Types["Contracts<br/>src/types"]
@@ -25,11 +26,41 @@ flowchart LR
   Client -- "HTTP (FormData / JSON)" --> Route
   Route --> Ingestion
   Route --> Intelligence
+  Route --> Radar
   Feature --> Store
   Types -.-> Client
   Types -.-> Route
   Types -.-> Ingestion
 ```
+
+## Research Radar
+
+The `/news` workspace section builds a short context from the active project's title,
+description, concept names, and question titles. The user can edit the summary and must
+explicitly approve transmission. Document pages and note bodies are never sent. The client
+calls `POST /api/research/scan` through `src/lib/api/radar-client.ts`; the route accepts the
+shared `ApiResponse` envelope and validated `ResearchContext` from `src/types/radar.ts`.
+The server runs Grok X Search, validates cited X status URLs and their snowflake publication
+timestamps against a rolling 168-hour UTC window, ranks and deduplicates candidates, asks
+OpenAlex for bibliographic records, and assesses claims against retrieved abstracts. Set
+`RADAR_ANALYSIS_PROVIDER=luminal` to route only assessment and Deep Dive to the app's
+server-only Luminal/Gemini model pipeline. X discovery remains on Grok. Both
+the per-claim evidence status and engineering recommendation are kept distinct. The
+`POST /api/research/deep-dive` route searches additional literature for one finding.
+
+The server remains stateless. The browser saves scans and Deep Dive reports under a
+project-specific key in `src/lib/browser-store.ts`; expired social findings are removed
+again before display. Reddit discovery is disabled until approved API access is available,
+and the UI states that limitation. These routes hold no project records or authentication:
+the client project ID labels locally owned results, and routes do not grant access to any
+server-side project data. If shared server-side projects are introduced, add ownership
+checks before accepting this ID.
+
+Research Radar request and response types live in `src/types/radar.ts`, Zod validation in
+`src/lib/radar/schema.ts`, and the browser-only typed client and fixture in
+`src/lib/api/radar-client.ts` and `radar-mock.ts`. Credentials stay on the server. A scan
+is a single bounded request with abort and timeout support; the UI reports the active
+operation without invented progress percentages.
 
 ## Layers
 
