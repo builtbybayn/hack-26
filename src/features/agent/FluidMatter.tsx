@@ -30,6 +30,7 @@ export function FluidMatter({ state, paused = false }: { state: AgentState; paus
     let visible = true;
     let lost = false;
     let color = materialColor(getComputedStyle(surface).color);
+    let targetColor = color;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const attraction: [number, number] = [0, 0];
 
@@ -42,6 +43,12 @@ export function FluidMatter({ state, paused = false }: { state: AgentState; paus
       weights = still
         ? formWeights(activity.current)
         : advanceWeights(weights, activity.current, dt);
+      color = still
+        ? targetColor
+        : (color.map(
+            (channel, index) =>
+              channel + (targetColor[index] - channel) * (1 - Math.exp(-dt * 3.2)),
+          ) as [number, number, number]);
       for (const index of [0, 1] as const) {
         attraction[index] +=
           ((still ? 0 : pointer.current[index]) - attraction[index]) * (1 - Math.exp(-dt * 4));
@@ -53,20 +60,23 @@ export function FluidMatter({ state, paused = false }: { state: AgentState; paus
     function restart() {
       cancelAnimationFrame(frame);
       previous = 0;
-      if (surface) color = materialColor(getComputedStyle(surface).color);
+      if (surface) targetColor = materialColor(getComputedStyle(surface).color);
       if (visible && !document.hidden && !lost) frame = requestAnimationFrame(draw);
     }
     function resize() {
       if (!surface) return;
       const size = surface.getBoundingClientRect();
       // Cap the preview's fragment budget; small panel sprites still get retina rendering.
-      const ratio = Math.min(devicePixelRatio || 1, 2, 640 / Math.max(size.width, size.height, 1));
+      const ratio = Math.min(
+        Math.max(devicePixelRatio || 1, 2),
+        2.5,
+        960 / Math.max(size.width, size.height, 1),
+      );
       surface.width = Math.max(1, Math.round(size.width * ratio));
       surface.height = Math.max(1, Math.round(size.height * ratio));
       restart();
     }
     function updateTheme() {
-      if (surface) color = materialColor(getComputedStyle(surface).color);
       restart();
     }
     function contextLost(event: Event) {

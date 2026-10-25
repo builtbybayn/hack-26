@@ -9,6 +9,16 @@ import {
 } from "./fluid-forms";
 
 describe("fluid activity forms", () => {
+  it("uses the silk loop at idle, including when returning from an active state", () => {
+    const silkLoop = formWeights("thinking");
+    expect(formWeights("idle")).toEqual(silkLoop);
+    let returning = formWeights("reading");
+    for (let frame = 0; frame < 120; frame++) {
+      returning = advanceWeights(returning, "idle", 1 / 60);
+    }
+    returning.forEach((weight, index) => expect(weight).toBeCloseTo(silkLoop[index], 2));
+  });
+
   it("covers every live activity once and keeps the shader contract at nine forms", () => {
     expect([...FLUID_STATES].sort()).toEqual(Object.keys(AGENT_STATES).sort());
     expect(new Set(FLUID_STATES).size).toBe(9);
@@ -31,11 +41,11 @@ describe("fluid activity forms", () => {
   });
 
   it("is independent of frame rate and settles on the requested form", () => {
-    const start = formWeights("idle");
+    const start = formWeights("reading");
     let at60 = start;
     let at30 = start;
-    for (let i = 0; i < 60; i++) at60 = advanceWeights(at60, "thinking", 1 / 60);
-    for (let i = 0; i < 30; i++) at30 = advanceWeights(at30, "thinking", 1 / 30);
+    for (let i = 0; i < 120; i++) at60 = advanceWeights(at60, "thinking", 1 / 60);
+    for (let i = 0; i < 60; i++) at30 = advanceWeights(at30, "thinking", 1 / 30);
     at60.forEach((weight, index) => expect(weight).toBeCloseTo(at30[index], 12));
     expect(at60[FLUID_STATES.indexOf("thinking")]).toBeGreaterThan(0.99);
     expect(advanceWeights(start, "error", 0)).toEqual(start);

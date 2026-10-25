@@ -33,7 +33,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 52px 24px 30px;
+  padding: 28px 24px 24px;
   text-align: center;
 }
 
@@ -60,13 +60,13 @@
 }
 
 .stage {
-  width: min(440px, 100%);
+  width: min(400px, 100%);
   aspect-ratio: 1;
   margin: -4px 0 -12px;
 }
 
 .caption {
-  min-height: 90px;
+  min-height: 78px;
 }
 
 .caption h2 {
@@ -104,7 +104,7 @@
 }
 
 .sidebar {
-  padding: 42px 24px 24px;
+  padding: 28px 24px 24px;
   border-left: 1px solid var(--background-modifier-border);
 }
 
@@ -137,7 +137,7 @@
   align-items: center;
   gap: 15px;
   width: 100%;
-  min-height: 53px;
+  min-height: 48px;
   padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 6px;

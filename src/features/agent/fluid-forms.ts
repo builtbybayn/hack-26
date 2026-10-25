@@ -14,22 +14,33 @@ export const FLUID_STATES = [
 ] as const satisfies readonly AgentState[];
 
 export const FLUID_FORMS: Record<AgentState, { name: string; description: string }> = {
-  idle: { name: "Free flow", description: "A weightless volume, folding and flowing in place." },
-  reading: { name: "Icosahedron", description: "Twenty soft facets held in liquid tension." },
-  analyzing: { name: "Stellation", description: "A faceted core extending into geometric points." },
+  idle: {
+    name: "Silk loop",
+    description: "A threefold current folding through a continuous loop.",
+  },
+  reading: {
+    name: "Liquid crystal",
+    description: "Icosahedral symmetry softened by surface tension.",
+  },
+  analyzing: { name: "Stellation", description: "Rounded arms unfurling from a flowing core." },
   searching: { name: "Torus", description: "An open ring with a slow circulating current." },
   comparing: { name: "Twin volumes", description: "Two fluid bodies joined by a yielding bridge." },
-  thinking: { name: "Twisted ring", description: "A threefold loop turning through itself." },
-  "preparing-voice": {
-    name: "Cone",
-    description: "A tapered volume gathering into a rounded tip.",
+  thinking: {
+    name: "Silk loop",
+    description: "A threefold current folding through a continuous loop.",
   },
-  speaking: { name: "Spikes", description: "A radial field of points extending and relaxing." },
-  error: { name: "Cube", description: "A quiet, softened solid holding its form." },
+  "preparing-voice": {
+    name: "Liquid spire",
+    description: "A tapered current rising into a softly bending tip.",
+  },
+  speaking: { name: "Bloom", description: "Twelve liquid points slowly opening and gathering." },
+  error: { name: "Soft cube", description: "A quiet volume settling into rounded symmetry." },
 };
 
 export function formWeights(state: AgentState): number[] {
-  return FLUID_STATES.map((candidate) => (candidate === state ? 1 : 0));
+  // Idle shares the silk-loop field and motion already used for thinking.
+  const form = state === "idle" ? "thinking" : state;
+  return FLUID_STATES.map((candidate) => (candidate === form ? 1 : 0));
 }
 
 /** Positive, normalized weights allow interrupted morphs to continue from the visible surface. */
@@ -38,10 +49,9 @@ export function advanceWeights(
   state: AgentState,
   seconds: number,
 ): number[] {
-  const blend = 1 - Math.exp(-Math.max(0, seconds) * 5);
-  return current.map(
-    (weight, index) => weight + ((FLUID_STATES[index] === state ? 1 : 0) - weight) * blend,
-  );
+  const blend = 1 - Math.exp(-Math.max(0, seconds) * 3.2);
+  const target = formWeights(state);
+  return current.map((weight, index) => weight + (target[index] - weight) * blend);
 }
 
 /** Parse the browser's resolved CSS color, rather than duplicating theme colors in the shader. */

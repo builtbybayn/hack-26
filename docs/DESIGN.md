@@ -27,9 +27,18 @@ highlighter, undo/redo), comments in the right margin beside their highlights.
 
 ## Extension panel
 
-Same theme, one column: the vault name and icons on top, the assistant sprite (placeholder), the
+Same theme, one column: the vault name and icons on top, the fluid assistant sprite, the
 current tab, then either the analyze flow (on a PDF) or a chat (anywhere else). The sprite shrinks
 once a conversation starts.
+
+The sprite is a deliberate material exception to the flat interface: one continuous,
+mathematically rendered liquid surface with broad pearlescent reflections. Its idle animation
+is the silk loop: a threefold current folding through a continuous loop in zero gravity.
+Activity forms use rounded symmetry,
+flowing loops, and soft points, retaining subtle flow instead of becoming rigid objects.
+Avoid hard facets, grain, particle clouds, flashing highlights, and a ground shadow.
+All forms share one material and motion clock; interrupted morphs continue from the visible
+surface. Reduced motion renders a still form. Review all states and sizes at `/sprite`.
 
 ## Tokens
 

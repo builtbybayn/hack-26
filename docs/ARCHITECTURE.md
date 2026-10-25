@@ -324,7 +324,7 @@ When several things run at once, the highest-priority state shows (see `AGENT_ST
 React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
 event. `AgentSprite.tsx` in the extension panel and `AgentStatus.tsx` in the vault both use
 `src/features/agent/FluidMatter.tsx`. Its native WebGL renderer blends nine mathematical surface
-fields through one continuous clock and reflective liquid material. Idle uses merging volumes;
+fields through one continuous clock and reflective liquid material. Idle uses the silk loop;
 the activity forms retain slow deformation and rounded edges. State transitions blend from the
 currently visible form, including interrupted transitions. The renderer pauses when hidden or
 offscreen, respects reduced motion, and shows a static fallback when WebGL is unavailable.
