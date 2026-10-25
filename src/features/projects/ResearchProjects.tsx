@@ -255,15 +255,12 @@ export function ResearchProjects({
           </div>
         )}
       </section>
-      {document && analysis && (
-        <RecommendationsPanel
-          key={document.id}
-          document={document}
-          analysis={analysis}
-          onSavePaper={selected ? savePaper : undefined}
-          savedPaperIds={selected?.papers.map((paper) => paper.id) ?? []}
-        />
-      )}
+      <RecommendationsPanel
+        document={document ?? undefined}
+        analysis={analysis ?? undefined}
+        onSavePaper={selected ? savePaper : undefined}
+        savedPaperIds={selected?.papers.map((paper) => paper.id) ?? []}
+      />
       {selected && (
         <SynthesisPanel
           key={selected.id}

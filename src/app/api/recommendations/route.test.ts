@@ -21,6 +21,22 @@ const post = (data: unknown) =>
 afterEach(() => vi.unstubAllGlobals());
 
 describe("POST /api/recommendations", () => {
+  it("searches real provider records from a topic alone", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json(fixture));
+    vi.stubGlobal("fetch", fetchMock);
+    const response = await post({ topic: "vector calculus" });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      ok: true,
+      data: {
+        recommendations: expect.arrayContaining([
+          expect.objectContaining({ paper: expect.objectContaining({ provider: "openalex" }) }),
+        ]),
+        queries: [{ text: "vector calculus", provider: "openalex" }],
+      },
+    });
+    expect(fetchMock.mock.calls[0][0].searchParams.get("search")).toBe("vector calculus");
+  });
   it("returns provider records in the standard envelope", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(fixture)));
     const response = await post(body);
@@ -41,6 +57,8 @@ describe("POST /api/recommendations", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     expect((await post({})).status).toBe(400);
+    expect((await post({ topic: "  " })).status).toBe(400);
+    expect((await post({ topic: "valid topic", limit: 21 })).status).toBe(400);
     expect(
       (
         await POST(
