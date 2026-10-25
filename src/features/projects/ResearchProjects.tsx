@@ -139,6 +139,21 @@ export function ResearchProjects({
     }
   }
 
+  async function updateNotes(value: string) {
+    if (!selected) return;
+    try {
+      const latest = await getProject(selected.id);
+      if (!latest) {
+        setError("The selected project no longer exists.");
+        return;
+      }
+      if (await persist({ ...latest, notes: value, updatedAt: new Date().toISOString() }))
+        setNotes(value);
+    } catch {
+      setError("These notes could not be changed in this browser.");
+    }
+  }
+
   return (
     <>
       <section className={styles.panel} aria-labelledby="projects-heading">
@@ -272,15 +287,25 @@ export function ResearchProjects({
               Project notes
               <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={5} />
             </label>
-            <button
-              className="secondary"
-              disabled={notes === selected.notes}
-              onClick={() =>
-                void persist({ ...selected, notes, updatedAt: new Date().toISOString() })
-              }
-            >
-              Save notes
-            </button>
+            <div className={styles.noteActions}>
+              <button
+                className="secondary"
+                disabled={notes === selected.notes}
+                onClick={() => void updateNotes(notes)}
+              >
+                Save notes
+              </button>
+              <button
+                className="secondary"
+                disabled={!notes && !selected.notes}
+                onClick={() => {
+                  if (window.confirm(`Delete the notes for “${selected.name}”?`))
+                    void updateNotes("");
+                }}
+              >
+                Delete notes
+              </button>
+            </div>
           </div>
         )}
       </section>

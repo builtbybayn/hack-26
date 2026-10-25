@@ -68,6 +68,11 @@
   width: 100%;
   resize: vertical;
 }
+.noteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 @media (max-width: 540px) {
   .panel {
     padding: 20px;
