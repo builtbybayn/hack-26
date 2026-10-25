@@ -4,6 +4,12 @@ import type { VaultEntry } from "@/types/vault";
 import { MOCK_INGEST_SUCCESS } from "@/lib/api/ingest-mock";
 import { MOCK_ROADMAP_RESPONSE } from "@/lib/api/roadmap-mock";
 import type { RoadmapResponse } from "@/types/roadmap";
+import {
+  entriesToRestore,
+  entriesToTrash,
+  validateVaultWrite,
+  visibleDocumentRecords,
+} from "@/lib/vault-trash";
 
 const memory = vi.hoisted(() => ({
   entries: [] as VaultEntry[],
@@ -11,8 +17,14 @@ const memory = vi.hoisted(() => ({
   workspace: null as unknown,
 }));
 vi.mock("@/lib/browser-store", () => ({
-  listVaultEntries: vi.fn(async () => structuredClone(memory.entries)),
-  listDocumentRecords: vi.fn(async () => structuredClone(memory.records)),
+  listVaultEntries: vi.fn(async (includeTrashed = false) =>
+    structuredClone(
+      includeTrashed ? memory.entries : memory.entries.filter((entry) => !entry.trashedAt),
+    ),
+  ),
+  listDocumentRecords: vi.fn(async () =>
+    structuredClone(visibleDocumentRecords(memory.records, memory.entries)),
+  ),
   listAllAnnotations: vi.fn(async () => []),
   loadMastery: vi.fn(async () => ({})),
   getWorkspaceState: vi.fn(async () => structuredClone(memory.workspace)),
@@ -21,8 +33,21 @@ vi.mock("@/lib/browser-store", () => ({
     return structuredClone(memory.workspace);
   }),
   putVaultEntries: vi.fn(async (entries: VaultEntry[]) => {
+    validateVaultWrite(memory.entries, entries);
     for (const entry of entries)
       memory.entries = [...memory.entries.filter((item) => item.id !== entry.id), entry];
+  }),
+  trashVaultEntry: vi.fn(async (id: string) => {
+    const changes = entriesToTrash(memory.entries, id, "2026-10-25T12:00:00Z");
+    memory.entries = memory.entries.map(
+      (entry) => changes.find((item) => item.id === entry.id) || entry,
+    );
+  }),
+  restoreVaultEntry: vi.fn(async (id: string) => {
+    const changes = entriesToRestore(memory.entries, id);
+    memory.entries = memory.entries.map(
+      (entry) => changes.find((item) => item.id === entry.id) || entry,
+    );
   }),
   deleteVaultEntries: vi.fn(async (ids: string[]) => {
     memory.entries = memory.entries.filter((entry) => !ids.includes(entry.id));
@@ -61,6 +86,60 @@ beforeEach(() => {
 });
 
 describe("real workspace wiring", () => {
+  it("restores a deleted project with its notes and writing draft", async () => {
+    const service = new VaultResearchService();
+    await service.refresh();
+    const project = await service.createProject("Trash preview");
+    const note = await service.saveNote({
+      projectId: project.id,
+      title: "Keep me",
+      body: "Important notes",
+      question: false,
+      resolved: false,
+    });
+    await service.saveDraft({ body: "Preserved draft" });
+    await service.trashItem(project.id, "project");
+    expect(service.snapshot().projects.some((item) => item.id === project.id)).toBe(false);
+    expect(service.snapshot().notes.some((item) => item.id === note.id)).toBe(false);
+    expect(service.snapshot().trash).toContainEqual(
+      expect.objectContaining({ id: project.id, kind: "project" }),
+    );
+    await service.restoreItem(project.id);
+    expect(service.snapshot().notes.find((item) => item.id === note.id)?.body).toBe(
+      "Important notes",
+    );
+    expect(service.snapshot().drafts[project.id].body).toBe("Preserved draft");
+  });
+
+  it("does not resurrect a note when an older editor autosaves after deletion", async () => {
+    const service = new VaultResearchService();
+    await service.refresh();
+    const note = await service.saveNote({
+      projectId: service.snapshot().activeProjectId,
+      title: "Old editor",
+      body: "Saved",
+      question: false,
+      resolved: false,
+    });
+    await service.deleteNote(note.id);
+    await expect(service.saveNote({ ...note, body: "Late write" })).rejects.toThrow("Trash");
+    expect(service.snapshot().notes).toHaveLength(0);
+    await service.restoreItem(note.id);
+    expect(service.snapshot().notes[0].body).toBe("Saved");
+  });
+
+  it("moves saved links to persistent Trash and restores them", async () => {
+    const service = new VaultResearchService();
+    await service.refresh();
+    const link = await service.addLink("https://example.com", "Source preview");
+    const id = await service.trashItem(link.id, "source");
+    await service.refresh();
+    expect(service.snapshot().documents.some((item) => item.id === link.id)).toBe(false);
+    expect(service.snapshot().trash).toContainEqual(expect.objectContaining({ id: link.id }));
+    await service.restoreItem(id);
+    expect(service.snapshot().documents.some((item) => item.id === link.id)).toBe(true);
+  });
+
   it("creates the research under its generated name together with its roadmap", async () => {
     const service = new VaultResearchService();
     await service.refresh();

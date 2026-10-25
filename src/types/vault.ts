@@ -15,6 +15,9 @@ interface VaultEntryBase {
   bookmarked?: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Recoverable deletion; the original hierarchy and stored paper content are retained. */
+  trashedAt?: string;
+  trashRootId?: string;
 }
 
 export interface VaultFolder extends VaultEntryBase {

@@ -23,7 +23,8 @@ import { requestRoadmap } from "@/lib/api/roadmap-client";
 import { roadmapToMarkdown } from "@/lib/research/roadmap-markdown";
 import { parseDocument } from "@/lib/api/intelligence-client";
 import {
-  deleteVaultEntries,
+  restoreVaultEntry,
+  trashVaultEntry,
   getWorkspaceState,
   listAllAnnotations,
   listDocumentRecords,
@@ -63,6 +64,7 @@ import type {
   SourceLocation,
   UploadJob,
   WorkspaceData,
+  TrashItem,
 } from "./models";
 import type { ResearchService } from "./service";
 import { stamp } from "./service";
@@ -77,6 +79,7 @@ interface StoredState {
   concepts: Concept[];
   savedFindings: ID[];
   links: Document[];
+  sourceTrash?: Record<ID, { document: Document; trashedAt: string }>;
 }
 
 const EMPTY_STATE: StoredState = {
@@ -206,14 +209,14 @@ export class VaultResearchService implements ResearchService {
 
   private async load() {
     const [entries, records, annotations, mastery, stored] = await Promise.all([
-      listVaultEntries(),
+      listVaultEntries(true),
       listDocumentRecords(),
       listAllAnnotations(),
       loadMastery(),
       getWorkspaceState<StoredState>(),
     ]);
     this.state = { ...EMPTY_STATE, ...stored };
-    let all = entries;
+    let all = entries.filter((entry) => !entry.trashedAt);
 
     // Every vault needs a project, and every saved paper belongs in one.
     const added: VaultEntry[] = [];
@@ -229,6 +232,36 @@ export class VaultResearchService implements ResearchService {
       pending: [...this.pending.values()],
       analyzing: this.analyzing,
     });
+    this.data.folders = all
+      .filter((entry): entry is VaultFolder => entry.kind === "folder" && entry.parentId !== null)
+      .map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        parentId: entry.parentId,
+        projectId: projectOf(all, entry, this.data.activeProjectId),
+      }));
+    this.data.trash = [
+      ...entries
+        .filter((entry) => entry.trashedAt && (entry.trashRootId || entry.id) === entry.id)
+        .map((entry) => ({
+          id: entry.id,
+          name: entry.name,
+          trashedAt: entry.trashedAt!,
+          kind: (entry.kind === "folder"
+            ? entry.parentId === null
+              ? "project"
+              : "folder"
+            : entry.kind === "paper"
+              ? "source"
+              : entry.kind) as TrashItem["kind"],
+        })),
+      ...Object.values(this.state.sourceTrash ?? {}).map(({ document, trashedAt }) => ({
+        id: document.id,
+        name: document.title,
+        kind: "source" as const,
+        trashedAt,
+      })),
+    ].sort((a, b) => b.trashedAt.localeCompare(a.trashedAt));
     this.emit();
   }
 
@@ -481,6 +514,7 @@ export class VaultResearchService implements ResearchService {
 
   async saveNote(input: Omit<Note, "id" | "updatedAt"> & { id?: ID }): Promise<Note> {
     if (!input.title.trim() && !input.body.trim()) throw new Error("Write a title or note.");
+    if (input.id) await this.refresh();
     const meta: VaultNote["meta"] = {
       question: input.question,
       resolved: input.resolved,
@@ -492,6 +526,8 @@ export class VaultResearchService implements ResearchService {
       (entry): entry is VaultNote => entry.kind === "note" && entry.id === input.id,
     );
     const at = stamp();
+    if (input.id && !existing)
+      throw new Error("This note is no longer available. Restore it from Trash before editing.");
     let note: VaultNote;
     if (existing) {
       note = {
@@ -521,8 +557,52 @@ export class VaultResearchService implements ResearchService {
   }
 
   async deleteNote(id: ID) {
-    await deleteVaultEntries([id]);
+    await this.trashItem(id, "note");
+  }
+
+  async trashItem(id: ID, kind: TrashItem["kind"]) {
     await this.refresh();
+    const entry =
+      kind === "source"
+        ? this.entries.find(
+            (item) =>
+              item.kind === "paper" &&
+              item.documentId === id &&
+              projectOf(this.entries, item, "") === this.projectId,
+          )
+        : this.entries.find((item) => item.id === id);
+    if (entry) {
+      await trashVaultEntry(entry.id);
+      await this.refresh();
+      return entry.id;
+    }
+    if (kind !== "source") throw new Error("This item is no longer available.");
+    if (this.pending.has(id))
+      throw new Error("Wait for this upload to finish before moving it to Trash.");
+    const document = this.data.documents.find((item) => item.id === id);
+    if (!document) throw new Error("This source is no longer available.");
+    await this.saveState((state) => {
+      state.sourceTrash ??= {};
+      state.sourceTrash[id] = { document, trashedAt: stamp() };
+    });
+    return id;
+  }
+
+  async restoreItem(id: ID) {
+    if (this.state.sourceTrash?.[id]) {
+      if (
+        !this.data.projects.some(
+          (project) => project.id === this.state.sourceTrash?.[id].document.projectId,
+        )
+      )
+        throw new Error("Restore the containing project from Trash first.");
+      await this.saveState((state) => {
+        delete state.sourceTrash?.[id];
+      });
+    } else {
+      await restoreVaultEntry(id);
+      await this.refresh();
+    }
   }
 
   async setConceptStatus(id: ID, status: Concept["status"]) {
@@ -905,9 +985,9 @@ export function buildSnapshot(
     documents: [
       ...live.pending.map(({ document, projectId }) => ({ ...document, projectId })),
       ...documents.sort((a, b) => b.addedAt.localeCompare(a.addedAt)),
-      ...state.links,
+      ...state.links.filter((link) => projects.some((project) => project.id === link.projectId)),
       ...literature,
-    ],
+    ].filter((document) => !state.sourceTrash?.[document.id]),
     annotations: uiAnnotations,
     notes: notes.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     concepts,

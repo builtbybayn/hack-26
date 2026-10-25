@@ -10,6 +10,7 @@ import type {
   Project,
   SourceLocation,
   WorkspaceData,
+  TrashItem,
 } from "./models";
 
 export interface ResearchService {
@@ -30,6 +31,8 @@ export interface ResearchService {
   annotate(annotation: Omit<Annotation, "id" | "createdAt">): Promise<Annotation>;
   saveNote(note: Omit<Note, "id" | "updatedAt"> & { id?: ID }): Promise<Note>;
   deleteNote(id: ID): Promise<void>;
+  trashItem(id: ID, kind: TrashItem["kind"]): Promise<ID>;
+  restoreItem(id: ID): Promise<void>;
   setConceptStatus(id: ID, status: Concept["status"]): Promise<void>;
   saveConcept(concept: Omit<Concept, "id">): Promise<Concept>;
   setFindingSaved(id: ID, saved: boolean): Promise<void>;

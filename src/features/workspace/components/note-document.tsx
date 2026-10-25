@@ -6,6 +6,7 @@ import { BookOpen, FilePenLine, Plus } from "lucide-react";
 import type { Note } from "../lib/models";
 import { useWorkspace } from "../lib/workspace-context";
 import { MarkdownContent } from "./markdown-content";
+import { registerNoteFlush } from "../lib/note-flush";
 
 /** A note is a document: open it, write, and let browser persistence follow the edits. */
 export function NoteDocument({ note }: { note: Note }) {
@@ -50,11 +51,13 @@ export function NoteDocument({ note }: { note: Note }) {
               : current,
           );
           setError("");
+          return true;
         })
         .catch((cause) => {
           const message = cause instanceof Error ? cause.message : "Note could not be saved.";
           setError(message);
           setNotice(message);
+          return false;
         });
     },
     [service, setNotice],
@@ -63,6 +66,10 @@ export function NoteDocument({ note }: { note: Note }) {
   useEffect(() => {
     pending.current = edit.dirty ? edit : null;
   }, [edit]);
+  useEffect(
+    () => registerNoteFlush(async () => (pending.current ? persist(pending.current) : true)),
+    [persist],
+  );
   useEffect(() => {
     if (!edit.dirty) return;
     const timer = setTimeout(() => void persist(edit), 500);
@@ -70,9 +77,13 @@ export function NoteDocument({ note }: { note: Note }) {
   }, [edit, persist]);
   useEffect(
     () => () => {
-      if (pending.current) void persist(pending.current);
+      if (
+        pending.current &&
+        service.snapshot().notes.some((item) => item.id === pending.current?.value.id)
+      )
+        void persist(pending.current);
     },
-    [persist],
+    [persist, service],
   );
 
   function change(patch: Partial<Note>) {

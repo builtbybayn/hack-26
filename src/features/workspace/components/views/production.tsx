@@ -166,7 +166,8 @@ export function NotesView({ noteId }: { noteId?: string } = {}) {
                 <button
                   className="btn btn-quiet text-xs"
                   onClick={() => {
-                    if (confirm("Delete this note?")) void service.deleteNote(note.id);
+                    if (confirm("Move this note to Trash? You can restore it from the explorer."))
+                      void service.deleteNote(note.id);
                   }}
                 >
                   Delete
