@@ -75,7 +75,7 @@ devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 
-**Superseded by 19 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+**Superseded by 19 for the vault.** _Original decision:_ Fluid Research uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
 
 ### 14. Optional independent review for cross-paper conflicts
 
@@ -147,7 +147,7 @@ note says which parts are AI-suggested.
 `gemini-flash-latest` began hanging for new keys. Gemini returns 503 during demand spikes, so
 temporary errors are retried and then routed to a fallback model before failing.
 
-### 24. Research Core UI over the existing browser and API contracts
+### 24. Fluid Research UI over the existing browser and API contracts
 
 **Confirmed by the requested UI integration.** The new main workspace uses the supplied Research
 Core interface and its Three.js blob effects. Its service adapter reuses existing vault records,

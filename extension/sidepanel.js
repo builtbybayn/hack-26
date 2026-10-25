@@ -1,4 +1,4 @@
-// Bridge between Chrome and the KnowBefore panel page (the app's /panel in an iframe).
+// Bridge between Chrome and the Fluid Research panel page (the app's /panel in an iframe).
 // The panel page owns all UI. This script only does what needs extension APIs: report the
 // active tab, read the selection on it, and fetch the paper it shows.
 //

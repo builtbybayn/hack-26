@@ -34,9 +34,11 @@ export function routeWorkspaceTab(
     data.documents.find((document) => document.id === sourceId)?.projectId ||
     data.notes.find((note) => note.id === noteId)?.projectId;
   const page = params.get("page");
+  const graphMode = section === "graph" && params.get("mode") === "brain" ? "brain" : undefined;
   return {
-    id: `${data.activeProjectId}:${section}:${sourceId || noteId || ""}`,
+    id: `${data.activeProjectId}:${section}:${sourceId || noteId || ""}${graphMode ? ":brain" : ""}`,
     section,
+    graphMode,
     projectId: data.activeProjectId,
     contentProjectId,
     documentId: sourceId,

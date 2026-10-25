@@ -68,3 +68,19 @@
     width: min(300px, 100%);
   }
 }
+
+.research-workspace .demo-source-reader {
+  width: min(100%, 780px);
+  margin: 0 auto;
+  padding: 32px;
+  color: var(--text-primary);
+  line-height: 1.75;
+}
+.research-workspace .demo-source-reader h1 {
+  font-size: 26px;
+  margin: 12px 0;
+}
+.research-workspace .demo-source-reader h2 {
+  font-size: 20px;
+  margin: 24px 0 12px;
+}

@@ -1,6 +1,6 @@
 # Design
 
-**Status: migrated.** The main research workspace (`/`) now uses the supplied Research Core UI:
+**Status: migrated.** The main research workspace (`/`) now uses the supplied Fluid Research UI:
 dark charcoal surfaces, restrained gold accents, serif display text, a project explorer, tabbed
 split views, and an expandable assistant. Its stylesheet is scoped under `.research-workspace`.
 Reused research tools retain the Obsidian controls from decision 19; `/classic`,
@@ -51,7 +51,7 @@ highlighter, undo/redo), comments in the right margin beside their highlights.
 
 ## Extension panel
 
-Same Research Core visual conventions, one column: the name and quick note/workspace actions on top, the fluid assistant sprite, the
+Same Fluid Research visual conventions, one column: the name and quick note/workspace actions on top, the fluid assistant sprite, the
 current tab, then either the analyze flow (on a PDF) or a chat (anywhere else). The sprite shrinks
 once a conversation starts.
 
@@ -81,3 +81,16 @@ same variables. Never hard-code a color in a component; add or reuse a token.
 
 Below 768px the sidebars become drawers over the work area (one at a time), split panes stack,
 and the page thumbnails hide. Margin comments float over the page edge when the margin doesn't fit.
+
+The rail's Home control uses the original Fluid Research droplet/network vector in
+`src/app/icon.svg`; the same file supplies Next.js's favicon. Home routes to `/` through
+workspace tabs. Rail tooltips wait 425 ms on hover, open on keyboard focus, and render in a
+body portal to avoid explorer clipping. The compact header wordmark scales between 18 and 20 px.
+New Tab uses the larger prompt (roughly 230 px overall), 52 px secondary actions with 12 px gaps,
+and no project breadcrumb or project status labels. The liquid assistant is anchored in the
+lower sidebar slot above the footer and development controls. Only its surface stretches;
+its existing glass material and activity animations remain intact.
+
+Surface pulling is confined to the dedicated lower-sidebar AI section, excluding its animation
+testing controls and the Trash footer. Its rectangular bounds are measured on resize; the
+blob remains anchored in its existing resting slot and cannot stretch into explorer lists.

@@ -65,7 +65,7 @@ export function createSurface(subdivisions = VISUAL.subdivisions) {
       3,
     ).setUsage(THREE.DynamicDrawUsage),
   );
-  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 2.5);
+  geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 5);
   const idle = new Float64Array(unique),
     directions = new Float64Array(unique.length);
   for (let i = 0; i < idle.length; i++) directions[i] = idle[i] / VISUAL.radius;
@@ -111,6 +111,12 @@ export class BlobSurface {
       const breath = 0.016 * Math.sin(time * (active === 1 ? 2.2 : 0.95));
       const calm =
         0.014 * Math.sin(2.6 * x + 1.8 * z - time * 0.75) * Math.sin(2.2 * y + time * 0.63);
+      const drift = active
+        ? 0
+        : 0.027 *
+            Math.sin(2.1 * x + 1.6 * y + time * 0.43 + 0.6 * Math.sin(time * 0.19)) *
+            Math.sin(1.9 * z - time * 0.37) +
+          0.012 * Math.sin(5.2 * y + 2.7 * z - time * 1.13) * Math.sin(3.1 * x + time * 0.71);
       const flow = active
         ? 0.052 *
           Math.sin(3.4 * x + 1.5 * y - time * 2.3) *
@@ -140,6 +146,7 @@ export class BlobSurface {
         (1 +
           breath +
           calm +
+          drift +
           flow +
           traveling +
           tension +

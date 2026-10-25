@@ -1,18 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useWorkspace } from "@/features/workspace/lib/workspace-context";
 
-export function NewTab({
-  onNewProject,
-  onBrowse,
-}: {
-  onNewProject: () => void;
-  onBrowse: () => void;
-}) {
+export function NewTab({ onBrowse }: { onBrowse: () => void }) {
   const { service, setAssistantOpen } = useWorkspace();
   const router = useRouter();
+  const promptId = useId();
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -54,11 +49,11 @@ export function NewTab({
             void submit();
           }}
         >
-          <label htmlFor="project-prompt" className="sr-only">
+          <label htmlFor={promptId} className="sr-only">
             Describe your research project
           </label>
           <textarea
-            id="project-prompt"
+            id={promptId}
             placeholder="Write a prompt to start a project…"
             value={prompt}
             disabled={busy || created}
@@ -101,14 +96,10 @@ export function NewTab({
           </div>
         )}
         <nav className="new-tab-actions" aria-label="Research quick actions">
-          <button onClick={onNewProject}>New Research Project</button>
-          <button onClick={onBrowse}>Browse Existing Projects</button>
-          <Link href="/library">Upload Research Source</Link>
-          <Link href="/library">Open Research Library</Link>
-          <Link href="/roadmap">Explore Knowledge Roadmap</Link>
+          <button onClick={onBrowse}>Browse Projects</button>
+          <Link href="/library">Research Library</Link>
+          <Link href="/graph?mode=brain">Second Brain</Link>
           <button onClick={() => setAssistantOpen(true)}>Ask AI</button>
-          <Link href="/notes">Open Notes</Link>
-          <Link href="/overview">Continue Research</Link>
         </nav>
       </div>
     </section>

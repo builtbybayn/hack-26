@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24">
+  <rect width="24" height="24" rx="5" fill="#202020"/>
+  <g id="fluid-mark" fill="none" stroke="#D4AF67" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="1.6" d="M12 2.2C10.6 6.3 4.3 9.3 4.3 14.7a7.7 7.1 0 0 0 15.4 0C19.7 9.3 13.4 6.3 12 2.2Z"/>
+    <path stroke-width="1.1" d="m8.2 15.6 3.8-5 3.8 5H8.2Z"/>
+    <g fill="#D4AF67" stroke="#202020" stroke-width=".6">
+      <circle cx="12" cy="10.6" r="1.6"/>
+      <circle cx="8.2" cy="15.6" r="1.6"/>
+      <circle cx="15.8" cy="15.6" r="1.6"/>
+    </g>
+  </g>
+</svg>

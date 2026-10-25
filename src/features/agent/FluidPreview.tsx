@@ -31,7 +31,7 @@ export function FluidPreview() {
         <Link href="/panel">
           <ArrowLeft size={15} /> Back to assistant
         </Link>
-        <span>KnowBefore / Matter study</span>
+        <span>Fluid Research / Matter study</span>
         <button
           className="clickable-icon"
           onClick={() => setLight(!light)}

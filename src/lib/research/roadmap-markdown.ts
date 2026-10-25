@@ -21,7 +21,7 @@ export function roadmapToMarkdown(roadmap: Roadmap): string {
     "",
     "---",
     "",
-    `*Planned with KnowBefore on ${date}. Concepts are AI-suggested; papers come from OpenAlex.*`,
+    `*Planned with Fluid Research on ${date}. Concepts are AI-suggested; papers come from OpenAlex.*`,
   );
   return lines.join("\n");
 }

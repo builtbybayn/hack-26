@@ -135,7 +135,13 @@ export function buildKnowledgeGraph(data: WorkspaceData): KnowledgeGraphData {
     .forEach((n) =>
       link(nodeId("project", n.projectId), n.id, "owns", "Stored project ownership."),
     );
+  const liveIds = new Set(nodes.map((node) => node.id));
   demoConnections.forEach(([a, b, explanation]) => {
+    if (
+      !liveIds.has(nodeId("concept", demoId(a, "concept"))) ||
+      !liveIds.has(nodeId("concept", demoId(b, "concept")))
+    )
+      return;
     link(
       nodeId("concept", demoId(a, "concept")),
       nodeId("concept", demoId(b, "concept")),

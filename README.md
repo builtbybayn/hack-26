@@ -1,6 +1,6 @@
-# KnowBefore
+# Fluid Research
 
-KnowBefore turns academic PDFs into prerequisite knowledge graphs and personalized learning paths. It extracts a PDF locally with PDF.js, optionally uses consented Mistral or Mathpix OCR, asks Gemini for structured concept analysis, validates the graph deterministically, and stores learner mastery in browser IndexedDB.
+Fluid Research turns academic PDFs into prerequisite knowledge graphs and personalized learning paths. It extracts a PDF locally with PDF.js, optionally uses consented Mistral or Mathpix OCR, asks Gemini for structured concept analysis, validates the graph deterministically, and stores learner mastery in browser IndexedDB.
 
 ## Architecture
 
@@ -112,7 +112,7 @@ the paper it shows, and opening the vault tab.
 1. Run `npm run dev` (the extension expects `http://localhost:3000`).
 2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
 3. Select the repository's `extension` directory. Chrome 114 or newer is required.
-4. Pin KnowBefore and click its icon to open the side panel.
+4. Pin Fluid Research and click its icon to open the side panel.
 
 The panel follows the active tab. At the top is the assistant (a placeholder sprite whose motion
 and color follow the agent state; see "Agent activity states" in

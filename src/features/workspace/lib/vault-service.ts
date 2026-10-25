@@ -23,6 +23,7 @@ import { requestRoadmap } from "@/lib/api/roadmap-client";
 import { roadmapToMarkdown } from "@/lib/research/roadmap-markdown";
 import { parseDocument } from "@/lib/api/intelligence-client";
 import {
+  deleteVaultEntries,
   restoreVaultEntry,
   trashVaultEntry,
   getWorkspaceState,
@@ -68,10 +69,12 @@ import type {
 } from "./models";
 import type { ResearchService } from "./service";
 import { stamp } from "./service";
+import { DEMO_PREFIX, loadDemo } from "./dev-seed";
 
 /** Workspace state that isn't part of the vault itself. Saved as one IndexedDB record. */
 interface StoredState {
   activeProjectId?: ID;
+  demoEvidence?: { claims: Claim[]; findings: EvidenceFinding[] };
   documents: Record<ID, { reading?: Document["reading"]; tags?: string[] }>;
   drafts: Record<ID, Draft>;
   conversations: Record<ID, Conversation>;
@@ -232,6 +235,15 @@ export class VaultResearchService implements ResearchService {
       pending: [...this.pending.values()],
       analyzing: this.analyzing,
     });
+    if (this.state.demoEvidence) {
+      const projects = new Set(this.data.projects.map((project) => project.id));
+      this.data.claims.push(
+        ...this.state.demoEvidence.claims.filter((item) => projects.has(item.projectId)),
+      );
+      this.data.findings.push(
+        ...this.state.demoEvidence.findings.filter((item) => projects.has(item.projectId)),
+      );
+    }
     this.data.folders = all
       .filter((entry): entry is VaultFolder => entry.kind === "folder" && entry.parentId !== null)
       .map((entry) => ({
@@ -280,6 +292,123 @@ export class VaultResearchService implements ResearchService {
 
   private get projectId() {
     return this.data.activeProjectId;
+  }
+
+  /** Stable, opt-in development records live in the same browser stores as research. */
+  async manageTestData(load: boolean) {
+    if (process.env.NODE_ENV !== "development") throw new Error("Test data is development-only.");
+    await this.refresh();
+    const isDemo = (id: string) => id.startsWith(DEMO_PREFIX);
+    if (load) {
+      const seeded = loadDemo({ ...structuredClone(EMPTY_WORKSPACE), projects: [] });
+      const existing = new Set(this.entries.map((entry) => entry.id));
+      const entries: VaultEntry[] = [];
+      for (const project of seeded.projects) {
+        entries.push({
+          id: project.id,
+          kind: "folder",
+          name: project.name,
+          parentId: null,
+          createdAt: project.updatedAt,
+          updatedAt: project.updatedAt,
+        });
+        for (const note of seeded.notes.filter((item) => item.projectId === project.id))
+          entries.push({
+            id: note.id,
+            kind: "note",
+            name: note.title,
+            body: note.body,
+            parentId: project.id,
+            createdAt: note.updatedAt,
+            updatedAt: note.updatedAt,
+            meta: {
+              location: note.location,
+              conceptId: note.conceptId,
+              findingId: note.findingId,
+              question: note.question,
+              resolved: note.resolved,
+            },
+          });
+      }
+      await putVaultEntries(entries.filter((entry) => !existing.has(entry.id)));
+      await this.saveState((state) => {
+        const merge = <T extends { id: string }>(old: T[], added: T[]) => {
+          const ids = new Set(old.map((item) => item.id));
+          return [...old, ...added.filter((item) => !ids.has(item.id))];
+        };
+        state.links = merge(state.links, seeded.documents);
+        state.concepts = merge(state.concepts, seeded.concepts);
+        state.demoEvidence = {
+          claims: merge(state.demoEvidence?.claims || [], seeded.claims),
+          findings: merge(state.demoEvidence?.findings || [], seeded.findings),
+        };
+      });
+    } else {
+      // Real notes created inside a demo folder must survive clearing its parent.
+      const fallback = this.data.projects.find((project) => !isDemo(project.id))?.id;
+      const realChildren = this.entries.filter(
+        (entry) => !isDemo(entry.id) && entry.parentId && isDemo(entry.parentId),
+      );
+      if (realChildren.length) {
+        if (!fallback)
+          throw new Error(
+            "Create a real project before clearing demo folders containing your notes.",
+          );
+        await putVaultEntries(realChildren.map((entry) => ({ ...entry, parentId: fallback })));
+      }
+      // Keep authored writing and chats accessible under recovered real projects.
+      const recovered = new Map<string, string>();
+      const recoveryEntries: VaultEntry[] = [];
+      for (const project of this.data.projects.filter((item) => isDemo(item.id))) {
+        const draft = this.state.drafts[project.id];
+        const chat = this.state.conversations[project.id];
+        if (
+          !(draft && (draft.title || draft.abstract || draft.body || draft.citations.length)) &&
+          !chat?.messages.length
+        )
+          continue;
+        const id = newId();
+        recovered.set(project.id, id);
+        recoveryEntries.push({
+          id,
+          kind: "folder",
+          name: `Recovered · ${project.name.replace(/^DEMO · /, "")}`,
+          parentId: null,
+          createdAt: stamp(),
+          updatedAt: stamp(),
+        });
+      }
+      if (recoveryEntries.length) await putVaultEntries(recoveryEntries);
+      await deleteVaultEntries(
+        this.entries.filter((entry) => isDemo(entry.id)).map((entry) => entry.id),
+      );
+      await this.saveState((state) => {
+        state.links = state.links
+          .filter((item) => !isDemo(item.id))
+          .map((item) =>
+            fallback && isDemo(item.projectId) ? { ...item, projectId: fallback } : item,
+          );
+        state.concepts = state.concepts
+          .filter((item) => !isDemo(item.id))
+          .map((item) =>
+            fallback && isDemo(item.projectId) ? { ...item, projectId: fallback } : item,
+          );
+        delete state.demoEvidence;
+        if (state.activeProjectId && isDemo(state.activeProjectId))
+          state.activeProjectId = fallback;
+        for (const id of Object.keys(state.drafts).filter(isDemo)) {
+          const target = recovered.get(id);
+          if (target) state.drafts[target] = { ...state.drafts[id], projectId: target };
+          delete state.drafts[id];
+        }
+        for (const id of Object.keys(state.conversations).filter(isDemo)) {
+          const target = recovered.get(id);
+          if (target)
+            state.conversations[target] = { ...state.conversations[id], projectId: target };
+          delete state.conversations[id];
+        }
+      });
+    }
   }
 
   async setActiveProject(id: ID) {
@@ -380,7 +509,7 @@ export class VaultResearchService implements ResearchService {
       reading: "unread",
       addedAt: stamp(),
       summary:
-        "Saved link. To read and annotate it here, add its PDF (or save it from the KnowBefore extension).",
+        "Saved link. To read and annotate it here, add its PDF (or save it from the Fluid Research extension).",
       url: parsed.toString(),
       passages: [],
     };
@@ -1064,7 +1193,8 @@ function projectGoal(entries: VaultEntry[], projectId: ID): string {
   const roadmap = entries.find(
     (entry): entry is VaultNote =>
       entry.kind === "note" &&
-      entry.name === "Roadmap" &&
+      (entry.name === "Roadmap" ||
+        (entry.id.startsWith(DEMO_PREFIX) && entry.name === "DEMO · Roadmap")) &&
       projectOf(entries, entry, "") === projectId,
   );
   const goal = roadmap?.body.split("\n").find((line) => line.startsWith("> "));

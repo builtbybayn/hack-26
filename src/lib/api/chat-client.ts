@@ -18,7 +18,7 @@ async function fetchChatReply(input: ChatRequest, signal?: AbortSignal): Promise
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     return {
       ok: false,
-      error: { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." },
+      error: { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." },
     };
   }
 }

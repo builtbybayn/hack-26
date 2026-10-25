@@ -25,7 +25,7 @@ async function fetchRoadmap(input: RoadmapRequest, signal?: AbortSignal): Promis
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     return {
       ok: false,
-      error: { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." },
+      error: { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." },
     };
   }
 }

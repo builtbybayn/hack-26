@@ -154,7 +154,7 @@ button:disabled {
   cursor: grab;
   border: 0;
   background: transparent;
-  clip-path: ellipse(46% 47% at 50% 50%);
+
   outline-offset: 4px;
   user-select: none;
 }
@@ -1145,33 +1145,6 @@ body {
   flex-shrink: 0;
   padding: 10px 16px;
 }
-.sidebar-assistant-button {
-  display: grid;
-  place-items: center;
-  width: 100px;
-  height: 100px;
-  border: 1px solid #454545;
-  background: #222;
-  border-radius: 7px;
-  cursor: pointer;
-}
-.sidebar-assistant-button:hover {
-  background: #2c2c2c;
-}
-.sidebar-assistant-orb {
-  display: block;
-  position: relative;
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  background: #d4af67;
-  overflow: hidden;
-}
-.sidebar-assistant-orb .assistant-canvas {
-  position: absolute;
-  inset: 0;
-  filter: sepia(1) saturate(0.5);
-}
 .new-tab-content {
   padding: 0;
   background-color: #1e1e1e;
@@ -1206,7 +1179,9 @@ body {
 .project-prompt textarea {
   display: block;
   width: 100%;
-  min-height: 155px;
+  height: 180px;
+  min-height: 180px;
+  overflow-y: auto;
   resize: vertical;
   padding: 24px;
   background: transparent;
@@ -1244,14 +1219,14 @@ body {
 }
 .new-tab-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 .new-tab-actions > * {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 43px;
+  min-height: 52px;
   padding: 10px 12px;
   border: 1px solid #3c3c3c;
   border-radius: 5px;
@@ -1266,9 +1241,9 @@ body {
   background: #333;
   border-color: #666;
 }
-@media (max-width: 1100px) {
+@container research-pane (max-width: 480px) {
   .new-tab-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 600px) {
@@ -1288,10 +1263,6 @@ body {
   .research-explorer {
     transition: none;
   }
-}
-.sidebar-assistant-orb .assistant-canvas {
-  filter: grayscale(1);
-  mix-blend-mode: luminosity;
 }
 
 /* One explorer header follows the sidebar edge and becomes a compact rail header. */
@@ -1478,27 +1449,6 @@ body {
 .explorer-scroll {
   min-height: 0;
 }
-.sidebar-assistant-button {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: #29271f;
-  border: 1px solid #d4af67;
-  overflow: hidden;
-}
-.sidebar-assistant-orb {
-  width: 100%;
-  height: 100%;
-  background: #423823;
-}
-.sidebar-assistant-orb .assistant-canvas {
-  filter: sepia(1) saturate(0.8);
-  mix-blend-mode: luminosity;
-}
-.sidebar-assistant-button:hover {
-  background: #343025;
-  border-color: #e8c681;
-}
 .rail-tools {
   gap: 7px;
 }
@@ -1587,20 +1537,6 @@ body {
   }
 }
 /* Preserve the archived physical glass shader without tinting its output. */
-.sidebar-assistant-button,
-.sidebar-assistant-button:hover {
-  background: transparent;
-  border: 0;
-  overflow: visible;
-}
-.sidebar-assistant-orb {
-  background: transparent;
-  overflow: visible;
-}
-.sidebar-assistant-orb .assistant-canvas {
-  filter: none;
-  mix-blend-mode: normal;
-}
 .workspace-content:has(.knowledge-view) {
   padding: 0;
   overflow: hidden;
@@ -1781,18 +1717,6 @@ body {
 }
 
 /* Motion-safe framing: the glass occupies about 160px with room for its hover. */
-.sidebar-assistant-button {
-  width: min(210px, 100%);
-  height: auto;
-  aspect-ratio: 1;
-}
-.sidebar-assistant-button:focus-visible {
-  outline: 1px solid #d4af67;
-  outline-offset: 2px;
-}
-.sidebar-assistant-orb {
-  aspect-ratio: 1;
-}
 
 .assistant-canvas canvas {
   touch-action: none;
@@ -2021,4 +1945,148 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* The interaction target stays compact; the clear render layer has rectangular
+   space for a neck and recoil. Only the button receives initial pointer input. */
+.sidebar-assistant-button,
+.sidebar-assistant-button:hover {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(210px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  cursor: grab;
+  touch-action: none;
+}
+.sidebar-assistant-button[data-grabbed="true"] {
+  cursor: grabbing;
+}
+.sidebar-assistant-button:focus-visible {
+  outline: 1px solid #d4af67;
+  outline-offset: 3px;
+}
+.sidebar-assistant-orb {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.sidebar-assistant-orb .assistant-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: none;
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+.sidebar-assistant-orb .assistant-canvas canvas {
+  pointer-events: none;
+}
+
+/* Rail hints are portaled into the body, outside explorer stacking contexts. */
+.rail-tooltip-anchor {
+  display: flex;
+  flex: none;
+}
+.rail-tooltip-anchor:has(> [hidden]) {
+  display: none;
+}
+.fluid-rail-tooltip {
+  position: fixed;
+  z-index: 1000;
+  transform: translateY(-50%);
+  max-width: calc(100vw - 70px);
+  padding: 5px 9px;
+  border: 1px solid #494949;
+  border-radius: 4px;
+  background: #282828;
+  color: #e4e4e4;
+  font:
+    13px/1.35 "Times New Roman",
+    serif;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+  animation: rail-hint-in 120ms ease-out;
+}
+@keyframes rail-hint-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.workspace-rail :is(a, button):focus-visible {
+  outline: 2px solid #d4af67;
+  outline-offset: 2px;
+}
+.workspace-rail .rail-brand.is-active {
+  background: #383838;
+}
+.explorer-heading > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: "Times New Roman", serif;
+  font-size: clamp(18px, calc(var(--explorer-width) * 0.065), 20px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0;
+  color: #d4d4d4;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fluid-rail-tooltip {
+    animation: none;
+  }
+}
+
+.explorer-collapsed .explorer-create-tooltip {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .explorer-create-tooltip {
+    display: none;
+  }
+  .research-workspace:has(.research-explorer.mobile-open) .explorer-create-tooltip {
+    display: flex;
+  }
+}
+
+/* Only the dedicated AI rectangle is rendered. The canvas is transparent to
+   input; accurate surface raycasts leave surrounding controls clickable. */
+.sidebar-liquid-layer {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  overflow: hidden;
+}
+.sidebar-liquid-layer canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.sidebar-assistant-button {
+  pointer-events: none;
+}
+
+.research-explorer[data-blob-hover="true"],
+.research-explorer[data-blob-hover="true"] * {
+  cursor: grab !important;
+}
+.research-explorer[data-blob-grabbed="true"],
+.research-explorer[data-blob-grabbed="true"] * {
+  cursor: grabbing !important;
 }

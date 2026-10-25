@@ -1,4 +1,4 @@
-/* Compact Research Core companion. Shared controls consume the scoped tokens below. */
+/* Compact Fluid Research companion. Shared controls consume the scoped tokens below. */
 
 html:has(.ext),
 body:has(.ext) {

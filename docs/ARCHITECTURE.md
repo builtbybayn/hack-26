@@ -336,7 +336,7 @@ clients report their own work through `track()`, so features get states without 
 | `thinking`        | `requestExplanation`, `requestQuiz`           |
 | `preparing-voice` | the speech player while audio is generated    |
 | `speaking`        | the speech player while audio plays           |
-| `error`           | any failed call, for 6 seconds                |
+| `error`           | any failed call, for 4 seconds                |
 | `idle`            | nothing running (after a 400 ms grace period) |
 
 When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
@@ -371,7 +371,7 @@ rather than repeating finished work.
 
 ### The research workspace (`/`)
 
-`src/features/workspace` is the main UI. The imported Research Core interface is backed by
+`src/features/workspace` is the main UI. The imported Fluid Research interface is backed by
 `VaultResearchService`, which reads existing browser records and calls the app's typed API
 clients. Top-level vault folders are workspace projects; papers, notes, annotations, and mastery
 retain their existing IDs and stores. Uploads use the existing parser and paper pipeline.
@@ -440,7 +440,7 @@ sees "Gemini is busy right now". Provider reasons are logged on the server, neve
 
 ### The extension panel (`/panel`)
 
-`src/features/extension-panel` uses scoped Research Core tokens over the shared controls
+`src/features/extension-panel` uses scoped Fluid Research tokens over the shared controls
 (`src/components/theme`) and the vault's `ChatView`. The dark surfaces, serif headings, compact
 controls, readable Markdown, and shared Three.js blob match the workspace. A New note action
 lazily loads the same browser service adapter, creates an untitled note in the active project,
@@ -500,3 +500,47 @@ for request/response work.
 
 Even then, keep the contracts in `src/types` and move the module behind an HTTP client, so callers
 don't change.
+
+### Development research corpus
+
+The graph's development-only Load/Clear Test Data controls call `VaultResearchService.manageTestData`.
+`dev-seed.ts` authors ten explicitly fictional projects: 60 source records with reader passages,
+70 editable notes (including roadmaps), 60 concepts, 30 claims with assumptions, and 30 findings.
+Projects and notes use the existing vault store; sources use workspace links, concepts use the
+workspace concept collection, and authored demo evidence uses `StoredState.demoEvidence`. No ingestion
+or external AI calls run during seeding. The same workspace snapshot feeds both graphs, the reader,
+library, roadmap, and evidence views. Ten cross-project links are labeled manually seeded suggestions.
+Stable `demo-research-v1-` IDs make loading additive and idempotent; clearing removes only these IDs,
+rescues real vault children into a real project, and retains user-authored drafts/conversations.
+
+The shared glass sprite retains its state controller and internal gold/red energy field. Its
+transparent shell samples the painted solid ancestor backdrop for edge refraction; HTML itself
+remains composited through the nearly clear center (arbitrary HTML text is not captured into a texture).
+A welded surface integrates neighbor-coupled springs at 120 Hz with bounded frame catch-up,
+volume correction, limited pulls, and release velocity impulses independently of state morphing.
+
+The sidebar glass has no circular mask or radius projection; material strain resistance
+and volume correction bound deformation instead. Pointer capture continues beyond the grabbed surface.
+Error previews use `reportAgentError`, the same four-second activity-store timer as API failures;
+new work cancels the timer and expiry restores the highest-priority live operation. The existing
+morph controller fades red energy and agitation smoothly. Assistant error messages are separate.
+User-facing branding is Fluid Research; existing storage namespaces and routes remain unchanged.
+
+The New Tab's four secondary actions are Browse Projects, Research Library, Second Brain,
+and Ask AI. `/graph?mode=brain` opens a graph tab in global mode; graph scope belongs to the
+workspace tab so returning to that action restores Second Brain even if its scope was changed.
+The usual `/graph` entry and project graph remain available. Browsing expands the existing
+explorer, and Ask AI opens the same contextual assistant as the glass bubble.
+
+The workspace glass sprite renders into an input-transparent canvas sized exactly to its dedicated AI rectangle. Document
+pointer capture begins only after a visible-surface raycast, leaving unrelated explorer
+controls interactive. The body's world anchor is measured from the fixed lower-sidebar button
+slot; dragging only updates local mesh springs. Whole-body motion and position persistence
+have been removed, and previously stored positions are ignored. Pointer coordinates use the measured `.sidebar-assistant` visual rectangle, ending before
+animation testing controls and the Trash footer; the Projects/Sources/Notes list is excluded. `containSurface` bounds the continuous deformation field in clip
+space, including perspective, so release overshoot also stays inside this dedicated AI area without
+clamping individual vertices. Resistance rises smoothly before reaching an edge. A cropped virtual
+sidebar camera preserves the existing size and optical perspective while the actual canvas stays
+inside the AI area. Resize recalculates the anchor and limits; collapsed explorers
+retain the rail assistant action. New Tab omits project breadcrumbs and status counts while project views
+continue showing their context.

@@ -272,7 +272,7 @@ export function DocumentIntelligence() {
       <AgentStatus variant="floating" />
       <header className="masthead">
         <div>
-          <span className="eyebrow">KNOWBEFORE</span>
+          <span className="eyebrow">Fluid Research</span>
           <h1>See what comes before understanding.</h1>
         </div>
         <p>

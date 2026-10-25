@@ -13,7 +13,11 @@ import {
 } from "@/features/workspace/lib/graph-layout";
 export function KnowledgeGraph({
   onOpen,
+  mode,
+  onModeChange: setMode,
 }: {
+  mode: "project" | "brain";
+  onModeChange: (mode: "project" | "brain") => void;
   onOpen: (node: KnowledgeNode, other: boolean) => void;
 }) {
   const { data, service, setNotice } = useWorkspace(),
@@ -21,8 +25,7 @@ export function KnowledgeGraph({
   const layout = useRef<GraphLayout | null>(null),
     cameraTarget = useRef<{ x: number; y: number; z: number } | null>(null);
   const [labels, setLabels] = useState(true);
-  const [mode, setMode] = useState<"project" | "brain">("project"),
-    [query, setQuery] = useState(""),
+  const [query, setQuery] = useState(""),
     [search, setSearch] = useState(""),
     [type, setType] = useState(""),
     [project, setProject] = useState(""),
@@ -371,10 +374,18 @@ export function KnowledgeGraph({
     <section className="knowledge-view" aria-label="Knowledge Graph">
       <div className="graph-toolbar">
         <div className="graph-modes" role="group" aria-label="Graph scope">
-          <button className={mode === "project" ? "active" : ""} onClick={() => setMode("project")}>
+          <button
+            aria-pressed={mode === "project"}
+            className={mode === "project" ? "active" : ""}
+            onClick={() => setMode("project")}
+          >
             Project Graph
           </button>
-          <button className={mode === "brain" ? "active" : ""} onClick={() => setMode("brain")}>
+          <button
+            aria-pressed={mode === "brain"}
+            className={mode === "brain" ? "active" : ""}
+            onClick={() => setMode("brain")}
+          >
             Second Brain
           </button>
         </div>
@@ -718,9 +729,9 @@ export function KnowledgeGraph({
           <button
             className="btn"
             disabled={!service.manageTestData}
-            onClick={() => {
+            onClick={async () => {
               try {
-                service.manageTestData?.(true);
+                await service.manageTestData?.(true);
                 setNotice("DEMO dataset loaded.");
               } catch (e) {
                 setNotice(String(e));
@@ -732,9 +743,9 @@ export function KnowledgeGraph({
           <button
             className="btn"
             disabled={!service.manageTestData}
-            onClick={() => {
+            onClick={async () => {
               try {
-                service.manageTestData?.(false);
+                await service.manageTestData?.(false);
                 setSelected("");
                 setEdgeId("");
                 setNotice("Generated DEMO records cleared.");

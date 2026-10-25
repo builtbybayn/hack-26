@@ -11,6 +11,7 @@ export interface WorkspaceTab {
   itemId?: string;
   itemType?: string;
   panel?: number;
+  graphMode?: "project" | "brain";
 }
 
 // Panel membership is separate from content identity, so moves never remount views.

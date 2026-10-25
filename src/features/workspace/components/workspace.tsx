@@ -1,9 +1,9 @@
 "use client";
+import { reportAgentError } from "@/lib/agent-activity";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Columns2,
-  House,
   Folder,
   FilePenLine,
   FileText,
@@ -29,6 +29,8 @@ import {
 } from "@/features/workspace/lib/workspace-panels";
 import { WorkspaceItemScope, useWorkspace } from "@/features/workspace/lib/workspace-context";
 import { ExplorerGroup, navigation } from "./workspace-navigation";
+import { RailTooltip } from "./rail-tooltip";
+import { FluidResearchLogo } from "./fluid-research-logo";
 import { useAIActivity } from "@/features/workspace/lib/ai-activity";
 import { routeWorkspaceTab } from "@/features/workspace/lib/workspace-routing";
 import { KnowledgeProvider } from "@/features/workspace/lib/knowledge-context";
@@ -144,7 +146,13 @@ export default function Workspace() {
     setTabs((items) =>
       items.some((item) => item.id === tab.id)
         ? items.map((item) =>
-            item.id === tab.id && tab.passageId ? { ...item, passageId: tab.passageId } : item,
+            item.id === tab.id
+              ? {
+                  ...item,
+                  ...(tab.passageId ? { passageId: tab.passageId } : {}),
+                  ...(tab.graphMode ? { graphMode: tab.graphMode } : {}),
+                }
+              : item,
           )
         : [...items, { ...tab, panel: target }],
     );
@@ -216,6 +224,7 @@ export default function Workspace() {
     setActiveTab(tab.id, target);
   }
   function tabTitle(tab: Tab) {
+    if (tab.section === "graph" && tab.graphMode === "brain") return "Second Brain";
     return tab.documentId
       ? data.documents.find((doc) => doc.id === tab.documentId)?.title || "Source"
       : tab.noteId
@@ -322,6 +331,8 @@ export default function Workspace() {
     }
   }
   const activity = useAIActivity();
+  const errorPreviewCleanup = useRef<(() => void) | null>(null);
+  useEffect(() => () => errorPreviewCleanup.current?.(), []);
   const [contrastBackdrop, setContrastBackdrop] = useState(false);
   const [testAnimation, setTestAnimation] = useState<"idle" | "researching" | "error" | null>(null);
   const assistantState = data.uploads.some(
@@ -390,65 +401,77 @@ export default function Workspace() {
           Skip to workspace
         </a>
         <nav className="workspace-rail no-print" aria-label="Research tools">
-          <Link
-            href="/"
-            className={`rail-brand ${currentTab?.section === "empty" ? "is-active" : ""}`}
-            aria-current={currentTab?.section === "empty" ? "page" : undefined}
-            title="Home"
-            aria-label="Home"
-          >
-            <House size={21} />
-            <span className="sr-only">Research Core</span>
-          </Link>
+          <RailTooltip label="Home">
+            <Link
+              href="/"
+              className={`rail-brand ${currentTab?.section === "empty" ? "is-active" : ""}`}
+              aria-current={currentTab?.section === "empty" ? "page" : undefined}
+              aria-label="Home"
+            >
+              <FluidResearchLogo />
+              <span className="sr-only">Fluid Research</span>
+            </Link>
+          </RailTooltip>
           <div className="rail-tools">
             {navigation.map(({ id, label, icon: Icon }) => (
-              <Link
-                key={id}
-                href={`/${id}`}
-                className={`rail-button ${currentTab?.section === id ? "is-active" : ""}`}
-                title={label}
-                aria-label={label}
-                aria-current={currentTab?.section === id ? "page" : undefined}
-              >
-                <Icon size={21} strokeWidth={1.65} />
-              </Link>
+              <RailTooltip key={id} label={label}>
+                <Link
+                  href={`/${id}`}
+                  className={`rail-button ${currentTab?.section === id ? "is-active" : ""}`}
+                  aria-label={label}
+                  aria-current={currentTab?.section === id ? "page" : undefined}
+                >
+                  <Icon size={21} strokeWidth={1.65} />
+                </Link>
+              </RailTooltip>
             ))}
           </div>
-          <button
-            hidden={(sidebarOpen && !compactViewport) || (compactViewport && menuOpen)}
-            className={`rail-button ${assistantOpen ? "is-active" : ""}`}
-            title="Toggle research assistant"
-            aria-label="Toggle research assistant"
-            aria-expanded={assistantOpen}
-            onClick={() => setAssistantOpen(!assistantOpen)}
+          <RailTooltip
+            label={assistantOpen ? "Close Research Assistant" : "Open Research Assistant"}
           >
-            <MessageCircle size={19} />
-          </button>
+            <button
+              hidden={(sidebarOpen && !compactViewport) || (compactViewport && menuOpen)}
+              className={`rail-button ${assistantOpen ? "is-active" : ""}`}
+              aria-label={assistantOpen ? "Close Research Assistant" : "Open Research Assistant"}
+              aria-expanded={assistantOpen}
+              onClick={() => setAssistantOpen(!assistantOpen)}
+            >
+              <MessageCircle size={19} />
+            </button>
+          </RailTooltip>
         </nav>
         <header className="explorer-heading no-print" aria-label="File explorer header">
-          <span>Research Core</span>
-          <button
-            className="icon-button explorer-create"
-            title="New project"
-            aria-label="New project"
-            onClick={() => setCreating(true)}
+          <span>Fluid Research</span>
+          <RailTooltip label="New project" className="explorer-create-tooltip">
+            <button
+              className="icon-button explorer-create"
+              aria-label="New project"
+              onClick={() => setCreating(true)}
+            >
+              <Plus size={16} />
+            </button>
+          </RailTooltip>
+          <RailTooltip
+            label={
+              (compactViewport ? menuOpen : sidebarOpen)
+                ? "Collapse research explorer"
+                : "Expand research explorer"
+            }
           >
-            <Plus size={16} />
-          </button>
-          <button
-            className="icon-button explorer-toggle"
-            title="Toggle research explorer"
-            aria-label="Toggle research explorer"
-            aria-controls="research-explorer"
-            aria-expanded={compactViewport ? menuOpen : sidebarOpen}
-            onClick={toggleExplorer}
-          >
-            {(compactViewport ? menuOpen : sidebarOpen) ? (
-              <PanelLeftClose size={17} />
-            ) : (
-              <PanelLeftOpen size={17} />
-            )}
-          </button>
+            <button
+              className="icon-button explorer-toggle"
+              aria-label="Toggle research explorer"
+              aria-controls="research-explorer"
+              aria-expanded={compactViewport ? menuOpen : sidebarOpen}
+              onClick={toggleExplorer}
+            >
+              {(compactViewport ? menuOpen : sidebarOpen) ? (
+                <PanelLeftClose size={17} />
+              ) : (
+                <PanelLeftOpen size={17} />
+              )}
+            </button>
+          </RailTooltip>
         </header>
         <aside
           id="research-explorer"
@@ -639,19 +662,41 @@ export default function Workspace() {
                 <p role="status">
                   ●{" "}
                   {testAnimation ||
-                    (assistantState === "researching" ? "Automatic · active request" : "Automatic")}
+                    (assistantState === "researching"
+                      ? "Automatic · active request"
+                      : assistantState === "error"
+                        ? "Automatic · Error (4s maximum)"
+                        : "Automatic")}
                 </p>
                 {(["idle", "researching", "error"] as const).map((state) => (
                   <button
                     key={state}
                     className="btn"
-                    aria-pressed={testAnimation === state}
-                    onClick={() => setTestAnimation(state)}
+                    aria-pressed={
+                      state === "error" ? activity === "error" : testAnimation === state
+                    }
+                    onClick={() => {
+                      errorPreviewCleanup.current?.();
+                      errorPreviewCleanup.current = null;
+                      if (state === "error") {
+                        setTestAnimation(null);
+                        errorPreviewCleanup.current = reportAgentError(
+                          "Development animation test",
+                        );
+                      } else setTestAnimation(state);
+                    }}
                   >
                     {state === "researching" ? "Thinking" : state === "idle" ? "Idle" : "Error"}
                   </button>
                 ))}
-                <button className="btn" onClick={() => setTestAnimation(null)}>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    errorPreviewCleanup.current?.();
+                    errorPreviewCleanup.current = null;
+                    setTestAnimation(null);
+                  }}
+                >
                   Return to Automatic
                 </button>
                 <button
@@ -665,7 +710,7 @@ export default function Workspace() {
             )}
           </div>
           <div className="explorer-footer">
-            <span>{project?.name}</span>
+            <span>{currentTab && currentTab.section !== "empty" ? project?.name : ""}</span>
             <button
               className="explorer-trash-button"
               onClick={() => {
@@ -843,16 +888,16 @@ export default function Workspace() {
                     )}
                   </div>
                 </div>
-                <div className="workspace-breadcrumb">
-                  <div>
-                    <span>{project?.name}</span>
-                    <strong>
-                      {tabs.find((tab) => tab.id === activeTabs[target])
-                        ? tabTitle(tabs.find((tab) => tab.id === activeTabs[target])!)
-                        : "New tab"}
-                    </strong>
+                {tabs.some((tab) => tab.id === activeTabs[target] && tab.section !== "empty") && (
+                  <div className="workspace-breadcrumb">
+                    <div>
+                      <span>{project?.name}</span>
+                      <strong>
+                        {tabTitle(tabs.find((tab) => tab.id === activeTabs[target])!)}
+                      </strong>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
             {layout !== "single" && (
@@ -923,7 +968,6 @@ export default function Workspace() {
                         >
                           {tab.section === "empty" ? (
                             <NewTab
-                              onNewProject={() => setCreating(true)}
                               onBrowse={() => {
                                 setSidebarOpen(true);
                                 if (compactViewport) setMenuOpen(true);
@@ -948,6 +992,14 @@ export default function Workspace() {
                             />
                           ) : tab.section === "graph" ? (
                             <KnowledgeGraph
+                              mode={tab.graphMode || "project"}
+                              onModeChange={(graphMode) =>
+                                setTabs((items) =>
+                                  items.map((item) =>
+                                    item.id === tab.id ? { ...item, graphMode } : item,
+                                  ),
+                                )
+                              }
                               onOpen={(node, other) => {
                                 const dest = other ? 1 - target : target;
                                 if (other && layout === "single") {
@@ -1024,7 +1076,6 @@ export default function Workspace() {
                   onPointerDown={() => setPanel(target)}
                 >
                   <NewTab
-                    onNewProject={() => setCreating(true)}
                     onBrowse={() => {
                       setSidebarOpen(true);
                       if (compactViewport) setMenuOpen(true);
@@ -1043,14 +1094,19 @@ export default function Workspace() {
                 Undo delete
               </button>
             )}
-            <span>
-              <span className="status-dot" />
-              {project?.name}
-            </span>
-            <span>
-              {documents.length} sources ·{" "}
-              {data.notes.filter((item) => item.projectId === data.activeProjectId).length} notes
-            </span>
+            {currentTab && currentTab.section !== "empty" && (
+              <>
+                <span>
+                  <span className="status-dot" />
+                  {project?.name}
+                </span>
+                <span>
+                  {documents.length} sources ·{" "}
+                  {data.notes.filter((item) => item.projectId === data.activeProjectId).length}{" "}
+                  notes
+                </span>
+              </>
+            )}
           </footer>
         </div>
         <aside className="assistant-dock no-print" hidden={!assistantOpen}>

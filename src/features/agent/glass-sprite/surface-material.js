@@ -15,14 +15,14 @@ export function createSurfaceMaterial(environment) {
     metalness: 0,
     roughness: 0.035,
     transmission: 1,
-    thickness: 0.22,
-    ior: 1.47,
+    thickness: 0.48,
+    ior: 1.39,
     attenuationColor: 0xffffff,
     attenuationDistance: 100,
-    clearcoat: 0.12,
+    clearcoat: 0.14,
     clearcoatRoughness: 0.025,
     envMap: environment,
-    envMapIntensity: 0.55,
+    envMapIntensity: 0.5,
     transparent: true,
     depthWrite: false,
     side: THREE.FrontSide,
@@ -72,7 +72,7 @@ export function createSurfaceMaterial(environment) {
 
       vec4 innerLiquid(vec3 surface) {
         float activity = clamp(uResearch + uError, 0.0, 1.0);
-        vec3 ray = refract(normalize(surface - uEye), normalize(vLocalNormal), 1.0 / 1.47);
+        vec3 ray = refract(normalize(surface - uEye), normalize(vLocalNormal), 1.0 / 1.39);
         vec3 light = vec3(0.0);
         float coverage = 0.0;
         float t = uTime;
@@ -108,8 +108,8 @@ export function createSurfaceMaterial(environment) {
       float fresnel = pow(1.0 - facing, 5.0);
       vec4 liquid = innerLiquid(vLocal);
       // Only a thin grazing reflection: no broad painted-on central softboxes.
-      outgoingLight += vec3(.68, .76, .86) * fresnel * .9;
-      float shellAlpha = clamp(.012 + fresnel * .68, .012, .70);
+      outgoingLight += vec3(.92, .95, 1.0) * fresnel * .85;
+      float shellAlpha = clamp(.035 + .10 * pow(1.0 - facing, 2.0) + fresnel * .48, .035, .615);
       // Three r180 clears the transmission target to white at half alpha on
       // transparent canvases. That placeholder is not actual DOM coverage.
       float glassAlpha = shellAlpha + liquid.a * (1.0 - shellAlpha);
@@ -128,12 +128,12 @@ export function createSurfaceMaterial(environment) {
       vec2 screenUV = gl_FragCoord.xy / uViewport;
       vec2 offset = normalize(normal).xy * (1.0 - facing) * (material.ior - 1.0) * material.thickness * .72;
       vec3 backdrop = texture2D(uBackdrop, clamp(screenUV - offset, .001, .999)).rgb;
-      vec3 shellColor = backdrop + gl_FragColor.rgb * .8;
+      vec3 shellColor = backdrop + max(gl_FragColor.rgb, vec3(0.0)) * .65;
       vec3 composite = shellColor * shellAlpha + liquid.rgb * (1.0 - shellAlpha);
       gl_FragColor.rgb = composite / max(glassAlpha, .0001);
     `,
       );
   };
-  material.customProgramCacheKey = () => "research-hollow-liquid-v7";
+  material.customProgramCacheKey = () => "research-hollow-liquid-v9";
   return { material, uniforms };
 }

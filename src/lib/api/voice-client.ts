@@ -45,5 +45,5 @@ export async function speak(request: SpeakRequest, signal?: AbortSignal): Promis
 }
 
 function networkError(): SpeakError {
-  return { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." };
+  return { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." };
 }

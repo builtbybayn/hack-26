@@ -15,7 +15,7 @@ import type {
 
 export interface ResearchService {
   refresh(): Promise<void>;
-  manageTestData?: (load: boolean) => void;
+  manageTestData?: (load: boolean) => Promise<void>;
   snapshot(): WorkspaceData;
   subscribe(listener: () => void): () => void;
   setActiveProject(id: ID): Promise<void>;

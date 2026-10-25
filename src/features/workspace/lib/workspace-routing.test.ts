@@ -14,6 +14,25 @@ const data: WorkspaceData = {
 };
 
 describe("workspace navigation", () => {
+  it("opens a dedicated global Second Brain tab even when a project graph is already open", () => {
+    const project = routeWorkspaceTab("/graph", new URLSearchParams(), data);
+    const brain = routeWorkspaceTab("/graph", new URLSearchParams("mode=brain"), data);
+    expect(brain).toMatchObject({ section: "graph", graphMode: "brain", projectId: "project-a" });
+    expect(brain.id).not.toBe(project.id);
+    expect(project.graphMode).toBeUndefined();
+    expect(
+      routeWorkspaceTab("/library", new URLSearchParams("mode=brain"), data).graphMode,
+    ).toBeUndefined();
+  });
+  it("opens Home as a New Tab without changing research or selecting Overview", () => {
+    const before = structuredClone(data);
+    expect(routeWorkspaceTab("/", new URLSearchParams(), data, "paper-a")).toMatchObject({
+      section: "empty",
+      projectId: "project-a",
+      documentId: undefined,
+    });
+    expect(data).toEqual(before);
+  });
   it("opens the extension's existing paper and page URL in the reader", () => {
     expect(
       routeWorkspaceTab("/", new URLSearchParams("paper=paper-b&page=12"), data),

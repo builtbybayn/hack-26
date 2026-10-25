@@ -16,7 +16,7 @@ async function fetchBriefCheck(input: BriefCheckRequest): Promise<BriefCheckResp
   } catch {
     return {
       ok: false,
-      error: { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." },
+      error: { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." },
     };
   }
 }

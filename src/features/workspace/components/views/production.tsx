@@ -533,7 +533,7 @@ export function WritingView() {
                   {local.title || "Untitled paper"}
                 </h1>
                 <p className="mt-4 text-sm">{local.authors || "Author information missing"}</p>
-                <p className="mt-1 text-xs">Research Core · APA 7 initial format</p>
+                <p className="mt-1 text-xs">Fluid Research · APA 7 initial format</p>
               </header>
               <section className="mt-12">
                 <h2 className="text-center text-base font-bold">Abstract</h2>
@@ -688,8 +688,8 @@ export function ExtensionView() {
       <section className="surface rounded-xl p-6">
         <h2 className="text-lg font-semibold">Open the research assistant</h2>
         <p className="mt-3 text-sm leading-7 text-muted">
-          The KnowBefore browser extension opens the assistant beside your current tab. It can save
-          an accessible page or PDF, analyze its concepts, and open the saved paper in this
+          The Fluid Research browser extension opens the assistant beside your current tab. It can
+          save an accessible page or PDF, analyze its concepts, and open the saved paper in this
           workspace. The panel and workspace share this browser’s saved data when they use the same
           app address.
         </p>

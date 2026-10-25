@@ -21,7 +21,7 @@ async function fetchSynthesis(input: SynthesisRequest): Promise<SynthesisRespons
   } catch {
     return {
       ok: false,
-      error: { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." },
+      error: { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." },
     };
   }
 }
@@ -43,7 +43,7 @@ async function fetchSynthesisCheck(input: SynthesisCheckRequest): Promise<Synthe
   } catch {
     return {
       ok: false,
-      error: { code: "NETWORK_ERROR", message: "Could not reach the KnowBefore server." },
+      error: { code: "NETWORK_ERROR", message: "Could not reach the Fluid Research server." },
     };
   }
 }

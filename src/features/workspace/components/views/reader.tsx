@@ -98,7 +98,23 @@ export function ReaderView({
       )}
       <div className="reader-layout">
         <div className="reader-surface theme-obsidian" data-theme="dark">
-          {doc.kind === "link" ? (
+          {doc.demo ? (
+            <article className="demo-source-reader">
+              <header>
+                <p className="eyebrow">FICTIONAL DEMONSTRATION SOURCE</p>
+                <h1>{doc.title}</h1>
+                <button className="btn" onClick={() => setSideOpen(!sideOpen)}>
+                  {sideOpen ? "Hide context" : "Show context"}
+                </button>
+              </header>
+              {doc.passages.map((passage) => (
+                <section key={passage.id} id={passage.id}>
+                  <h2>{passage.heading || `Page ${passage.page || 1}`}</h2>
+                  <p>{passage.text}</p>
+                </section>
+              ))}
+            </article>
+          ) : doc.kind === "link" ? (
             <Empty
               title="Saved link"
               detail={doc.summary}

@@ -300,7 +300,7 @@ export function ExtensionPanel() {
   return (
     <main className="ext theme-obsidian" data-theme="dark">
       <header className="ext-topbar">
-        <span className="ext-vault-name">Research Core</span>
+        <span className="ext-vault-name">Fluid Research</span>
         <button
           type="button"
           className="clickable-icon"

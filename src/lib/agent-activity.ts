@@ -65,7 +65,7 @@ export interface AgentSnapshot {
 }
 
 /** How long an error stays visible unless new work starts first. */
-const ERROR_VISIBLE_MS = 6_000;
+export const ERROR_VISIBLE_MS = 4_000;
 /** Back-to-back steps (read → analyze) shouldn't flash idle in between. */
 export const IDLE_GRACE_MS = 400;
 const IDLE: AgentSnapshot = { state: "idle", detail: null, activities: [] };
@@ -77,7 +77,7 @@ let error: { message: string; timer: ReturnType<typeof setTimeout> } | null = nu
 let snapshot: AgentSnapshot = IDLE;
 let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
-function publish() {
+function publish(immediate = false) {
   if (idleTimer) clearTimeout(idleTimer);
   idleTimer = null;
   const running = [...activities.values()];
@@ -93,7 +93,7 @@ function publish() {
     : top
       ? { state: top.state, detail: top.detail, activities: running }
       : IDLE;
-  if (next === IDLE && snapshot !== IDLE) {
+  if (!immediate && next === IDLE && snapshot !== IDLE) {
     // Wait briefly: if more work starts, the idle state is never shown.
     idleTimer = setTimeout(() => emit(IDLE), IDLE_GRACE_MS);
     return;
@@ -128,16 +128,23 @@ export function beginActivity(state: BusyState, detail: string | null = null): (
 }
 
 /** Shows the error state briefly; new work replaces it sooner. */
-export function reportAgentError(message: string): void {
+export function reportAgentError(message: string): () => void {
   clearError();
   error = {
     message,
     timer: setTimeout(() => {
       error = null;
-      publish();
+      publish(true);
     }, ERROR_VISIBLE_MS),
   };
+  const ownedError = error;
   publish();
+  // Preview owners can clean up on unmount without cancelling newer failures.
+  return () => {
+    if (error !== ownedError) return;
+    clearError();
+    publish(true);
+  };
 }
 
 /**

@@ -1,4 +1,4 @@
-# Research Core integration audit
+# Fluid Research integration audit
 
 Audited October 25, 2026. The main UI migration is retained, including its supplied Three.js
 blob effects. Existing staged migrations and user files were preserved.

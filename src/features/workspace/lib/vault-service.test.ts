@@ -308,3 +308,61 @@ describe("real workspace wiring", () => {
     expect(service.snapshot().conversation.messages).toHaveLength(0);
   });
 });
+
+it("persists demo data idempotently and clears it while rescuing real notes", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  try {
+    const service = new VaultResearchService();
+    await service.refresh();
+    const realProject = service.snapshot().projects[0].id;
+    await service.manageTestData(true);
+    await service.manageTestData(true);
+    expect(service.snapshot().projects).toHaveLength(11);
+    expect(service.snapshot().documents).toHaveLength(60);
+    expect(service.snapshot().notes).toHaveLength(70);
+    expect(service.snapshot().claims).toHaveLength(30);
+    const demoProject = service
+      .snapshot()
+      .projects.find((p) => p.id.startsWith("demo-research-v1-"))!;
+    await service.setActiveProject(demoProject.id);
+    const note = await service.saveNote({
+      projectId: demoProject.id,
+      title: "My real observation",
+      body: "Keep my work",
+      question: false,
+      resolved: false,
+    });
+    const reloaded = new VaultResearchService();
+    await reloaded.refresh();
+    expect(reloaded.snapshot().documents).toHaveLength(60);
+    await reloaded.manageTestData(false);
+    expect(reloaded.snapshot().projects.map((p) => p.id)).toEqual([realProject]);
+    expect(reloaded.snapshot().documents).toHaveLength(0);
+    expect(reloaded.snapshot().claims).toHaveLength(0);
+    expect(reloaded.snapshot().notes.find((n) => n.id === note.id)?.body).toBe("Keep my work");
+    expect(reloaded.snapshot().notes.find((n) => n.id === note.id)?.projectId).toBe(realProject);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
+it("recovers authored writing from demo projects when clearing", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  try {
+    const service = new VaultResearchService();
+    await service.refresh();
+    await service.manageTestData(true);
+    const demo = service.snapshot().projects.find((p) => p.id.startsWith("demo-research-v1-"))!;
+    await service.setActiveProject(demo.id);
+    await service.saveDraft({ title: "My authored draft", body: "Retain this writing" });
+    await service.manageTestData(false);
+    const recovered = service.snapshot().projects.find((p) => p.name.startsWith("Recovered ·"))!;
+    expect(recovered).toBeDefined();
+    expect(service.snapshot().drafts[recovered.id].body).toBe("Retain this writing");
+    expect(
+      Object.keys(service.snapshot().drafts).some((id) => id.startsWith("demo-research-v1-")),
+    ).toBe(false);
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
