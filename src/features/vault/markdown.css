@@ -1,0 +1,122 @@
+/* Rendered Markdown: notes in reading view and AI replies. */
+
+.markdown-rendered {
+  color: var(--text-normal);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.markdown-rendered > :first-child {
+  margin-top: 0;
+}
+
+.markdown-rendered h1,
+.markdown-rendered h2,
+.markdown-rendered h3,
+.markdown-rendered h4,
+.markdown-rendered h5,
+.markdown-rendered h6 {
+  margin: 1.4em 0 0.5em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.markdown-rendered h1 {
+  font-size: 1.62em;
+}
+
+.markdown-rendered h2 {
+  font-size: 1.38em;
+}
+
+.markdown-rendered h3 {
+  font-size: 1.2em;
+}
+
+.markdown-rendered p,
+.markdown-rendered ul,
+.markdown-rendered ol,
+.markdown-rendered blockquote,
+.markdown-rendered pre {
+  margin: 0 0 0.9em;
+}
+
+.markdown-rendered ul,
+.markdown-rendered ol {
+  padding-left: 1.6em;
+}
+
+.markdown-rendered li + li {
+  margin-top: 0.15em;
+}
+
+.markdown-rendered .md-task {
+  list-style: none;
+  margin-left: -1.4em;
+}
+
+.markdown-rendered .md-task input {
+  margin: 0 8px 0 0;
+  accent-color: var(--interactive-accent);
+}
+
+.markdown-rendered blockquote {
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--interactive-accent);
+  color: var(--text-muted);
+}
+
+.markdown-rendered code {
+  padding: 0.1em 0.3em;
+  border-radius: var(--radius-s);
+  background: var(--code-background);
+  font-family: var(--font-monospace);
+  font-size: 0.875em;
+}
+
+.markdown-rendered pre {
+  padding: 12px 16px;
+  border-radius: var(--radius-s);
+  background: var(--code-background);
+  overflow-x: auto;
+}
+
+.markdown-rendered pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown-rendered .md-math {
+  background: none;
+  color: var(--text-accent);
+}
+
+.markdown-rendered mark {
+  padding: 0 2px;
+  border-radius: 2px;
+  background: rgb(255 208 0 / 0.4);
+  color: inherit;
+}
+
+.markdown-rendered hr {
+  margin: 2em 0;
+  border: 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.markdown-rendered a {
+  color: var(--text-accent);
+}
+
+.markdown-rendered .md-wikilink {
+  text-decoration: none;
+}
+
+.markdown-rendered .md-wikilink:hover {
+  text-decoration: underline;
+}
+
+.markdown-rendered .md-wikilink.is-unresolved {
+  opacity: 0.7;
+}

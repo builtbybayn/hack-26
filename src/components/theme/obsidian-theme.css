@@ -1,0 +1,306 @@
+/*
+ * Obsidian's default theme as tokens and shared controls, used by the vault and the extension
+ * panel. Put `theme-obsidian` on a root element (with data-theme="dark" | "light" | "system").
+ * Every color is a token, so the light theme is just a second token set.
+ */
+
+.theme-obsidian {
+  --background-primary: #1e1e1e;
+  --background-primary-alt: #242424;
+  --background-secondary: #262626;
+  --background-secondary-alt: #1e1e1e;
+  --background-modifier-border: #363636;
+  --background-modifier-border-hover: #444;
+  --background-modifier-hover: rgb(255 255 255 / 0.075);
+  --background-modifier-active: rgb(255 255 255 / 0.1);
+  --background-modifier-form-field: #2a2a2a;
+  --background-modifier-error: #fb464c;
+  --text-normal: #dadada;
+  --text-muted: #b3b3b3;
+  --text-faint: #8a8a8a;
+  --text-on-accent: #fff;
+  --text-accent: #a68af9;
+  --interactive-accent: #7f6df2;
+  --interactive-accent-hover: #8875ff;
+  --icon-color: #999;
+  --icon-color-hover: #dadada;
+  --pdf-background: #2b2b2b;
+  --pdf-toolbar: #333;
+  --page-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  --comment-background: #e8eaed;
+  --comment-text: #1f1f1f;
+  --comment-muted: #5f6368;
+  --code-background: #2a2a2a;
+  --shadow-s: 0 1px 2px rgb(0 0 0 / 0.28), 0 3px 8px rgb(0 0 0 / 0.3);
+  --shadow-l: 0 2px 8px rgb(0 0 0 / 0.4), 0 14px 40px rgb(0 0 0 / 0.45);
+  --font-interface:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif;
+  --font-monospace: ui-monospace, "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  --radius-s: 4px;
+  --radius-m: 8px;
+
+  /* Tokens used by the reused feature panels (recommendations, contradictions, voice). */
+  --paper: var(--background-primary);
+  --ink: var(--text-normal);
+  --muted: var(--text-muted);
+  --line: var(--background-modifier-border);
+  --forest: var(--interactive-accent);
+  --forest-soft: rgb(127 109 242 / 0.16);
+  --clay: #e5976a;
+  --white: var(--background-primary-alt);
+
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  font-size: 14px;
+  line-height: 1.5;
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-obsidian[data-theme="light"] {
+  --background-primary: #fff;
+  --background-primary-alt: #fafafa;
+  --background-secondary: #f6f6f6;
+  --background-secondary-alt: #fff;
+  --background-modifier-border: #e0e0e0;
+  --background-modifier-border-hover: #d0d0d0;
+  --background-modifier-hover: rgb(0 0 0 / 0.05);
+  --background-modifier-active: rgb(0 0 0 / 0.08);
+  --background-modifier-form-field: #fff;
+  --text-normal: #222;
+  --text-muted: #5c5c5c;
+  --text-faint: #8f8f8f;
+  --text-accent: #7a5ff0;
+  --interactive-accent: #7f6df2;
+  --icon-color: #6b6b6b;
+  --icon-color-hover: #222;
+  --pdf-background: #e9e9e9;
+  --pdf-toolbar: #f6f6f6;
+  --page-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+  --comment-background: #fff;
+  --code-background: #f4f4f4;
+  --shadow-s: 0 1px 2px rgb(0 0 0 / 0.08), 0 3px 8px rgb(0 0 0 / 0.08);
+  --shadow-l: 0 2px 8px rgb(0 0 0 / 0.1), 0 14px 40px rgb(0 0 0 / 0.14);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  .theme-obsidian[data-theme="system"] {
+    --background-primary: #fff;
+    --background-primary-alt: #fafafa;
+    --background-secondary: #f6f6f6;
+    --background-secondary-alt: #fff;
+    --background-modifier-border: #e0e0e0;
+    --background-modifier-border-hover: #d0d0d0;
+    --background-modifier-hover: rgb(0 0 0 / 0.05);
+    --background-modifier-active: rgb(0 0 0 / 0.08);
+    --background-modifier-form-field: #fff;
+    --text-normal: #222;
+    --text-muted: #5c5c5c;
+    --text-faint: #8f8f8f;
+    --text-accent: #7a5ff0;
+    --icon-color: #6b6b6b;
+    --icon-color-hover: #222;
+    --pdf-background: #e9e9e9;
+    --pdf-toolbar: #f6f6f6;
+    --page-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
+    --comment-background: #fff;
+    --code-background: #f4f4f4;
+    --shadow-s: 0 1px 2px rgb(0 0 0 / 0.08), 0 3px 8px rgb(0 0 0 / 0.08);
+    --shadow-l: 0 2px 8px rgb(0 0 0 / 0.1), 0 14px 40px rgb(0 0 0 / 0.14);
+    color-scheme: light;
+  }
+}
+
+.theme-obsidian *,
+.theme-obsidian *::before,
+.theme-obsidian *::after {
+  box-sizing: border-box;
+}
+
+/* Zero specificity, so component rules below always win. */
+:where(.theme-obsidian) :where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+.theme-obsidian button {
+  cursor: pointer;
+}
+
+.theme-obsidian :focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+.theme-obsidian [hidden] {
+  display: none !important;
+}
+
+.theme-obsidian kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-primary-alt);
+  font-family: var(--font-monospace);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ---- Shared controls ---------------------------------------------------------------------- */
+
+.theme-obsidian .clickable-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--icon-color);
+  text-decoration: none;
+}
+
+.theme-obsidian .clickable-icon:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  color: var(--icon-color-hover);
+}
+
+.theme-obsidian .clickable-icon[aria-pressed="true"],
+.theme-obsidian .clickable-icon[aria-selected="true"] {
+  background: var(--background-modifier-active);
+  color: var(--icon-color-hover);
+}
+
+.theme-obsidian .clickable-icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.theme-obsidian .mod-cta,
+.theme-obsidian .mod-muted,
+.theme-obsidian .mod-warning {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  box-shadow: var(--shadow-s);
+}
+
+.theme-obsidian .mod-cta {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.theme-obsidian .mod-cta:hover:not(:disabled) {
+  background: var(--interactive-accent-hover);
+}
+
+.theme-obsidian .mod-muted {
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+}
+
+.theme-obsidian .mod-muted:hover {
+  background: var(--background-modifier-hover);
+}
+
+.theme-obsidian .mod-warning {
+  background: var(--background-modifier-error);
+  color: #fff;
+}
+
+.theme-obsidian .mod-cta:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.theme-obsidian .link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-accent);
+  font-size: inherit;
+}
+
+.theme-obsidian .link-button:hover {
+  text-decoration: underline;
+}
+
+.theme-obsidian .dropdown,
+.theme-obsidian .setting-item-control input[type="text"] {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.theme-obsidian .toolbar-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--background-modifier-border-hover);
+  flex: none;
+}
+
+/* ---- Menus -------------------------------------------------------------------------------- */
+
+.theme-obsidian .menu {
+  position: absolute;
+  z-index: 50;
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  box-shadow: var(--shadow-l);
+  font-size: 13px;
+}
+
+.theme-obsidian .context-menu {
+  position: fixed;
+}
+
+.menu-section + .menu-section {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.theme-obsidian .menu button {
+  display: block;
+  width: 100%;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text-normal);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.theme-obsidian .menu button:hover,
+.theme-obsidian .menu button:focus-visible {
+  background: var(--background-modifier-hover);
+  outline: none;
+}
+
+.theme-obsidian .menu button.is-warning {
+  color: var(--background-modifier-error);
+}

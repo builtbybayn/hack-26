@@ -65,8 +65,10 @@ export function useExtensionBridge(handlers: BridgeHandlers) {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  // Requests carry no data, so the parent's unknown chrome-extension:// origin can be "*".
-  const send = (type: string) => window.parent.postMessage({ type }, "*");
+  // Requests carry nothing private (at most a paper's content hash), so the parent's unknown
+  // chrome-extension:// origin can be "*".
+  const send = (type: string, extra: object = {}) =>
+    window.parent.postMessage({ type, ...extra }, "*");
 
   return {
     /** Null until the extension reports a tab (always null when opened outside the extension). */
@@ -80,7 +82,12 @@ export function useExtensionBridge(handlers: BridgeHandlers) {
       setPending("kb:get-paper");
       send("kb:get-paper");
     },
-    openApp: () => send("kb:open-app"),
+    /** Opens (or reuses) the vault tab, showing a saved paper at a page when given one. */
+    openApp: (documentId?: string, page?: number) =>
+      send(
+        "kb:open-app",
+        documentId ? { path: `/?paper=${documentId}${page ? `&page=${page}` : ""}` } : {},
+      ),
   };
 }
 
@@ -104,6 +111,12 @@ export function rememberPaperForUrl(url: string, documentId: string): void {
   } catch {
     // Without storage the panel still works; it just won't auto-select this paper next time.
   }
+}
+
+/** The page in a PDF link like `paper.pdf#page=4`, if any. */
+export function pageFromUrl(url: string): number | null {
+  const match = url.match(/#(?:.*&)?page=(\d+)/);
+  return match ? Number(match[1]) : null;
 }
 
 function normalizeUrl(url: string): string {

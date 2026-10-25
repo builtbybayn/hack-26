@@ -1,6 +1,7 @@
 # Components
 
-Reusable UI primitives shared by two or more features (buttons, inputs, dialogs). No data fetching
-and no feature-specific knowledge. Owned by the UI developer.
+Reusable UI primitives shared by two or more features. No data fetching and no feature-specific
+knowledge.
 
-Empty until the UI is designed. See [docs/DESIGN.md](../../docs/DESIGN.md).
+- `theme/obsidian-theme.css`: the Obsidian theme (color tokens, light/dark, buttons, menus,
+  focus). Used by the vault and the extension panel; see [docs/DESIGN.md](../../docs/DESIGN.md).

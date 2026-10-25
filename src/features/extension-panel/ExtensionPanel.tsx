@@ -1,311 +1,438 @@
 "use client";
 
 /**
- * Barebones extension side panel, loaded at /panel inside the extension. It follows the active
- * tab: "Analyze this paper" saves it to the vault and runs the full pipeline (analysis, related
- * papers, contradiction check), then the paper can be explored through six views. The flow and
- * wiring are what this establishes; the visual design is provisional.
+ * The extension side panel, loaded at /panel inside the extension. It follows the active tab:
+ * on a PDF it offers "Analyze this paper" and "Open in vault" (at the page you're reading);
+ * anywhere else it's a chat with the research assistant. Same Obsidian theme as the vault.
  */
-import { useEffect, useRef, useState } from "react";
-import { AgentStatus } from "@/features/agent/AgentStatus";
-import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
-import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
-import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ExternalLink, FileText, Globe, LoaderCircle, SquarePen } from "lucide-react";
+import { AgentSprite } from "@/features/agent/AgentSprite";
+import { ChatView } from "@/features/vault/ChatView";
+import { useSettings } from "@/features/vault/use-settings";
+import { CHATS_FOLDER, ensureFolder, newId, uniqueName } from "@/features/vault/vault-tree";
 import { parseDocument } from "@/lib/api/intelligence-client";
 import {
   listDocumentRecords,
-  loadMastery,
-  saveMastery,
+  listVaultEntries,
+  putVaultEntries,
+  saveDocument,
+  subscribeStoreChanges,
   type DocumentRecord,
 } from "@/lib/browser-store";
 import { runPaperPipeline } from "@/lib/paper-pipeline";
 import type { ParsedDocument } from "@/types/ingestion";
-import type { MasteryLevel } from "@/types/intelligence";
+import { PIPELINE_STEPS, type PipelineStepStatus } from "@/types/pipeline";
+import type { VaultChat } from "@/types/vault";
 import {
+  pageFromUrl,
   paperForUrl,
   rememberPaperForUrl,
   useExtensionBridge,
   type TabPaper,
-  type TabSelection,
 } from "./bridge";
-import {
-  ExplainView,
-  NeedsAnalysis,
-  NeedsPaper,
-  OverviewView,
-  PipelineProgress,
-  PrerequisitesView,
-} from "./PanelViews";
+import "@/components/theme/obsidian-theme.css";
 import "./extension-panel.css";
 
-const VIEWS = [
-  { id: "overview", label: "Overview" },
-  { id: "prerequisites", label: "Prerequisites" },
-  { id: "explain", label: "Explain" },
-  { id: "related", label: "Related" },
-  { id: "conflicts", label: "Conflicts" },
-  { id: "listen", label: "Listen" },
-] as const;
-type View = (typeof VIEWS)[number]["id"];
+/** What to do with a paper once the tab hands it over. */
+type Intent = { kind: "analyze" } | { kind: "open"; page: number } | { kind: "attach" };
+
+const STATUS_TEXT: Record<PipelineStepStatus, string> = {
+  pending: "Waiting",
+  running: "Working…",
+  done: "Done",
+  skipped: "Skipped",
+  failed: "Failed",
+};
+
+function emptyChat(): VaultChat {
+  const at = new Date().toISOString();
+  return {
+    id: newId(),
+    kind: "chat",
+    name: "Panel chat",
+    parentId: null,
+    documentIds: [],
+    messages: [],
+    createdAt: at,
+    updatedAt: at,
+  };
+}
 
 export function ExtensionPanel() {
+  const settings = useSettings();
   const [records, setRecords] = useState<DocumentRecord[]>([]);
-  const [picked, setPicked] = useState<{ id: string; forUrl: string | null } | null>(null);
-  const [view, setView] = useState<View>("overview");
-  const [selection, setSelection] = useState<TabSelection | null>(null);
-  const [mastery, setMastery] = useState<Record<string, MasteryLevel>>({});
   const [runningId, setRunningId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pageDraft, setPageDraft] = useState<{ url: string; value: string } | null>(null);
+  const [chat, setChat] = useState<VaultChat | null>(null);
+  /** Bumped by "New chat" to reset the chat view. */
+  const [chatGeneration, setChatGeneration] = useState(0);
+  const intent = useRef<Intent>({ kind: "analyze" });
   const pipelineAbort = useRef<AbortController | null>(null);
+  const chatRef = useRef<VaultChat | null>(null);
+  const filed = useRef(false);
+  const writes = useRef(Promise.resolve());
 
-  const bridge = useExtensionBridge({
-    onPaper: (paper) => void analyzeFromTab(paper),
-    onSelection: (incoming) => {
-      setSelection(incoming);
-      setView("explain");
-      setError(null);
-    },
-    onError: (_request, message) => setError(message),
-  });
+  const reloadRecords = useCallback(
+    () =>
+      listDocumentRecords()
+        .then(setRecords)
+        .catch(() => setError("Couldn't open browser storage.")),
+    [],
+  );
 
   useEffect(() => {
-    let active = true;
-    Promise.all([listDocumentRecords(), loadMastery()])
-      .then(([stored, levels]) => {
-        if (!active) return;
-        setRecords(stored);
-        setMastery(levels);
-      })
-      .catch(() => active && setError("Couldn't open browser storage."));
+    void reloadRecords();
+    // The vault (another tab) may analyze or delete papers too.
+    const unsubscribe = subscribeStoreChanges((change) => {
+      if (change === "documents") void reloadRecords();
+    });
     return () => {
-      active = false;
+      unsubscribe();
       pipelineAbort.current?.abort();
     };
-  }, []);
+  }, [reloadRecords]);
+
+  const bridge = useExtensionBridge({
+    onPaper: (paper) => void receivePaper(paper),
+    onSelection: () => {},
+    onError: (_request, message) => {
+      setBusy(null);
+      setError(message);
+    },
+  });
 
   const tab = bridge.tab;
-  const tabUrl = tab?.url ?? null;
-  // Which paper to show: a manual pick for this tab, else the paper analyzed from this tab before,
-  // else (outside the extension) the most recent paper.
-  const tabPaperId = tabUrl ? paperForUrl(tabUrl) : null;
-  const activeId =
-    (picked && picked.forUrl === tabUrl ? picked.id : null) ??
-    (tabPaperId && records.some((entry) => entry.id === tabPaperId) ? tabPaperId : null) ??
-    (tab ? null : (records[0]?.id ?? null));
-  const record = records.find((entry) => entry.id === activeId) ?? null;
+  const onPdf = tab?.kind === "pdf";
+  const tabPaperId = tab ? paperForUrl(tab.url) : null;
+  const record = records.find((entry) => entry.id === tabPaperId) ?? null;
   const running = Boolean(record && runningId === record.id);
+  const pageCount = record?.document.metadata.pageCount ?? record?.document.pages.length ?? null;
+  const pageValue =
+    pageDraft && tab && pageDraft.url === tab.url
+      ? pageDraft.value
+      : String((tab && pageFromUrl(tab.url)) ?? 1);
+  const page = Math.max(1, Math.min(Number(pageValue) || 1, pageCount ?? Infinity));
 
   const upsert = (updated: DocumentRecord) =>
     setRecords((current) => [updated, ...current.filter((entry) => entry.id !== updated.id)]);
 
-  async function runPipeline(document: ParsedDocument, file?: { blob: Blob; fileName: string }) {
+  async function runPipeline(
+    document: ParsedDocument,
+    file: { blob: Blob; fileName: string } | undefined,
+    onSaved?: () => void,
+  ) {
     pipelineAbort.current?.abort();
     const controller = new AbortController();
     pipelineAbort.current = controller;
     setRunningId(document.id);
+    let announced = false;
     try {
-      await runPaperPipeline(document, { file, signal: controller.signal, onUpdate: upsert });
+      await runPaperPipeline(document, {
+        file,
+        signal: controller.signal,
+        onUpdate: (updated) => {
+          upsert(updated);
+          if (!announced && updated.pipeline?.saved.status === "done") {
+            announced = true;
+            onSaved?.();
+          }
+        },
+      });
     } catch (caught) {
-      if (!(caught instanceof DOMException && caught.name === "AbortError")) {
+      if (!(caught instanceof DOMException && caught.name === "AbortError"))
         setError(caught instanceof Error ? caught.message : "The analysis stopped unexpectedly.");
-      }
     } finally {
       setRunningId((current) => (current === document.id ? null : current));
     }
   }
 
-  /** Parse the paper, then save it and run the whole pipeline on it. */
-  async function analyzeFromTab(paper: TabPaper | File) {
-    setError(null);
+  /** The tab's paper arrived: parse it, then analyze, open in the vault, or attach to the chat. */
+  async function receivePaper(paper: TabPaper) {
     setBusy("Reading the paper…");
     const file =
-      paper instanceof File
-        ? paper
-        : paper.kind === "pdf"
-          ? new File([paper.bytes], paper.fileName, { type: "application/pdf" })
-          : // Page text becomes Markdown titled with the tab's title, so the paper has a title.
-            new File(
-              [paper.title ? `# ${paper.title}\n\n${paper.text}` : paper.text],
-              paper.fileName,
-              { type: "text/markdown" },
-            );
+      paper.kind === "pdf"
+        ? new File([paper.bytes], paper.fileName, { type: "application/pdf" })
+        : // Page text becomes Markdown titled with the tab's title, so the paper has a title.
+          new File(
+            [paper.title ? `# ${paper.title}\n\n${paper.text}` : paper.text],
+            paper.fileName,
+            { type: "text/markdown" },
+          );
     const parsed = await parseDocument(file, { mode: "standard" });
     setBusy(null);
     if (!parsed.ok) {
       setError(parsed.error.message);
       return;
     }
-    const document = parsed.data.document;
-    if (paper instanceof File) setPicked({ id: document.id, forUrl: tabUrl });
-    else {
-      rememberPaperForUrl(paper.url, document.id);
-      setPicked(null);
+    const { document } = parsed.data;
+    rememberPaperForUrl(paper.url, document.id);
+    const wanted = intent.current;
+    if (wanted.kind === "attach") {
+      await saveDocument(document);
+      await reloadRecords();
+      const current = chatRef.current ?? emptyChat();
+      updateChat({ documentIds: [...new Set([...current.documentIds, document.id])] });
+      return;
     }
-    setView("overview");
-    await runPipeline(document, { blob: file, fileName: file.name });
-  }
-
-  async function updateMastery(conceptId: string, level: MasteryLevel) {
-    setMastery((current) => ({ ...current, [conceptId]: level }));
-    await saveMastery(conceptId, level);
-  }
-
-  const rerun = () => record && void runPipeline(record.document);
-  const usingTabPaper = Boolean(record && tabPaperId === record.id);
-  const pipelineIncomplete =
-    record?.pipeline &&
-    Object.values(record.pipeline).some(
-      (step) => step.status !== "done" && step.status !== "skipped",
+    await runPipeline(
+      document,
+      { blob: file, fileName: file.name },
+      wanted.kind === "open" ? () => bridge.openApp(document.id, wanted.page) : undefined,
     );
+  }
+
+  const request = (next: Intent) => {
+    setError(null);
+    intent.current = next;
+    bridge.requestPaper();
+  };
+
+  /** Opens the paper in the vault at the chosen page, saving (and analyzing) it first if needed. */
+  const openInVault = () => {
+    if (record) bridge.openApp(record.id, page);
+    else request({ kind: "open", page });
+  };
+
+  /** Applies a change and saves the chat to the vault's "Chats" folder (filed on first save). */
+  function updateChat(patch: Partial<VaultChat>) {
+    const next = {
+      ...(chatRef.current ?? emptyChat()),
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    chatRef.current = next;
+    setChat(next);
+    if (!next.messages.length) return;
+    writes.current = writes.current
+      .then(async () => {
+        const latest = chatRef.current!;
+        if (filed.current) {
+          await putVaultEntries([latest]);
+          return;
+        }
+        const entries = await listVaultEntries();
+        const { folderId, created } = ensureFolder(entries, null, CHATS_FOLDER);
+        const question = latest.messages[0]?.content.replace(/\s+/g, " ").trim() ?? "";
+        const filedChat = {
+          ...latest,
+          parentId: folderId,
+          name: uniqueName(
+            [...entries, ...created],
+            folderId,
+            question ? `Chat – ${question.slice(0, 40)}` : "Panel chat",
+          ),
+        };
+        chatRef.current = {
+          ...chatRef.current!,
+          parentId: filedChat.parentId,
+          name: filedChat.name,
+        };
+        filed.current = true;
+        setChat(chatRef.current);
+        await putVaultEntries([...created, chatRef.current]);
+      })
+      .catch(() => setError("Couldn't save this chat to your vault."));
+  }
+
+  const newChat = () => {
+    chatRef.current = null;
+    filed.current = false;
+    setChat(null);
+    setChatGeneration((value) => value + 1);
+  };
+
+  const shownChat = chat ?? EMPTY_CHAT;
+  const recordMap = new Map(records.map((entry) => [entry.id, entry]));
+  const pendingPaper = bridge.pending === "kb:get-paper";
+  const status = error ?? busy ?? (pendingPaper ? "Getting the paper from this tab…" : null);
+  const chatting = !onPdf;
 
   return (
-    <main className="ext-panel">
-      <header className="ext-header">
-        <span className="eyebrow">KNOWBEFORE</span>
-        <AgentStatus />
+    <main className="ext theme-obsidian" data-theme={settings.theme}>
+      <header className="ext-topbar">
+        <span className="ext-vault-name">{settings.vaultName}</span>
+        {chatting && (
+          <button
+            type="button"
+            className="clickable-icon"
+            aria-label="New chat"
+            title="New chat"
+            onClick={newChat}
+          >
+            <SquarePen size={16} />
+          </button>
+        )}
+        <button
+          type="button"
+          className="clickable-icon"
+          aria-label="Open vault"
+          title="Open vault"
+          onClick={() => (tab ? bridge.openApp() : window.open("/", "_blank"))}
+        >
+          <ExternalLink size={16} />
+        </button>
       </header>
 
-      <section className="ext-card" aria-label="Current paper">
-        {tab ? (
-          <>
-            <span className="ext-label">THIS TAB</span>
-            <p className="ext-tab-title">{tab.title || "Untitled tab"}</p>
-            {tab.kind === "unsupported" ? (
-              <p className="ext-muted">Open a paper (a PDF or an article page) to analyze it.</p>
-            ) : !usingTabPaper ? (
+      <section
+        className="ext-hero"
+        data-compact={(chatting && shownChat.messages.length > 0) || undefined}
+      >
+        <AgentSprite greeting={onPdf ? "Ready when you are" : "Ask me anything"} />
+      </section>
+
+      {tab && (
+        <div className="ext-tab" title={tab.url}>
+          {onPdf ? <FileText size={14} aria-hidden /> : <Globe size={14} aria-hidden />}
+          <span>{tab.title || "Untitled tab"}</span>
+        </div>
+      )}
+
+      {status && (
+        <p className={error ? "ext-status is-error" : "ext-status"} role="status">
+          {!error && <LoaderCircle size={13} className="ext-spin" aria-hidden />}
+          {status}
+        </p>
+      )}
+
+      {onPdf ? (
+        <section className="ext-pdf" aria-label="This paper">
+          {!record ? (
+            <>
               <button
                 type="button"
-                className="primary"
-                onClick={bridge.requestPaper}
-                disabled={Boolean(busy) || bridge.pending === "kb:get-paper"}
+                className="mod-cta ext-wide"
+                onClick={() => request({ kind: "analyze" })}
+                disabled={Boolean(busy) || pendingPaper}
               >
                 Analyze this paper
               </button>
-            ) : null}
-          </>
-        ) : (
-          <p className="ext-muted">
-            Open this panel from the KnowBefore extension to analyze the paper in your current tab.
-            You can still choose or upload a paper below.
-          </p>
-        )}
-        {(error || busy || bridge.pending === "kb:get-paper") && (
-          <p className={error ? "ext-status failed" : "ext-status"} role="status">
-            {error ?? busy ?? "Getting the paper from this tab…"}
-          </p>
-        )}
-        {record && <PipelineProgress record={record} />}
-        {record && pipelineIncomplete && !running && (
-          <button type="button" className="secondary" onClick={rerun}>
-            Finish the analysis
-          </button>
-        )}
-        <details className="ext-library">
-          <summary>
-            {record
-              ? `Paper: ${record.document.title ?? record.document.source.fileName}`
-              : "Your vault"}
-          </summary>
-          {records.length > 0 && (
-            <label className="ext-field">
-              Switch to a saved paper
-              <select
-                value={record?.id ?? ""}
-                onChange={(event) => setPicked({ id: event.target.value, forUrl: tabUrl })}
-              >
-                {!record && <option value="">Choose…</option>}
-                {records.map((entry) => (
-                  <option key={entry.id} value={entry.id}>
-                    {entry.document.title ?? entry.document.source.fileName}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <p className="ext-hint">
+                Saves it to your vault, then finds what to know first, related papers, and conflicts
+                with papers you&apos;ve saved.
+              </p>
+            </>
+          ) : (
+            <>
+              <ol className="ext-steps" aria-label="Analysis progress">
+                {PIPELINE_STEPS.map(({ id, label }) => {
+                  const step = record.pipeline?.[id];
+                  const state = step?.status ?? "pending";
+                  return (
+                    <li key={id} data-status={state}>
+                      <span className="ext-step-dot" aria-hidden>
+                        {state === "running" && <LoaderCircle size={12} className="ext-spin" />}
+                      </span>
+                      <span>{label}</span>
+                      <span className="ext-step-status">{STATUS_TEXT[state]}</span>
+                      {step?.message && <small>{step.message}</small>}
+                    </li>
+                  );
+                })}
+              </ol>
+              {!running &&
+                (!record.pipeline ||
+                  Object.values(record.pipeline).some((step) => step.status === "failed")) && (
+                  <button
+                    type="button"
+                    className="mod-muted ext-wide"
+                    onClick={() => void runPipeline(record.document, undefined)}
+                  >
+                    Finish the analysis
+                  </button>
+                )}
+              {record.analysis && <Summary record={record} />}
+            </>
           )}
-          <label className="ext-upload">
-            <input
-              type="file"
-              accept=".pdf,application/pdf,.md,.txt"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void analyzeFromTab(file);
-              }}
-            />
-            <span>Upload and analyze a file</span>
-          </label>
-        </details>
-      </section>
 
-      <nav className="ext-views" role="tablist" aria-label="Paper views">
-        {VIEWS.map((entry) => (
-          <button
-            key={entry.id}
-            id={`view-${entry.id}`}
-            type="button"
-            role="tab"
-            aria-selected={view === entry.id}
-            aria-controls="ext-view"
-            onClick={() => setView(entry.id)}
-          >
-            {entry.label}
-          </button>
-        ))}
-      </nav>
-
-      <div id="ext-view" className="ext-view" role="tabpanel" aria-labelledby={`view-${view}`}>
-        {view === "explain" ? (
-          <ExplainView
-            selection={selection}
-            canRequest={Boolean(tab && tab.kind !== "unsupported")}
-            pending={bridge.pending === "kb:get-selection"}
-            onRequest={bridge.requestSelection}
-            onClear={() => setSelection(null)}
-          />
-        ) : !record ? (
-          <NeedsPaper />
-        ) : view === "overview" ? (
-          <OverviewView record={record} running={running} onRun={rerun} />
-        ) : view === "prerequisites" ? (
-          <PrerequisitesView
-            record={record}
-            mastery={mastery}
-            onMastery={updateMastery}
-            running={running}
-            onRun={rerun}
-          />
-        ) : view === "listen" ? (
-          <ReadAloudPanel key={record.id} document={record.document} />
-        ) : !record.analysis ? (
-          <NeedsAnalysis record={record} running={running} onRun={rerun} />
-        ) : view === "related" ? (
-          <RecommendationsPanel
-            // Remount when the pipeline saves results so they appear without a search.
-            key={`${record.id}-${Boolean(record.recommendations)}`}
-            document={record.document}
-            analysis={record.analysis}
-            initialResult={record.recommendations ?? null}
-          />
-        ) : (
-          <ContradictionPanel
-            key={`${record.id}-${Boolean(record.contradictions)}`}
-            document={record.document}
-            analysis={record.analysis}
-            initialReport={record.contradictions ?? null}
-          />
-        )}
-      </div>
-
-      <footer className="ext-footer">
-        <button
-          type="button"
-          className="ext-link"
-          onClick={tab ? bridge.openApp : () => window.open("/", "_blank")}
-        >
-          Open full app
-        </button>
-        <span className="ext-tag">Barebones build</span>
-      </footer>
+          <div className="ext-send">
+            <label className="ext-page">
+              Page
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={pageCount ?? undefined}
+                value={pageValue}
+                onChange={(event) =>
+                  tab && setPageDraft({ url: tab.url, value: event.target.value })
+                }
+              />
+              {pageCount && <span>of {pageCount}</span>}
+            </label>
+            <button
+              type="button"
+              className={record ? "mod-cta" : "mod-muted"}
+              onClick={openInVault}
+              disabled={Boolean(busy) || pendingPaper}
+            >
+              <ExternalLink size={14} aria-hidden /> Open in vault
+            </button>
+          </div>
+          <p className="ext-hint">
+            Opens the paper in your vault at this page. Chrome&apos;s PDF viewer doesn&apos;t tell
+            extensions where you are, so set the page you&apos;re on.
+          </p>
+        </section>
+      ) : (
+        <ChatView
+          key={chatGeneration}
+          compact
+          chat={shownChat}
+          records={recordMap}
+          passage={null}
+          onPassageChange={() => {}}
+          onChange={updateChat}
+          onOpenPage={(documentId, pageNumber) =>
+            tab ? bridge.openApp(documentId, pageNumber) : window.open(`/?paper=${documentId}`)
+          }
+          contextActions={
+            tab?.kind === "page" ? (
+              <button
+                type="button"
+                className="context-add"
+                onClick={() => request({ kind: "attach" })}
+                disabled={Boolean(busy) || pendingPaper}
+              >
+                <Globe size={14} aria-hidden /> Use this page
+              </button>
+            ) : null
+          }
+        />
+      )}
     </main>
+  );
+}
+
+/** Shown until the first change creates the real chat, which gets its own ID. */
+const EMPTY_CHAT = emptyChat();
+
+function Summary({ record }: { record: DocumentRecord }) {
+  const analysis = record.analysis!;
+  const prerequisites = analysis.learningPath.slice(0, 5).flatMap((item) => {
+    const concept = analysis.graph.concepts.find((entry) => entry.id === item.conceptId);
+    return concept ? [concept.name] : [];
+  });
+  return (
+    <div className="ext-summary">
+      <h2>{analysis.understanding.subject}</h2>
+      {prerequisites.length > 0 && (
+        <>
+          <h3>Know these first</h3>
+          <ol>
+            {prerequisites.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ol>
+        </>
+      )}
+      <div className="ext-tags">
+        {analysis.understanding.topics.slice(0, 6).map((topic) => (
+          <span key={topic}>#{topic.replace(/\s+/g, "-")}</span>
+        ))}
+      </div>
+    </div>
   );
 }

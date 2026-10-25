@@ -1,0 +1,137 @@
+/* Placeholder sprite: one blob, animated per agent state. Colors come from the theme tokens. */
+
+.agent-sprite {
+  --sprite-color: var(--interactive-accent, #7f6df2);
+  --sprite-speed: 7s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.agent-sprite-stage {
+  position: relative;
+  width: 104px;
+  height: 104px;
+}
+
+.agent-sprite-blob {
+  position: absolute;
+  inset: 14px;
+  border-radius: 46% 54% 58% 42% / 48% 42% 58% 52%;
+  background:
+    radial-gradient(circle at 34% 30%, rgb(255 255 255 / 0.55), transparent 42%),
+    radial-gradient(
+      circle at 60% 70%,
+      color-mix(in srgb, var(--sprite-color), #000 25%),
+      transparent 70%
+    ),
+    var(--sprite-color);
+  box-shadow: 0 0 32px color-mix(in srgb, var(--sprite-color), transparent 55%);
+  animation:
+    sprite-morph var(--sprite-speed) ease-in-out infinite,
+    sprite-float calc(var(--sprite-speed) * 0.85) ease-in-out infinite;
+  transition: background-color 400ms ease;
+}
+
+.agent-sprite-shadow {
+  position: absolute;
+  left: 30%;
+  right: 30%;
+  bottom: 0;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.35);
+  filter: blur(3px);
+  animation: sprite-shadow calc(var(--sprite-speed) * 0.85) ease-in-out infinite;
+}
+
+.agent-sprite-label {
+  margin: 8px 0 0;
+  color: var(--text-normal);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.agent-sprite-detail {
+  margin: 2px 0 0;
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-sprite[data-state="reading"],
+.agent-sprite[data-state="analyzing"],
+.agent-sprite[data-state="searching"],
+.agent-sprite[data-state="comparing"] {
+  --sprite-speed: 2.6s;
+}
+
+.agent-sprite[data-state="searching"] {
+  --sprite-color: #3ea6f0;
+}
+
+.agent-sprite[data-state="comparing"] {
+  --sprite-color: #e5976a;
+}
+
+.agent-sprite[data-state="thinking"] {
+  --sprite-speed: 1.8s;
+  --sprite-color: #a68af9;
+}
+
+.agent-sprite[data-state="preparing-voice"],
+.agent-sprite[data-state="speaking"] {
+  --sprite-speed: 1.4s;
+  --sprite-color: #4fb966;
+}
+
+.agent-sprite[data-state="error"] {
+  --sprite-speed: 10s;
+  --sprite-color: #fb464c;
+}
+
+@keyframes sprite-morph {
+  0%,
+  100% {
+    border-radius: 46% 54% 58% 42% / 48% 42% 58% 52%;
+  }
+  33% {
+    border-radius: 58% 42% 44% 56% / 55% 58% 42% 45%;
+  }
+  66% {
+    border-radius: 42% 58% 52% 48% / 40% 50% 50% 60%;
+  }
+}
+
+@keyframes sprite-float {
+  0%,
+  100% {
+    transform: translateY(-4px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(4deg);
+  }
+}
+
+@keyframes sprite-shadow {
+  0%,
+  100% {
+    transform: scaleX(0.8);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-sprite-blob,
+  .agent-sprite-shadow {
+    animation: none;
+  }
+}

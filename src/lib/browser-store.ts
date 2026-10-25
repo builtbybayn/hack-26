@@ -11,14 +11,17 @@ import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { PaperPipeline } from "@/types/pipeline";
 import type { RecommendationsResult } from "@/types/research";
+import type { Annotation, VaultEntry } from "@/types/vault";
 
 const DB_NAME = "knowbefore";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
 const AUDIO_STORE = "audio";
 const READING_STORE = "readingPositions";
 const FILE_STORE = "files";
+const VAULT_STORE = "vault";
+const ANNOTATION_STORE = "annotations";
 /** Generated speech kept for replay. Oldest entries are evicted beyond this count. */
 const MAX_CACHED_AUDIO = 400;
 
@@ -71,6 +74,7 @@ export async function saveDocument(
       updatedAt: new Date().toISOString(),
     } satisfies DocumentRecord),
   );
+  notifyChange("documents");
 }
 
 /** Merges derived results into a saved paper. Returns the updated record, or null if absent. */
@@ -82,6 +86,7 @@ export async function updateDocumentRecord(
   if (!existing) return null;
   const updated: DocumentRecord = { ...existing, ...patch, updatedAt: new Date().toISOString() };
   await request(DOCUMENT_STORE, "readwrite", (store) => store.put(updated));
+  notifyChange("documents");
   return updated;
 }
 
@@ -118,6 +123,82 @@ export async function listDocumentRecords(): Promise<DocumentRecord[]> {
 
 export async function loadLatestDocument(): Promise<DocumentRecord | null> {
   return (await listDocumentRecords())[0] ?? null;
+}
+
+/** Removes a paper and everything stored for it (file, highlights, reading position). */
+export async function deleteDocumentRecord(documentId: string): Promise<void> {
+  const annotations = await listAnnotations(documentId);
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(
+      [DOCUMENT_STORE, FILE_STORE, READING_STORE, ANNOTATION_STORE],
+      "readwrite",
+    );
+    transaction.objectStore(DOCUMENT_STORE).delete(documentId);
+    transaction.objectStore(FILE_STORE).delete(documentId);
+    transaction.objectStore(READING_STORE).delete(documentId);
+    for (const annotation of annotations)
+      transaction.objectStore(ANNOTATION_STORE).delete(annotation.id);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+  notifyChange("documents");
+}
+
+/** Every folder, note, paper placement, and chat in the vault. */
+export async function listVaultEntries(): Promise<VaultEntry[]> {
+  return request<VaultEntry[]>(VAULT_STORE, "readonly", (store) => store.getAll());
+}
+
+export async function putVaultEntries(entries: VaultEntry[]): Promise<void> {
+  if (!entries.length) return;
+  await requestAll(VAULT_STORE, (store) => entries.forEach((entry) => store.put(entry)));
+  notifyChange("vault");
+}
+
+export async function deleteVaultEntries(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await requestAll(VAULT_STORE, (store) => ids.forEach((id) => store.delete(id)));
+  notifyChange("vault");
+}
+
+/** Highlights and comments on one paper. */
+export async function listAnnotations(documentId: string): Promise<Annotation[]> {
+  return request<Annotation[]>(ANNOTATION_STORE, "readonly", (store) =>
+    store.index("documentId").getAll(documentId),
+  );
+}
+
+export async function putAnnotation(annotation: Annotation): Promise<void> {
+  await request(ANNOTATION_STORE, "readwrite", (store) => store.put(annotation));
+  notifyChange("annotations");
+}
+
+export async function deleteAnnotation(id: string): Promise<void> {
+  await request(ANNOTATION_STORE, "readwrite", (store) => store.delete(id));
+  notifyChange("annotations");
+}
+
+export type StoreChange = "documents" | "vault" | "annotations";
+
+const CHANNEL_NAME = "knowbefore-store";
+let channel: BroadcastChannel | null = null;
+
+/**
+ * Tells other pages of this origin (the vault, the extension panel) that stored data changed, so
+ * they can reload it. Pages don't receive their own messages.
+ */
+function notifyChange(change: StoreChange) {
+  if (typeof BroadcastChannel === "undefined") return;
+  channel ??= new BroadcastChannel(CHANNEL_NAME);
+  channel.postMessage(change);
+}
+
+export function subscribeStoreChanges(listener: (change: StoreChange) => void): () => void {
+  if (typeof BroadcastChannel === "undefined") return () => {};
+  const subscription = new BroadcastChannel(CHANNEL_NAME);
+  subscription.onmessage = (event: MessageEvent<StoreChange>) => listener(event.data);
+  return () => subscription.close();
 }
 
 interface AudioRecord {
@@ -194,6 +275,17 @@ async function request<T>(
   });
 }
 
+/** Runs several writes in one transaction. */
+async function requestAll(storeName: string, run: (store: IDBObjectStore) => void): Promise<void> {
+  const db = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(storeName, "readwrite");
+    run(transaction.objectStore(storeName));
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const open = indexedDB.open(DB_NAME, DB_VERSION);
@@ -212,8 +304,20 @@ function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore(READING_STORE, { keyPath: "documentId" });
       if (!db.objectStoreNames.contains(FILE_STORE))
         db.createObjectStore(FILE_STORE, { keyPath: "documentId" });
+      if (!db.objectStoreNames.contains(VAULT_STORE))
+        db.createObjectStore(VAULT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(ANNOTATION_STORE)) {
+        db.createObjectStore(ANNOTATION_STORE, { keyPath: "id" }).createIndex(
+          "documentId",
+          "documentId",
+        );
+      }
     };
-    open.onsuccess = () => resolve(open.result);
+    open.onsuccess = () => {
+      // Another page (e.g. the extension panel) may be on an older version; let it upgrade.
+      open.result.onversionchange = () => open.result.close();
+      resolve(open.result);
+    };
     open.onerror = () => reject(open.error);
   });
 }

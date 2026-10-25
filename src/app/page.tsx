@@ -1,5 +1,8 @@
-import { DocumentIntelligence } from "@/features/document-intelligence/DocumentIntelligence";
+import type { Metadata } from "next";
+import { Vault } from "@/features/vault/Vault";
+
+export const metadata: Metadata = { title: "KnowBefore · Research vault" };
 
 export default function Home() {
-  return <DocumentIntelligence />;
+  return <Vault />;
 }

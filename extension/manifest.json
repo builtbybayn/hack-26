@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KnowBefore",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "KnowBefore reading companion (barebones development build). Requires the app at http://localhost:3000.",
   "minimum_chrome_version": "114",
   "action": {

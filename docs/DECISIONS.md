@@ -75,7 +75,7 @@ devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 
-**Confirmed.** KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+**Superseded by 15 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
 
 ### 14. ElevenLabs over plain `fetch`, read one segment at a time
 
@@ -86,3 +86,22 @@ credits are billed per character and a full paper is roughly 50,000 characters. 
 default model (fastest, cheapest); Multilingual v2 is the high-quality option. Equations and code
 are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
 fallback when no key is configured.
+
+### 15. The vault looks and works like Obsidian
+
+**Confirmed.** The main UI (`/`) recreates Obsidian's default theme and layout: ribbon, file tree,
+tabbed and split work area, right sidebar, status bar, dark by default with a light option. Papers,
+notes, and AI chats are all files in one tree. The team chose this so the product feels like a
+familiar research vault rather than a dashboard. The editorial palette from decision 13 remains
+only in the classic workspace (`/classic`), which the vault replaces.
+
+### 16. Lucide icons
+
+**Confirmed.** `lucide-react` provides the vault's icons. It is the icon set Obsidian uses, so the
+look matches, and icons are tree-shaken per import.
+
+### 17. Annotations and chat stay in the browser
+
+**Provisional.** Highlights, comments, notes, and chats are stored in IndexedDB like everything
+else (decision 12). `/api/chat` receives the conversation and paper text per request and stores
+nothing. When the team's vault backend exists, these stores are what it syncs.

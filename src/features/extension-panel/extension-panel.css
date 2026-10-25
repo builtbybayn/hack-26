@@ -1,302 +1,294 @@
-/* Barebones extension side panel. Uses the app tokens from globals.css. Provisional design. */
+/* The extension side panel. Colors and controls come from the Obsidian theme. */
 
-.ext-panel {
-  display: grid;
-  gap: 12px;
-  padding: 14px;
+html:has(.ext),
+body:has(.ext) {
+  margin: 0;
+  background: var(--background-secondary, #262626);
 }
-.ext-header {
+
+.ext {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--background-secondary);
+}
+
+.ext-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
+  height: 40px;
+  padding: 0 8px 0 14px;
+  flex: none;
+  border-bottom: 1px solid var(--background-modifier-border);
 }
-.ext-tag {
-  padding: 3px 7px;
-  border: 1px dashed var(--clay);
-  color: var(--clay);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+
+.ext-vault-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.ext-card {
-  display: grid;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  background: var(--white);
+
+.ext-hero {
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px 12px;
+  flex: none;
 }
-.ext-label {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
+
+/* Once a conversation starts, the sprite shrinks to make room. */
+.ext-hero[data-compact] {
+  padding: 8px 16px 4px;
 }
-.ext-tab-title {
-  margin: -4px 0 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 18px;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
+
+.ext-hero[data-compact] .agent-sprite-stage {
+  width: 56px;
+  height: 56px;
 }
-.ext-muted {
-  margin: 0;
-  color: var(--muted);
+
+.ext-hero[data-compact] .agent-sprite-blob {
+  inset: 8px;
+}
+
+.ext-hero[data-compact] .agent-sprite-label {
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.ext-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  padding: 8px 10px;
+  flex: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 13px;
+}
+
+.ext-tab svg {
+  flex: none;
+  color: var(--text-faint);
+}
+
+.ext-tab span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ext-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 14px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ext-status.is-error {
+  color: var(--background-modifier-error);
+}
+
+.ext-spin {
+  flex: none;
+  animation: ext-spin 0.9s linear infinite;
+}
+
+/* ---- On a PDF: analyze and open in the vault ---------------------------------------------- */
+
+.ext-pdf {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 12px 24px;
+}
+
+.ext-wide {
+  width: 100%;
+  height: 36px !important;
+  font-size: 14px !important;
+}
+
+.ext-hint {
+  margin: 8px 2px 16px;
+  color: var(--text-faint);
   font-size: 12px;
   line-height: 1.45;
 }
-.ext-status {
-  margin: 0;
-  padding: 9px 11px;
-  background: #e8ece8;
-  color: #385447;
-  font-size: 12px;
-  font-weight: 700;
-}
-.ext-status.failed {
-  background: #f5dfd4;
-  color: #7a351e;
+
+.ext-steps {
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  list-style: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
 }
 
-.ext-library {
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  font-size: 12px;
-}
-.ext-library summary {
-  color: var(--forest);
-  font-weight: 700;
-  cursor: pointer;
-  overflow-wrap: anywhere;
-}
-.ext-library[open] {
+.ext-steps li {
   display: grid;
-  gap: 10px;
-}
-.ext-field {
-  display: grid;
-  gap: 6px;
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-.ext-field select,
-.ext-concept-row select {
-  width: 100%;
-  min-width: 0;
-}
-.ext-upload {
-  display: grid;
-  place-items: center;
-  min-height: 46px;
-  border: 1px dashed #8c968e;
-  background: #f8f6ef;
-  color: var(--forest);
+  grid-template-columns: 12px 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 7px 0;
   font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.ext-upload:hover,
-.ext-upload:focus-within {
-  border-color: var(--forest);
-  background: var(--forest-soft);
-}
-.ext-upload input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
 }
 
-/* View switcher */
-.ext-views {
+.ext-steps li + li {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.ext-step-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--background-modifier-border-hover);
+}
+
+.ext-steps [data-status="done"] .ext-step-dot {
+  background: #4fb966;
+}
+
+.ext-steps [data-status="failed"] .ext-step-dot {
+  background: var(--background-modifier-error);
+}
+
+.ext-steps [data-status="running"] .ext-step-dot {
+  background: transparent;
+  color: var(--interactive-accent);
+}
+
+.ext-step-status {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.ext-steps small {
+  grid-column: 2 / 4;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ext-summary {
+  margin: 4px 2px 16px;
+}
+
+.ext-summary h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.ext-summary h3 {
+  margin: 0 0 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ext-summary ol {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+.ext-tags {
   display: flex;
   flex-wrap: wrap;
-  border: 1px solid var(--line);
-  background: var(--white);
-}
-.ext-views button {
-  flex: 1 1 auto;
-  min-height: 38px;
-  padding: 0 8px;
-  border: 0;
-  border-bottom: 3px solid transparent;
-  background: none;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-.ext-views button[aria-selected="true"] {
-  border-bottom-color: var(--forest);
-  color: var(--forest);
-}
-.ext-view {
-  padding: 16px;
-  border: 1px solid var(--line);
-  background: var(--white);
+  gap: 4px;
 }
 
-.ext-stack {
-  display: grid;
-  gap: 12px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-.ext-stack p {
-  margin: 0;
-}
-.ext-title {
-  margin: 0;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 22px;
-  font-weight: 400;
-  line-height: 1.2;
-}
-.ext-subhead {
-  margin: 4px 0 0;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-.ext-callout {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  background: #f8f6ef;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.ext-callout p {
-  margin: 0;
-}
-.ext-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--forest);
+.ext-tags span {
+  padding: 1px 8px;
+  border-radius: 12px;
+  background: rgb(127 109 242 / 0.15);
+  color: var(--text-accent);
   font-size: 12px;
-  font-weight: 700;
-  text-decoration: underline;
-  justify-self: start;
 }
 
-.ext-concepts {
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding-left: 18px;
-}
-.ext-concepts li::marker {
-  color: var(--muted);
-  font-size: 12px;
-}
-.ext-concept-row {
-  display: grid;
-  grid-template-columns: 1fr 120px;
+.ext-send {
+  display: flex;
   align-items: center;
   gap: 8px;
-}
-.ext-concept-row select {
-  height: 32px;
-  font-size: 11px;
-}
-.ext-concepts small {
-  display: block;
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.ext-explanation {
-  margin-top: 8px;
-  padding: 12px;
-  background: #edf1ed;
-  color: #34453c;
-  font-size: 13px;
-}
-.ext-explanation p {
-  white-space: pre-wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
 }
 
-.ext-quote {
-  max-height: 200px;
-  margin: 0;
-  padding: 10px 12px;
-  overflow-y: auto;
-  border-left: 3px solid var(--forest);
-  background: #f8f6ef;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 15px;
-  line-height: 1.55;
-  white-space: pre-wrap;
-}
-.ext-placeholder {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border: 1px dashed var(--clay);
-  color: var(--muted);
-  font-size: 13px;
-}
-.ext-placeholder strong {
-  color: var(--clay);
-}
-
-.ext-footer {
+.ext-page {
   display: flex;
-  justify-content: center;
-  padding: 4px 0 12px;
-}
-
-/* Components reused from the main app, tightened for the narrow panel. */
-.ext-view .read-aloud {
-  margin: -16px;
-  padding: 16px;
-  border: 0;
-}
-.ext-view .read-aloud h2 {
-  font-size: 22px;
-}
-.ext-view .transcript {
-  max-height: 60vh;
-}
-
-/* Pipeline progress */
-.ext-pipeline {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 10px 0 0;
-  border-top: 1px solid var(--line);
-  list-style: none;
-  font-size: 12px;
-}
-.ext-pipeline li {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 2px 8px;
-}
-.ext-pipeline small {
-  grid-column: 1 / -1;
-  color: var(--muted);
-}
-.ext-pipeline-status {
-  color: var(--muted);
-  font-weight: 700;
-}
-.ext-pipeline li[data-status="running"] .ext-pipeline-status {
-  color: var(--forest);
-}
-.ext-pipeline li[data-status="done"] .ext-pipeline-status {
-  color: #385447;
-}
-.ext-pipeline li[data-status="failed"] .ext-pipeline-status {
-  color: #7a351e;
-}
-.ext-footer {
   align-items: center;
-  gap: 12px;
+  gap: 6px;
+  flex: 1;
+  color: var(--text-muted);
+  font-size: 13px;
+  white-space: nowrap;
 }
-.ext-header .agent-status {
-  justify-content: flex-end;
+
+.ext-page input {
+  width: 56px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-form-field);
+  color: var(--text-normal);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---- Anywhere else: the chat --------------------------------------------------------------- */
+
+.ext .chat-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ext .chat-context {
+  padding: 0 12px 8px;
+}
+
+.ext .chat-context:empty {
+  display: none;
+}
+
+.ext .chat-scroll {
+  padding: 12px;
+}
+
+.ext .chat-empty {
+  margin-top: 0;
+}
+
+.ext .chat-suggestions {
+  grid-template-columns: 1fr;
+}
+
+.ext .chat-message.is-user {
+  max-width: 92%;
+}
+
+.ext .chat-composer {
+  padding: 8px 12px 12px;
+}
+
+@keyframes ext-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

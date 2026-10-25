@@ -9,7 +9,7 @@ flowchart LR
     Page["Pages<br/>src/app/**/page.tsx"]
     Feature["Features<br/>src/features/*"]
     Client["API clients + mocks<br/>src/lib/api"]
-    Store["IndexedDB: documents, analyses, mastery<br/>src/lib/browser-store.ts"]
+    Store["IndexedDB: papers, vault, annotations<br/>src/lib/browser-store.ts"]
   end
 
   subgraph Server
@@ -166,6 +166,11 @@ real output.
 | `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                             |
 | `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path. |
 | `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.            |
+| `POST /api/chat`              | JSON `{ messages, papers }` (`src/types/chat.ts`); returns `{ reply }` (Markdown, cites pages).  |
+
+`/api/chat` is stateless like the rest: each request carries the whole conversation and the text
+of the attached papers. The server keeps quoted pages first and trims the rest to a shared
+character budget (`src/lib/intelligence/chat.ts`).
 
 Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
 
@@ -245,8 +250,10 @@ clients report their own work through `track()`, so features get states without 
 
 When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
 React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
-event. `src/features/agent/AgentStatus.tsx` is the placeholder to replace with the sprite:
-map `snapshot.state` to an animation. New features call `track(state, detail, work)`.
+event. `src/features/agent/AgentSprite.tsx` (in the extension panel) is the placeholder blob to
+replace with the sprite: it maps `snapshot.state` to motion and color through `data-state`.
+`AgentStatus.tsx` is the compact version in the vault's status bar. New features call
+`track(state, detail, work)`.
 
 ### "Analyze this paper" pipeline
 
@@ -256,6 +263,43 @@ parallel. The check compares with up to three saved, analyzed papers whose topic
 is skipped when none do. Each step's status (`src/types/pipeline.ts`) and result is saved on the
 paper's record, so the vault can read `recommendations`, `contradictions`, and `pipeline`
 directly, and re-running resumes rather than repeating finished work.
+
+### The research vault (`/`)
+
+`src/features/vault` is the main UI: an Obsidian-style workspace with a file tree of folders,
+notes, papers, and AI chats; tabs that can split into two panes; a PDF reader with highlights,
+margin comments, and an "Ask AI" selection toolbar; and a right sidebar with the open paper's
+analysis, related papers, contradiction check, read-aloud, and backlinks.
+
+| Part                         | Where                                   |
+| ---------------------------- | --------------------------------------- |
+| Tree, notes, chats (types)   | `src/types/vault.ts`                    |
+| Tree logic (pure, tested)    | `src/features/vault/vault-tree.ts`      |
+| Tabs and split panes         | `src/features/vault/workspace-state.ts` |
+| Vault data and imports       | `src/features/vault/use-vault.ts`       |
+| PDF reader and annotations   | `src/features/vault/reader/*`           |
+| Highlight and margin layout  | `src/features/vault/reader/geometry.ts` |
+| Markdown (notes, AI replies) | `src/features/vault/Markdown.tsx`       |
+
+The reader renders the stored PDF with PDF.js in the browser (canvas plus PDF.js's selectable text
+layer); papers saved from web pages show their extracted text on fixed-width sheets instead.
+Highlights are stored as rectangles in fractions of the unrotated page, so they stay in place at
+any zoom or rotation. Papers saved by the extension are filed in the first project's
+"Papers" folder (`defaultPaperFolder` in `vault-tree.ts`) and appear live. The extension's "Open in
+vault" opens `/?paper=<document id>&page=<n>`, reusing an open vault tab; the reader also
+remembers where you were in each paper (per browser). The original single-page
+workspace (concept map, quizzes) remains at `/classic`.
+
+### The extension panel (`/panel`)
+
+`src/features/extension-panel` uses the same Obsidian theme (`src/components/theme`) and the
+vault's `ChatView`. On a PDF tab it runs the analyze pipeline and sends the paper to the vault at a
+page; elsewhere it is a chat whose conversations are filed in the vault's "Chats" folder. The
+placeholder sprite is `src/features/agent/AgentSprite.tsx`.
+
+Chrome's PDF viewer runs inside another extension's frame (in a closed shadow root), so neither
+the scroll position nor the selection can be read by our extension. The page to open comes from the
+URL's `#page=` or the page box in the panel.
 
 ### Storage: the browser owns state, the server is stateless
 
@@ -267,6 +311,10 @@ nothing, and re-uploading the same file reuses its stored analysis instead of ca
 A paper's record also holds its pipeline results, and a `files` store keeps the original upload
 (the PDF) for the vault. Voice adds two stores: generated audio (keyed by a hash of voice, quality, and text; the oldest
 are evicted past 400 entries) and per-document reading positions.
+
+The vault adds a `vault` store (folders, notes, paper placements, and chats with their messages)
+and an `annotations` store (highlights and comments, indexed by document). Writes are announced on
+a `BroadcastChannel`, so an open vault updates when the extension saves a paper.
 
 IndexedDB is per origin. An extension side panel that loads a page from this app shares the web
 app's storage; a page bundled inside the extension would have its own. Learning paths are derived
