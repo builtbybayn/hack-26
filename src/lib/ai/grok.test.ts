@@ -39,5 +39,6 @@ describe("Grok adapter", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("https://api.x.ai/v1/responses");
     expect(JSON.parse(init.body).text.format.type).toBe("json_schema");
+    expect(JSON.parse(init.body).store).toBe(false);
   });
 });

@@ -48,6 +48,14 @@
   color: var(--muted);
   font-size: 12px;
 }
+.abstract {
+  max-height: 12em;
+  overflow: auto;
+  padding: 12px;
+  border-left: 2px solid var(--line);
+  background: var(--paper);
+  font-size: 14px;
+}
 .links {
   display: flex;
   flex-wrap: wrap;

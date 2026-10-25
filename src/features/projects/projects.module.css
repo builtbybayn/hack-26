@@ -1,0 +1,79 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.panel h2 {
+  margin: 10px 0;
+  font:
+    400 29px Georgia,
+    "Times New Roman",
+    serif;
+}
+.panel p {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.controls,
+.controls form,
+.title {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.controls label,
+.notes {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.controls input,
+.controls select,
+.notes textarea {
+  min-width: 210px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+.detail {
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.title {
+  justify-content: space-between;
+}
+.title h3 {
+  font:
+    400 22px Georgia,
+    "Times New Roman",
+    serif;
+}
+.papers {
+  padding-left: 20px;
+  line-height: 1.8;
+}
+.papers li button {
+  margin-left: 12px;
+}
+.papers a {
+  color: var(--forest);
+}
+.notes {
+  margin: 16px 0 10px;
+}
+.notes textarea {
+  width: 100%;
+  resize: vertical;
+}
+@media (max-width: 540px) {
+  .panel {
+    padding: 20px;
+  }
+  .controls input,
+  .controls select {
+    width: 100%;
+  }
+}

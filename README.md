@@ -19,6 +19,8 @@ This remains one Next.js 16 application: interactive UI in `src/features`, typed
 Parallel work is split into three tracks: analysis (prerequisites and contradictions), paper
 recommendations, and voice. Start with [docs/tracks/README.md](docs/tracks/README.md).
 
+Planned research features and their implementation order are in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 ## Install and run
 
 Requires Node.js 22 or newer.
@@ -43,6 +45,7 @@ Open `http://localhost:3000` for the research vault. Standard PDF extraction wor
 | `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
 | `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
 | `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
+| `XAI_API_KEY` / `XAI_MODEL`          | Optional Grok check of candidate cross-paper conflicts        |
 | `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
 | `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
 | `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen          |
@@ -90,7 +93,9 @@ map and quizzes is at `/classic`.
 4. Analyze. PDF.js preserves pages, text positions, metadata, and page references. Automatic mode stays local unless quality is low **and** consent is checked.
 5. Inspect the graph, dependency evidence, learning path, explanations, source pages, and quizzes.
 6. Manual mastery changes and passed assessments persist in IndexedDB. Opening an explanation does not change mastery.
-7. After analyzing a second paper, select two to four saved papers in the comparison panel to inspect possible conflicts with quotes from both sources.
+7. Add analyzed documents to a research project, synthesize two to four of them, and create an editable Research Brief with a print view.
+8. Explore possible gaps from that synthesis and inspect a graph linking project papers by verified findings or topic overlap.
+9. After analyzing another paper, compare two to four saved documents for possible conflicts with quotes from both sources.
 
 ## Chrome extension development
 
@@ -133,6 +138,9 @@ After changing files in `extension/`, click the reload icon on the extension's c
 - `POST /api/chat` — research chat grounded in the attached papers
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
+- `POST /api/contradictions` — evidence-checked comparison of two stored papers
+- `POST /api/synthesis` — evidence-linked themes across two to four project documents
+- `POST /api/papers/citations` — refresh OpenAlex references for saved-paper citation links
 - `GET /api/health` — service and provider configuration status
 - `POST /api/ingest` — backwards-compatible generic ingestion endpoint
 - `GET /api/voice/voices` — preset and ElevenLabs account voices

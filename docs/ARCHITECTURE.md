@@ -158,21 +158,85 @@ real output.
 
 ### PDF intelligence endpoints
 
-| Endpoint                      | Contract and responsibility                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| `POST /api/documents/parse`   | Multipart `file`, `mode`, `ocrProvider`, and `allowExternalProcessing`; returns `{ document }`.  |
-| `POST /api/documents/analyze` | JSON `{ document, mastery? }`; returns `{ analysis }`: validated graph and learning path.        |
-| `POST /api/explain`           | JSON `{ document, concept, style, question? }`; explains using only the concept's source pages.  |
-| `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                             |
-| `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path. |
-| `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.            |
-| `POST /api/chat`              | JSON `{ messages, papers }` (`src/types/chat.ts`); returns `{ reply }` (Markdown, cites pages).  |
+| Endpoint                      | Contract and responsibility                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/documents/parse`   | Multipart `file`, `mode`, `ocrProvider`, and `allowExternalProcessing`; returns `{ document }`.                                               |
+| `POST /api/documents/analyze` | JSON `{ document, mastery? }`; returns `{ analysis }`: validated graph and learning path.                                                     |
+| `POST /api/explain`           | JSON `{ document, concept, style, question? }`; returns short explanation sections with verified page quotes or an explicit background label. |
+| `POST /api/contradictions`    | JSON `{ documents: [first, second] }`; returns page-verified claim comparisons and independent Grok verdicts when configured.                 |
+| `POST /api/synthesis`         | JSON `{ documents }` with two to four parsed documents; returns evidence-linked agreements, differences, and open questions.                  |
+| `POST /api/synthesis/check`   | JSON `{ documents, findings }`; rechecks one to twelve saved synthesis findings against their cited pages without regenerating text.          |
+| `POST /api/brief/check`       | JSON `{ documents, finding }`; checks a revised brief finding against its cited source pages and returns refreshed interpretation labels.     |
+| `POST /api/papers/citations`  | JSON `{ paperIds }` with one to twenty OpenAlex IDs; returns provider reference IDs for saved-paper citation links.                           |
+| `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                                                                          |
+| `POST /api/evaluate`          | JSON `{ quiz, answers }`; scores an explicit assessment. The only automatic mastery update path.                                              |
+| `GET /api/health`             | Reports service health and whether each provider is configured, never its credential.                                                         |
+| `POST /api/chat`              | JSON `{ messages, papers }` (`src/types/chat.ts`); returns `{ reply }` (Markdown, cites pages).                                               |
 
 `/api/chat` is stateless like the rest: each request carries the whole conversation and the text
 of the attached papers. The server keeps quoted pages first and trims the rest to a shared
 character budget (`src/lib/intelligence/chat.ts`).
 
 Provider calls are bounded by request cancellation/timeouts. Gemini receives section-aware excerpts, then Zod validates the response before the deterministic graph engine merges duplicates, drops invalid references, repairs cycles, topologically sorts, and calculates downstream impact.
+
+Concept source references require a quote found on the cited parsed page. References without a matching quote are removed and recorded in `graph.repairs`. The browser applies the same check when loading older saved analyses, so cached references receive the current validation without another model call.
+
+Explanations use the concept's source pages as context. Each paper-grounded section carries a
+page number and a short quote. The server checks that the quote appears on that page, then makes
+one batched AI assessment of whether each cited claim is supported, contradicted, or unclear
+from the surrounding passage. Invalid or unavailable assessment returns unclear. General
+background has no citation or assessment. The UI shows each assessment as an AI check and opens
+the PDF page when the original file is still selected, or stored page text after a reload.
+Readers can correct a cited assessment. Corrections stay in the browser's IndexedDB, keyed by
+document, claim, page, and quote; they can be removed or exported as labeled claim-passage JSON.
+The workspace reports agreement on reviewed claims. `npm run eval:evidence` uses the same verifier
+on a starter set or an exported set; see [EVIDENCE_EVALUATION.md](EVIDENCE_EVALUATION.md).
+
+Critical review compares two to four stored documents on demand. Gemini compares up to 24 candidate
+claim pairs; the server checks each quote against its cited page and removes unsupported findings. Grok reviews
+candidate conflicts independently through the xAI Responses API when `XAI_API_KEY` is set. A
+conflict is confirmed only when both agree; otherwise it is marked unclear. Grok requests set
+`store: false`. Each paper's review excerpt is capped at 20,000 characters and truncation is
+reported to the user. The server stores no review results.
+
+Project synthesis uses two to four attached analyzed documents. Gemini proposes up to twelve
+agreements, differences, and open questions from a capped excerpt of each document. The server
+checks every cited quote against its page and requires evidence from at least two documents for
+agreements and differences. A separate batched AI check assesses each paper's contribution and
+the combined finding. A finding is labeled supported only when every cited contribution is
+supported; malformed or unavailable checks are labeled unclear. The browser saves the report
+within its research project; the server remains stateless. Older saved reports display "not
+checked" until regenerated or rechecked.
+Saved findings can also be rechecked without generating new text. The browser preserves the
+findings and coverage warnings, replaces their assessments, and updates the synthesis timestamp
+so dependent briefs show that their source synthesis changed.
+
+The Research Brief is assembled in the browser from a project's saved synthesis and reading list.
+Its question, notes, included findings, and finding summaries can be edited. Evidence stays attached
+to each finding, along with any synthesis checks. Editing a summary clears its old assessment.
+The user can check the revised claim on demand against the same cited pages; a checked summary is
+saved with the new labels, and another edit invalidates them. The brief is saved on the project record
+in IndexedDB. `/brief?project=<id>` reads the saved record from the same browser origin and provides
+a print view; it does not call a model or store a copy on the server.
+
+The Gap Explorer derives possible research questions from the project's open questions and
+differences in the saved synthesis when the combined finding and every cited source are assessed
+as supported. The same rule applies to agreements used as counter-evidence. Findings with missing,
+unclear, or contradicted checks are withheld with an explanation in the UI. Previously saved ideas
+remain visible but are flagged if the current checked synthesis does not support them. Each idea keeps its source passages, any same-theme agreement
+that may narrow the gap, the reviewed document set, and suggested search terms. Saved and dismissed
+ideas live in the project record. These are corpus-scoped hypotheses, not claims that a field-wide
+gap exists.
+
+The project paper graph combines attached analyzed documents and saved scholarly records. Its
+agreement and disagreement links come only from synthesis findings whose combined and source
+checks are supported. Withheld links are counted in the UI; older saved syntheses need regeneration
+to supply these checks. Dashed topic links
+are inferred from exact topic phrases in analyzed topics, titles, or abstracts. Directional
+citation links use OpenAlex `referenced_works` only when both records are saved in the project.
+Existing saved papers can refresh those references through `/api/papers/citations`; absent
+references do not prove that no citation exists. The graph has an accessible paper and
+relationship list alongside React Flow.
 
 ### Cross-paper contradiction check
 
@@ -209,7 +273,9 @@ route has a 20-second deadline. `OPENALEX_API_KEY` is optional and server-only; 
 requests share an IP usage budget. No recommendation state is kept on the server.
 
 The browser uses `src/lib/api/research-client.ts`. `RecommendationsPanel` searches on demand
-and displays Read first / Related groups, provider links, missing abstracts, and the query trail.
+and displays Read first / Related groups, abstracts, citation counts, access links, and the query
+trail. Users can save papers into browser projects from these cards. OpenAlex reference IDs are
+included when available, so newly saved papers can form citation links without a second request.
 
 ### Voice endpoints
 
@@ -304,7 +370,9 @@ URL's `#page=` or the page box in the panel.
 ### Storage: the browser owns state, the server is stateless
 
 The server keeps nothing between requests. `src/lib/browser-store.ts` (IndexedDB) stores parsed
-documents and their analyses keyed by the document's SHA-256 content hash, plus mastery records.
+documents and their analyses keyed by the document's SHA-256 content hash, mastery records, and
+research projects, and reader evidence corrections. Projects contain saved paper records, notes, and references to stored documents;
+they do not duplicate parsed document content.
 Clients send whatever a request needs (the document, a concept, a quiz) in the body. A restart loses
 nothing, and re-uploading the same file reuses its stored analysis instead of calling Gemini again.
 

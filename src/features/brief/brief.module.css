@@ -1,0 +1,158 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.panel h2 {
+  margin: 10px 0;
+  font:
+    400 29px Georgia,
+    "Times New Roman",
+    serif;
+}
+.panel p {
+  line-height: 1.55;
+}
+.editor {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+.editor label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.editor input:not([type="checkbox"]),
+.editor textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+.editor textarea {
+  resize: vertical;
+}
+.editor .check {
+  display: flex;
+  align-items: center;
+}
+.editFinding {
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+}
+.checkAction {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.actions,
+.printControls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.actions a,
+.printControls a {
+  color: var(--forest);
+}
+.note,
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.brief {
+  margin-top: 24px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.brief h1 {
+  margin: 10px 0;
+  font:
+    400 clamp(30px, 4vw, 46px) Georgia,
+    "Times New Roman",
+    serif;
+}
+.brief h2 {
+  margin-top: 32px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font:
+    400 24px Georgia,
+    "Times New Roman",
+    serif;
+}
+.brief h3 {
+  font:
+    400 19px Georgia,
+    "Times New Roman",
+    serif;
+}
+.brief p {
+  line-height: 1.6;
+}
+.brief li {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.brief summary {
+  cursor: pointer;
+  color: var(--forest);
+}
+.brief pre {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font:
+    12px/1.5 Arial,
+    sans-serif;
+}
+.notes {
+  white-space: pre-wrap;
+}
+.finding {
+  break-inside: avoid;
+}
+.printPage {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+.printControls {
+  justify-content: space-between;
+}
+@media (max-width: 540px) {
+  .panel,
+  .brief {
+    padding: 20px;
+  }
+}
+@media print {
+  .printPage {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  .printControls {
+    display: none;
+  }
+  .printPage .brief {
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .brief details pre {
+    display: none;
+  }
+  .brief summary {
+    color: #000;
+  }
+}

@@ -75,9 +75,31 @@ devices; that requires accounts and server storage.
 
 ### 13. Product visual language
 
-**Superseded by 15 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
+**Superseded by 18 for the vault.** _Original decision:_ KnowBefore uses an editorial, warm-neutral interface with Georgia display type, system sans-serif controls, forest green for verified structure, and clay for inferred or advanced information. Panels use square edges, fine rules, restrained shadows, and no decorative gradients beyond a subtle page wash.
 
-### 14. ElevenLabs over plain `fetch`, read one segment at a time
+### 14. Optional independent review for cross-paper conflicts
+
+**Provisional.** Gemini proposes claim comparisons from two to four documents. The server verifies each
+quoted source passage against its cited page. Only candidate conflicts go to Grok for an
+independent verdict through the xAI Responses API, using plain `fetch` and `store: false`.
+Without Grok agreement, a conflict remains unconfirmed. This adds no SDK or server persistence.
+
+### 15. Briefs reuse verified synthesis
+
+**Provisional.** The Research Brief is built in the browser from saved synthesis findings and the
+project's paper list. No second model call rewrites the evidence. Users can edit the question,
+notes, and finding summaries; edited summaries are visibly marked for source review. Briefs stay
+in the project's IndexedDB record and use a separate print page on the same origin.
+
+### 16. Gap ideas and paper links retain their provenance
+
+**Provisional.** Gap suggestions are derived from the project's verified synthesis and labeled as
+questions for further search. Saved ideas keep their evidence and reviewed document set. The paper
+graph shows synthesis-backed agreement or disagreement separately from inferred topic overlap.
+Citation edges use OpenAlex reference IDs when the provider supplies them; missing matches are
+treated as unknown, not evidence of no citation.
+
+### 17. ElevenLabs over plain `fetch`, read one segment at a time
 
 **Provisional.** Voice uses ElevenLabs' REST API through `fetch` (no SDK dependency) from a
 server-only module, so the key never reaches a client. Papers are cleaned and split in the browser,
@@ -87,7 +109,7 @@ default model (fastest, cheapest); Multilingual v2 is the high-quality option. E
 are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
 fallback when no key is configured.
 
-### 15. The vault looks and works like Obsidian
+### 18. The vault looks and works like Obsidian
 
 **Confirmed.** The main UI (`/`) recreates Obsidian's default theme and layout: ribbon, file tree,
 tabbed and split work area, right sidebar, status bar, dark by default with a light option. Papers,
@@ -95,12 +117,12 @@ notes, and AI chats are all files in one tree. The team chose this so the produc
 familiar research vault rather than a dashboard. The editorial palette from decision 13 remains
 only in the classic workspace (`/classic`), which the vault replaces.
 
-### 16. Lucide icons
+### 19. Lucide icons
 
 **Confirmed.** `lucide-react` provides the vault's icons. It is the icon set Obsidian uses, so the
 look matches, and icons are tree-shaken per import.
 
-### 17. Annotations and chat stay in the browser
+### 20. Annotations and chat stay in the browser
 
 **Provisional.** Highlights, comments, notes, and chats are stored in IndexedDB like everything
 else (decision 12). `/api/chat` receives the conversation and paper text per request and stores

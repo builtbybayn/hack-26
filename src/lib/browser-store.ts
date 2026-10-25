@@ -6,17 +6,23 @@
  * its own database, so the web app and an extension page that loads it share data; a separately
  * bundled extension page would not.
  */
+import type { ResearchBrief } from "@/types/brief";
 import type { ContradictionReport } from "@/types/contradictions";
-import type { DocumentAnalysis, MasteryLevel } from "@/types/intelligence";
+import type { ResearchGap } from "@/types/gaps";
+import type { DocumentAnalysis, EvidenceFeedback, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { PaperPipeline } from "@/types/pipeline";
-import type { RecommendationsResult } from "@/types/research";
+import type { PaperRecord, RecommendationsResult } from "@/types/research";
+import type { SynthesisReport } from "@/types/synthesis";
 import type { Annotation, VaultEntry } from "@/types/vault";
 
 const DB_NAME = "knowbefore";
-const DB_VERSION = 6;
+/** 7 merges two version-5 lines (files; projects) and version 6 (vault); upgrades add what's missing. */
+const DB_VERSION = 7;
 const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
+const PROJECT_STORE = "projects";
+const EVIDENCE_FEEDBACK_STORE = "evidence-feedback";
 const AUDIO_STORE = "audio";
 const READING_STORE = "readingPositions";
 const FILE_STORE = "files";
@@ -24,6 +30,56 @@ const VAULT_STORE = "vault";
 const ANNOTATION_STORE = "annotations";
 /** Generated speech kept for replay. Oldest entries are evicted beyond this count. */
 const MAX_CACHED_AUDIO = 400;
+
+export interface ResearchProject {
+  id: string;
+  name: string;
+  notes: string;
+  papers: PaperRecord[];
+  documentIds: string[];
+  synthesis?: SynthesisReport;
+  brief?: ResearchBrief;
+  gapIdeas?: ResearchGap[];
+  dismissedGapIds?: string[];
+  updatedAt: string;
+}
+
+export async function listProjects(): Promise<ResearchProject[]> {
+  const projects = await request<ResearchProject[]>(PROJECT_STORE, "readonly", (store) =>
+    store.getAll(),
+  );
+  return projects.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function getProject(projectId: string): Promise<ResearchProject | null> {
+  const project = await request<ResearchProject | undefined>(PROJECT_STORE, "readonly", (store) =>
+    store.get(projectId),
+  );
+  return project ?? null;
+}
+
+export async function saveProject(project: ResearchProject): Promise<void> {
+  await request(PROJECT_STORE, "readwrite", (store) => store.put(project));
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  await request(PROJECT_STORE, "readwrite", (store) => store.delete(projectId));
+}
+
+export async function listEvidenceFeedback(documentId: string): Promise<EvidenceFeedback[]> {
+  const records = await request<EvidenceFeedback[]>(EVIDENCE_FEEDBACK_STORE, "readonly", (store) =>
+    store.getAll(),
+  );
+  return records.filter((record) => record.documentId === documentId);
+}
+
+export async function saveEvidenceFeedback(feedback: EvidenceFeedback): Promise<void> {
+  await request(EVIDENCE_FEEDBACK_STORE, "readwrite", (store) => store.put(feedback));
+}
+
+export async function deleteEvidenceFeedback(id: string): Promise<void> {
+  await request(EVIDENCE_FEEDBACK_STORE, "readwrite", (store) => store.delete(id));
+}
 
 interface MasteryRecord {
   conceptId: string;
@@ -295,6 +351,10 @@ function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore(MASTERY_STORE, { keyPath: "conceptId" });
       if (!db.objectStoreNames.contains(DOCUMENT_STORE))
         db.createObjectStore(DOCUMENT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(PROJECT_STORE))
+        db.createObjectStore(PROJECT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(EVIDENCE_FEEDBACK_STORE))
+        db.createObjectStore(EVIDENCE_FEEDBACK_STORE, { keyPath: "id" });
       // Version 2 kept a single "latest" session; documents now live in DOCUMENT_STORE.
       if (db.objectStoreNames.contains("sessions")) db.deleteObjectStore("sessions");
       if (!db.objectStoreNames.contains(AUDIO_STORE)) {

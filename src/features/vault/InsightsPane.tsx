@@ -17,7 +17,7 @@ import { ListenButton } from "@/features/voice/ListenButton";
 import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 import { requestExplanation } from "@/lib/api/intelligence-client";
 import { loadMastery, saveMastery, type DocumentRecord } from "@/lib/browser-store";
-import type { MasteryLevel } from "@/types/intelligence";
+import type { ExplainResult, MasteryLevel } from "@/types/intelligence";
 import { PIPELINE_STEPS, type PipelineStepStatus } from "@/types/pipeline";
 import type { Annotation, VaultEntry, VaultNote } from "@/types/vault";
 import { useAnnotations } from "./reader/annotations-store";
@@ -110,7 +110,7 @@ function PaperInsights({
     case "overview":
       return <Overview record={record} running={running} onRun={onRunAnalysis} />;
     case "prerequisites":
-      return analysis ? <Prerequisites record={record} /> : needsAnalysis;
+      return analysis ? <Prerequisites record={record} onOpenPage={onOpenPage} /> : needsAnalysis;
     case "highlights":
       return <Highlights documentId={record.id} onOpen={onOpenAnnotation} />;
     case "related":
@@ -240,10 +240,19 @@ function NeedsAnalysis({
   );
 }
 
-function Prerequisites({ record }: { record: DocumentRecord }) {
+function Prerequisites({
+  record,
+  onOpenPage,
+}: {
+  record: DocumentRecord;
+  onOpenPage: (pageNumber: number) => void;
+}) {
   const analysis = record.analysis!;
   const [mastery, setMastery] = useState<Record<string, MasteryLevel>>({});
-  const [explanation, setExplanation] = useState<{ conceptId: string; text: string } | null>(null);
+  const [explanation, setExplanation] = useState<{
+    conceptId: string;
+    result: ExplainResult | string;
+  } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -261,13 +270,13 @@ function Prerequisites({ record }: { record: DocumentRecord }) {
   const explain = async (conceptId: string) => {
     const concept = analysis.graph.concepts.find((entry) => entry.id === conceptId);
     if (!concept) return;
-    setExplanation({ conceptId, text: "Asking Gemini…" });
+    setExplanation({ conceptId, result: "Asking Gemini…" });
     const result = await requestExplanation({
       document: record.document,
       concept,
       style: "beginner",
     });
-    setExplanation({ conceptId, text: result.ok ? result.data.explanation : result.error.message });
+    setExplanation({ conceptId, result: result.ok ? result.data : result.error.message });
   };
 
   return (
@@ -305,8 +314,36 @@ function Prerequisites({ record }: { record: DocumentRecord }) {
             </p>
             {explanation?.conceptId === concept.id && (
               <div className="concept-explanation">
-                <p>{explanation.text}</p>
-                <ListenButton text={explanation.text} />
+                {typeof explanation.result === "string" ? (
+                  <p>{explanation.result}</p>
+                ) : (
+                  <>
+                    {explanation.result.sections.map((section, index) => (
+                      <div key={index} className="explanation-section">
+                        <p>{section.text}</p>
+                        {section.sourceReference ? (
+                          <button
+                            type="button"
+                            className="explanation-source"
+                            data-verdict={section.evidence?.verdict ?? "unclear"}
+                            onClick={() => onOpenPage(section.sourceReference!.pageNumber)}
+                          >
+                            p. {section.sourceReference.pageNumber}: “
+                            {section.sourceReference.quote}”
+                            <span> · {section.evidence?.verdict ?? "unchecked"}</span>
+                          </button>
+                        ) : (
+                          <small className="explanation-background">
+                            Background or inference, not quoted from the paper
+                          </small>
+                        )}
+                      </div>
+                    ))}
+                    <ListenButton
+                      text={explanation.result.sections.map((section) => section.text).join(" ")}
+                    />
+                  </>
+                )}
               </div>
             )}
           </li>

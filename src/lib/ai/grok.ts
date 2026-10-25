@@ -25,6 +25,7 @@ export async function generateJson<T>(
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: process.env.XAI_MODEL ?? "grok-4.7",
+          store: false,
           input: prompt,
           text: {
             format: {

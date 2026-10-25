@@ -1,0 +1,76 @@
+.panel {
+  margin-top: 22px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.panel h2 {
+  margin: 10px 0;
+  font:
+    400 29px Georgia,
+    "Times New Roman",
+    serif;
+}
+.panel p {
+  line-height: 1.55;
+}
+.panel > h3 {
+  margin-top: 26px;
+  font:
+    400 23px Georgia,
+    "Times New Roman",
+    serif;
+}
+.card {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.card h3 {
+  margin: 8px 0;
+  font:
+    400 22px Georgia,
+    "Times New Roman",
+    serif;
+}
+.card h4 {
+  margin: 18px 0 8px;
+  font-size: 13px;
+}
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+.evidence {
+  padding-left: 20px;
+}
+.evidence li {
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.evidence summary {
+  cursor: pointer;
+  color: var(--forest);
+}
+.evidence pre {
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font:
+    12px/1.5 Arial,
+    sans-serif;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dismissed {
+  margin-top: 20px;
+}
+@media (max-width: 540px) {
+  .panel {
+    padding: 20px;
+  }
+}

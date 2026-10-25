@@ -1229,6 +1229,42 @@
   font-size: 13px;
 }
 
+.explanation-section + .explanation-section {
+  margin-top: 8px;
+}
+
+.explanation-source {
+  display: block;
+  width: 100%;
+  margin: 0 0 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: left;
+}
+
+.explanation-source:hover {
+  color: var(--text-accent);
+}
+
+.explanation-source[data-verdict="supported"] span {
+  color: #4fb966;
+}
+
+.explanation-source[data-verdict="contradicted"] span {
+  color: var(--background-modifier-error);
+}
+
+.explanation-background {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-style: italic;
+}
+
 .concept-explanation p {
   margin: 0 0 8px;
   white-space: pre-wrap;

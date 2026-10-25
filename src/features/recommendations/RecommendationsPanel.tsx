@@ -5,17 +5,22 @@ import { requestRecommendations } from "@/lib/api/research-client";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { DocumentAnalysis } from "@/types/intelligence";
 import type { RecommendationsResult } from "@/types/research";
+import type { PaperRecord } from "@/types/research";
 import styles from "./recommendations.module.css";
 
 export function RecommendationsPanel({
   document,
   analysis,
   initialResult = null,
+  onSavePaper,
+  savedPaperIds = [],
 }: {
   document: ParsedDocument;
   analysis: DocumentAnalysis;
   /** Results found earlier (e.g. by the analyze pipeline), shown without searching again. */
   initialResult?: RecommendationsResult | null;
+  onSavePaper?: (paper: PaperRecord) => Promise<void>;
+  savedPaperIds?: string[];
 }) {
   const [result, setResult] = useState<RecommendationsResult | null>(initialResult);
   const [loading, setLoading] = useState(false);
@@ -95,6 +100,15 @@ export function RecommendationsPanel({
                             .filter(Boolean)
                             .join(" · ")}
                         </p>
+                        <p className={styles.metadata}>
+                          {paper.citationCount === undefined
+                            ? "Citations unavailable"
+                            : `${paper.citationCount.toLocaleString()} citations`}
+                          {" · "}
+                          {paper.openAccessPdfUrl
+                            ? "Open-access PDF available"
+                            : "Open-access PDF unavailable"}
+                        </p>
                         {!!conceptIds.length && (
                           <p>
                             Background for:{" "}
@@ -110,13 +124,21 @@ export function RecommendationsPanel({
                         )}
                         {reason && <p>{reason}</p>}
                         {paper.abstract ? (
-                          <details>
-                            <summary>Abstract</summary>
-                            <p>{paper.abstract}</p>
-                          </details>
+                          <p className={styles.abstract}>{paper.abstract}</p>
                         ) : (
                           <p className={styles.metadata}>Abstract not available.</p>
                         )}
+                        <button
+                          className="secondary"
+                          disabled={!onSavePaper || savedPaperIds.includes(paper.id)}
+                          onClick={() => void onSavePaper?.(paper)}
+                        >
+                          {savedPaperIds.includes(paper.id)
+                            ? "Saved to project"
+                            : onSavePaper
+                              ? "Save to project"
+                              : "Create or select a project to save"}
+                        </button>
                         <p className={styles.links}>
                           <a href={paper.url} target="_blank" rel="noopener noreferrer">
                             OpenAlex record
