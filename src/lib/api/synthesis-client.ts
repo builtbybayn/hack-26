@@ -1,3 +1,4 @@
+import { track } from "@/lib/agent-activity";
 import type {
   SynthesisCheckRequest,
   SynthesisCheckResponse,
@@ -5,7 +6,11 @@ import type {
   SynthesisResponse,
 } from "@/types/synthesis";
 
-export async function requestSynthesis(input: SynthesisRequest): Promise<SynthesisResponse> {
+export function requestSynthesis(input: SynthesisRequest): Promise<SynthesisResponse> {
+  return track("comparing", "Synthesizing the project's papers", () => fetchSynthesis(input));
+}
+
+async function fetchSynthesis(input: SynthesisRequest): Promise<SynthesisResponse> {
   try {
     const response = await fetch("/api/synthesis", {
       method: "POST",
@@ -21,9 +26,13 @@ export async function requestSynthesis(input: SynthesisRequest): Promise<Synthes
   }
 }
 
-export async function requestSynthesisCheck(
+export function requestSynthesisCheck(
   input: SynthesisCheckRequest,
 ): Promise<SynthesisCheckResponse> {
+  return track("analyzing", "Checking synthesis evidence", () => fetchSynthesisCheck(input));
+}
+
+async function fetchSynthesisCheck(input: SynthesisCheckRequest): Promise<SynthesisCheckResponse> {
   try {
     const response = await fetch("/api/synthesis/check", {
       method: "POST",

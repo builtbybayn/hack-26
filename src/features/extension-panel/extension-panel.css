@@ -52,10 +52,6 @@ body:has(.ext) {
   height: 56px;
 }
 
-.ext-hero[data-compact] .agent-sprite-blob {
-  inset: 8px;
-}
-
 .ext-hero[data-compact] .agent-sprite-label {
   margin-top: 2px;
   font-size: 12px;

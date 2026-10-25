@@ -1,6 +1,13 @@
+import { track } from "@/lib/agent-activity";
 import type { CitationReferencesRequest, CitationReferencesResponse } from "@/types/research";
 
-export async function requestCitationReferences(
+export function requestCitationReferences(
+  input: CitationReferencesRequest,
+): Promise<CitationReferencesResponse> {
+  return track("searching", "Finding citation links", () => fetchCitationReferences(input));
+}
+
+async function fetchCitationReferences(
   input: CitationReferencesRequest,
 ): Promise<CitationReferencesResponse> {
   try {

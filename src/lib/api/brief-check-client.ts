@@ -1,6 +1,11 @@
+import { track } from "@/lib/agent-activity";
 import type { BriefCheckRequest, BriefCheckResponse } from "@/types/brief";
 
-export async function checkBriefFinding(input: BriefCheckRequest): Promise<BriefCheckResponse> {
+export function checkBriefFinding(input: BriefCheckRequest): Promise<BriefCheckResponse> {
+  return track("analyzing", "Checking brief evidence", () => fetchBriefCheck(input));
+}
+
+async function fetchBriefCheck(input: BriefCheckRequest): Promise<BriefCheckResponse> {
   try {
     const response = await fetch("/api/brief/check", {
       method: "POST",
