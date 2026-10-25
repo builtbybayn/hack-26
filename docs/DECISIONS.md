@@ -79,7 +79,7 @@ devices; that requires accounts and server storage.
 
 ### 14. Optional independent review for cross-paper conflicts
 
-**Provisional.** Gemini proposes claim comparisons from two documents. The server verifies each
+**Provisional.** Gemini proposes claim comparisons from two to four documents. The server verifies each
 quoted source passage against its cited page. Only candidate conflicts go to Grok for an
 independent verdict through the xAI Responses API, using plain `fetch` and `store: false`.
 Without Grok agreement, a conflict remains unconfirmed. This adds no SDK or server persistence.

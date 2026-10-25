@@ -187,8 +187,8 @@ document, claim, page, and quote; they can be removed or exported as labeled cla
 The workspace reports agreement on reviewed claims. `npm run eval:evidence` uses the same verifier
 on a starter set or an exported set; see [EVIDENCE_EVALUATION.md](EVIDENCE_EVALUATION.md).
 
-Critical review compares two stored documents on demand. Gemini proposes up to eight claim pairs;
-the server checks each quote against its cited page and removes unsupported findings. Grok reviews
+Critical review compares two to four stored documents on demand. Gemini compares up to 24 candidate
+claim pairs; the server checks each quote against its cited page and removes unsupported findings. Grok reviews
 candidate conflicts independently through the xAI Responses API when `XAI_API_KEY` is set. A
 conflict is confirmed only when both agree; otherwise it is marked unclear. Grok requests set
 `store: false`. Each paper's review excerpt is capped at 20,000 characters and truncation is
