@@ -98,3 +98,13 @@ questions for further search. Saved ideas keep their evidence and reviewed docum
 graph shows synthesis-backed agreement or disagreement separately from inferred topic overlap.
 Citation edges use OpenAlex reference IDs when the provider supplies them; missing matches are
 treated as unknown, not evidence of no citation.
+
+### 17. ElevenLabs over plain `fetch`, read one segment at a time
+
+**Provisional.** Voice uses ElevenLabs' REST API through `fetch` (no SDK dependency) from a
+server-only module, so the key never reaches a client. Papers are cleaned and split in the browser,
+spoken one segment at a time with the next two prefetched, and cached in IndexedDB, because
+credits are billed per character and a full paper is roughly 50,000 characters. Flash v2.5 is the
+default model (fastest, cheapest); Multilingual v2 is the high-quality option. Equations and code
+are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
+fallback when no key is configured.

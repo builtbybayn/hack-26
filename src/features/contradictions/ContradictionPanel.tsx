@@ -1,159 +1,141 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { requestCriticalReview } from "@/lib/api/contradictions-client";
+import { useEffect, useState } from "react";
+import { requestContradictions } from "@/lib/api/contradictions-client";
 import { listDocumentRecords, type DocumentRecord } from "@/lib/browser-store";
-import type { ContradictionReport, ReviewClaim } from "@/types/contradictions";
-import styles from "./contradictions.module.css";
+import type { ContradictionReport } from "@/types/contradictions";
+import type { ParsedDocument } from "@/types/ingestion";
+import type { DocumentAnalysis } from "@/types/intelligence";
 
-export function ContradictionPanel({ documentId }: { documentId: string | null }) {
+export function ContradictionPanel({
+  document,
+  analysis,
+}: {
+  document: ParsedDocument;
+  analysis: DocumentAnalysis;
+}) {
   const [records, setRecords] = useState<DocumentRecord[]>([]);
-  const [firstId, setFirstId] = useState("");
-  const [secondId, setSecondId] = useState("");
+  const [selectedIds, setSelectedIds] = useState<string[]>([document.id]);
   const [report, setReport] = useState<ContradictionReport | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const requestId = useRef(0);
 
   useEffect(() => {
+    let active = true;
     listDocumentRecords()
-      .then((saved) => {
-        setRecords(saved);
-        setFirstId((current) => current || documentId || saved[0]?.id || "");
-        setSecondId((current) => current || saved.find((item) => item.id !== documentId)?.id || "");
+      .then((stored) => {
+        if (!active) return;
+        const current: DocumentRecord = {
+          id: document.id,
+          document,
+          analysis,
+          updatedAt: new Date().toISOString(),
+        };
+        setRecords([current, ...stored.filter((record) => record.id !== document.id)]);
+        setSelectedIds([document.id]);
       })
-      .catch(() => setError("Stored documents could not be loaded."));
-  }, [documentId]);
+      .catch(() => active && setError("Could not load saved papers from this browser."));
+    return () => {
+      active = false;
+    };
+  }, [document, analysis]);
 
-  async function review() {
-    const first = records.find((item) => item.id === firstId);
-    const second = records.find((item) => item.id === secondId);
-    if (!first || !second || first.id === second.id) return;
-    const current = ++requestId.current;
-    setLoading(true);
-    setError("");
+  function toggle(id: string) {
     setReport(null);
-    const result = await requestCriticalReview({ documents: [first.document, second.document] });
-    if (current !== requestId.current) return;
-    setLoading(false);
-    if (result.ok) setReport(result.data);
-    else setError(result.error.message);
-  }
-
-  function changeSelection(update: () => void) {
-    requestId.current += 1;
-    setLoading(false);
-    setReport(null);
-    update();
-  }
-
-  function evidence(claim: ReviewClaim) {
-    const document = records.find((item) => item.id === claim.documentId)?.document;
-    const page = document?.pages.find((item) => item.pageNumber === claim.pageNumber);
-    return (
-      <div key={claim.documentId} className={styles.claim}>
-        <strong>{document?.title ?? document?.source.fileName ?? "Document"}</strong>
-        <p>{claim.text}</p>
-        {claim.conditions && <p className={styles.muted}>Conditions: {claim.conditions}</p>}
-        <details>
-          <summary>
-            Page {claim.pageNumber}: “{claim.quote}”
-          </summary>
-          <pre>{page?.text ?? "Page text unavailable."}</pre>
-        </details>
-      </div>
+    setSelectedIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id].slice(0, 4),
     );
   }
 
+  async function compare() {
+    const selected = selectedIds.map((id) => records.find((record) => record.id === id)!);
+    setLoading(true);
+    setError(null);
+    setReport(null);
+    try {
+      const result = await requestContradictions({
+        documents: selected.map((record) => record.document),
+        ...(selected.every((record) => record.analysis)
+          ? { analyses: selected.map((record) => record.analysis!) }
+          : {}),
+      });
+      if (result.ok) setReport(result.data);
+      else setError(result.error.message);
+    } catch {
+      setError("The comparison was cancelled.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <section className={styles.panel} aria-labelledby="critical-review-heading" aria-busy={loading}>
-      <span className="step">CRITICAL REVIEW</span>
-      <h2 id="critical-review-heading">Compare two papers</h2>
+    <section className="contradiction-panel" aria-labelledby="contradictions-title">
+      <span className="step">05 · CROSS-PAPER CHECK</span>
+      <h2 id="contradictions-title">Compare claims across papers</h2>
       <p>
-        Compare sends excerpts from both papers to Gemini. Candidate conflicts are also sent to Grok
-        for an independent check when configured.
+        Select two to four papers saved in this browser. Only page-verified quotes are compared.
       </p>
-      <div className={styles.controls}>
-        <label>
-          First document
-          <select
-            value={firstId}
-            onChange={(event) => changeSelection(() => setFirstId(event.target.value))}
-          >
-            <option value="">Select</option>
-            {records.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.document.title ?? item.document.source.fileName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Second document
-          <select
-            value={secondId}
-            onChange={(event) => changeSelection(() => setSecondId(event.target.value))}
-          >
-            <option value="">Select</option>
-            {records.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.document.title ?? item.document.source.fileName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          className="primary"
-          disabled={loading || !firstId || !secondId || firstId === secondId}
-          onClick={review}
-        >
-          {loading ? "Reviewing…" : "Compare claims"}
-        </button>
+      <div className="contradiction-documents">
+        {records.map((record) => (
+          <label key={record.id}>
+            <input
+              type="checkbox"
+              checked={selectedIds.includes(record.id)}
+              disabled={!selectedIds.includes(record.id) && selectedIds.length >= 4}
+              onChange={() => toggle(record.id)}
+            />
+            <span>{record.document.title ?? record.document.source.fileName}</span>
+          </label>
+        ))}
       </div>
-      {records.length < 2 && <p>Analyze a second document to compare claims.</p>}
+      {records.length < 2 && <p>Upload and analyze another paper to compare it with this one.</p>}
+      <button className="primary" disabled={selectedIds.length < 2 || loading} onClick={compare}>
+        {loading ? "Comparing…" : "Compare papers"}
+      </button>
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
       {report && (
-        <div role="status">
+        <div aria-live="polite" className="contradiction-results">
+          <p>
+            {report.comparedClaimCount} candidate pairs compared. {report.findings.length} possible
+            conflicts found.
+          </p>
           {report.warnings.map((warning) => (
-            <p key={warning} className={styles.muted}>
+            <p className="contradiction-warning" key={warning}>
               {warning}
             </p>
           ))}
-          {!report.findings.length && (
-            <p>No verified comparable claims were found in the reviewed excerpts.</p>
-          )}
-          {report.findings.map((finding, index) => (
-            <article key={`${finding.topic}-${index}`} className={styles.finding}>
-              <div className={styles.heading}>
-                <h3>{finding.topic}</h3>
-                <strong>
-                  {finding.verdict === "contradiction"
-                    ? "Confirmed conflict"
-                    : finding.verdict === "compatible"
-                      ? "Compatible"
-                      : "Unclear / unconfirmed"}
-                </strong>
-              </div>
-              <div className={styles.claims}>{finding.claims.map(evidence)}</div>
+          {report.findings.map((finding) => (
+            <article key={finding.id} className="contradiction-finding">
+              <span className="step">
+                {finding.review.grok === "contradiction" ? "TWO-MODEL AGREEMENT" : "NEEDS REVIEW"}
+              </span>
+              <h3>{finding.topic}</h3>
               <p>{finding.explanation}</p>
+              <div className="contradiction-claims">
+                {finding.claims.map((claim) => (
+                  <blockquote key={`${finding.id}-${claim.documentId}`}>
+                    <strong>
+                      {records.find((record) => record.id === claim.documentId)?.document.title ??
+                        claim.documentId}{" "}
+                      · Page {claim.source.pageNumber}
+                    </strong>
+                    <p>“{claim.source.quote}”</p>
+                    <small>{claim.conditions}</small>
+                  </blockquote>
+                ))}
+              </div>
               {finding.alternativeExplanations.length > 0 && (
-                <>
-                  <h4>Possible explanations</h4>
-                  <ul>
-                    {finding.alternativeExplanations.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </>
+                <p>
+                  <strong>Check also:</strong> {finding.alternativeExplanations.join(" ")}
+                </p>
               )}
-              <p className={styles.muted}>
-                Gemini: {finding.review.gemini} · Grok:{" "}
-                {finding.review.grok === "not_run" ? "not run" : finding.review.grok}
-              </p>
+              <small>
+                Gemini: {finding.review.gemini}; Grok: {finding.review.grok.replace("_", " ")}
+              </small>
             </article>
           ))}
         </div>

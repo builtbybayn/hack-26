@@ -1,0 +1,229 @@
+/* Voice feature styles. Uses the app's tokens from globals.css (--paper, --forest, …). */
+
+.read-aloud {
+  margin-top: 22px;
+  padding: 27px;
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.read-aloud .panel-heading {
+  align-items: end;
+}
+.read-aloud h2 {
+  margin: 7px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 29px;
+  font-weight: 400;
+}
+.read-aloud-meta {
+  max-width: 420px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.read-aloud-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px 16px;
+  margin-top: 20px;
+}
+.read-aloud-controls label,
+.voice-picker label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.read-aloud-controls select {
+  min-width: 120px;
+}
+.transport {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.transport .primary {
+  min-width: 96px;
+}
+.transport button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.voice-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.voice-picker select {
+  min-width: 240px;
+  max-width: 340px;
+}
+.voice-custom {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+}
+.voice-custom input {
+  width: 260px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid #bbb8af;
+  background: var(--white);
+  color: var(--ink);
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+}
+.voice-custom small,
+.voice-note {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.voice-custom input[aria-invalid] + small,
+.voice-custom input[aria-invalid] {
+  border-color: var(--clay);
+}
+
+.read-aloud-status {
+  margin: 16px 0 0;
+  padding: 11px 14px;
+  background: #e8ece8;
+  color: #385447;
+  font-size: 13px;
+  font-weight: 700;
+}
+.read-aloud-status.failed {
+  background: #f5dfd4;
+  color: #7a351e;
+}
+
+/* The transcript: the paper as it is read, with the current paragraph marked. */
+.transcript {
+  position: relative;
+  max-height: 520px;
+  margin: 16px 0 0;
+  padding: 8px 0;
+  overflow-y: auto;
+  list-style: none;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.transcript li {
+  display: grid;
+  border-left: 3px solid transparent;
+  transition:
+    background 160ms,
+    border-color 160ms;
+}
+.transcript li button:first-child {
+  padding: 10px 18px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 17px;
+  line-height: 1.65;
+  text-align: left;
+  white-space: pre-line;
+}
+.transcript li:hover {
+  background: #f8f6ef;
+}
+.transcript li.current {
+  border-left-color: var(--forest);
+  background: var(--forest-soft);
+}
+.transcript-heading button:first-child {
+  padding-top: 22px !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.transcript-notice button:first-child {
+  color: var(--muted) !important;
+  font-size: 15px !important;
+  font-style: italic;
+}
+.transcript .open-page {
+  justify-self: start;
+  margin: -4px 0 10px 18px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--clay);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* Listen button for explanations and other generated text. */
+.listen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.listen .secondary {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+.listen span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.listen span.failed {
+  color: #7a351e;
+}
+
+@media (max-width: 900px) {
+  .read-aloud .panel-heading {
+    display: grid;
+    gap: 8px;
+  }
+  .read-aloud-meta {
+    text-align: left;
+  }
+}
+@media (max-width: 540px) {
+  .read-aloud {
+    padding: 20px;
+  }
+  .read-aloud-controls > *,
+  .voice-picker,
+  .voice-picker label,
+  .voice-picker select {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .transport button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 8px;
+  }
+  .transport .primary {
+    min-width: 0;
+  }
+  .transcript li button:first-child {
+    padding: 10px 12px;
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .transcript li {
+    transition: none;
+  }
+}

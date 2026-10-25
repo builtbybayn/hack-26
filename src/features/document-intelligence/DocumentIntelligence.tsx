@@ -15,7 +15,7 @@ import type {
 } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
 import { ResearchProjects } from "@/features/projects/ResearchProjects";
-import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
+import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import {
   analyzeDocument,
   evaluateAnswers,
@@ -40,6 +40,9 @@ import {
   saveEvidenceFeedback,
   saveMastery,
 } from "@/lib/browser-store";
+import { ContradictionPanel } from "@/features/contradictions/ContradictionPanel";
+import { ListenButton } from "@/features/voice/ListenButton";
+import { ReadAloudPanel } from "@/features/voice/ReadAloudPanel";
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   extracting: "Extracting PDF locally",
@@ -89,12 +92,12 @@ export function DocumentIntelligence() {
         if (requestedId && !record) setError("This document is no longer stored in this browser.");
         if (record?.analysis) {
           const verified = verifyAnalysisReferences(record.document, record.analysis);
-          if (verified !== record.analysis)
-            void saveDocument(record.document, verified).catch(() => undefined);
           setDocument(record.document);
           setAnalysis(verified);
           setSelectedConcept(verified.graph.concepts[0] ?? null);
           setStage("completed");
+          if (verified !== record.analysis)
+            void saveDocument(record.document, verified).catch(() => undefined);
         }
       })
       .catch(() => undefined);
@@ -140,6 +143,9 @@ export function DocumentIntelligence() {
       setStage("concepts");
       // Reuse a stored analysis of the same file (same content hash) instead of calling Gemini.
       let documentAnalysis = (await getDocumentRecord(parsedDocument.id))?.analysis;
+      if (documentAnalysis)
+        // Keep the parsed paper even if analysis fails, so read-aloud and the extension can use it.
+        await saveDocument(parsedDocument, documentAnalysis ?? null);
       if (!documentAnalysis) {
         const analyzed = await analyzeDocument(
           { document: parsedDocument, mastery },
@@ -375,12 +381,21 @@ export function DocumentIntelligence() {
           </div>
         </section>
       )}
+      {document && (
+        <ReadAloudPanel
+          key={document.id}
+          document={document}
+          onOpenPage={pdfUrl ? setSelectedPage : undefined}
+        />
+      )}
 
       <ResearchProjects document={document} analysis={analysis} />
-      <ContradictionPanel documentId={document?.id ?? null} />
 
       {analysis && (
         <>
+          {document && (
+            <RecommendationsPanel key={document.id} document={document} analysis={analysis} />
+          )}
           <section className="insight-grid">
             <article className="subject-card">
               <span className="step">02 · UNDERSTANDING</span>
@@ -589,6 +604,11 @@ export function DocumentIntelligence() {
                       {feedbackError && <p role="alert">{feedbackError}</p>}
                     </div>
                   )}
+                  {explanation && typeof explanation !== "string" && (
+                    <ListenButton
+                      text={explanation.sections.map((section) => section.text).join(" ")}
+                    />
+                  )}
                   <button className="quiz-button" onClick={startQuiz}>
                     Take a short quiz
                   </button>
@@ -654,6 +674,7 @@ export function DocumentIntelligence() {
               )}
             </section>
           )}
+          {document && <ContradictionPanel document={document} analysis={analysis} />}
         </>
       )}
     </main>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ParsedDocument } from "@/types/ingestion";
+import { verifyConceptEvidence } from "@/lib/contradictions/evidence";
 import { analyzeDocument, chunkDocument } from "./gemini";
 
 const document: ParsedDocument = {
@@ -94,5 +95,31 @@ describe("Gemini analysis", () => {
     );
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks.join("")).toContain("Second");
+  });
+
+  it("removes concept quotes that are not on the cited page", async () => {
+    const model = JSON.parse(valid);
+    model.concepts[0].sourceReferences = [
+      { pageNumber: 1, quote: "Divergence and curl" },
+      { pageNumber: 1, quote: "An invented sentence" },
+    ];
+    const result = await analyzeDocument(document, {}, async () => JSON.stringify(model));
+    expect(result.graph.concepts[0].sourceReferences).toEqual([
+      { pageNumber: 1, quote: "Divergence and curl" },
+    ]);
+    expect(result.graph.repairs).toContainEqual(
+      expect.objectContaining({ type: "unverified-quote" }),
+    );
+  });
+
+  it("cleans quotes in an analysis restored from browser storage", async () => {
+    const saved = await analyzeDocument(document, {}, async () => valid);
+    saved.graph.concepts[0].sourceReferences.push({ pageNumber: 1, quote: "Invented quote" });
+    const verified = verifyConceptEvidence(document, saved);
+    expect(verified.graph.concepts[0].sourceReferences).not.toContainEqual({
+      pageNumber: 1,
+      quote: "Invented quote",
+    });
+    expect(verifyConceptEvidence(document, verified)).toBe(verified);
   });
 });

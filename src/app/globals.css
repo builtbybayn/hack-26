@@ -532,6 +532,45 @@ select {
   background: var(--white);
   white-space: pre-wrap;
 }
+.contradiction-panel {
+  margin-top: 22px;
+  padding: 27px;
+  border: 1px solid var(--line);
+  background: #f8f6f0;
+}
+.contradiction-panel > p,
+.contradiction-finding p {
+  line-height: 1.6;
+}
+.contradiction-documents,
+.contradiction-results {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+}
+.contradiction-documents label {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.contradiction-finding {
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.contradiction-claims {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.contradiction-claims blockquote {
+  margin: 0;
+  padding: 14px;
+  border-left: 3px solid var(--forest);
+  background: var(--paper);
+}
+.contradiction-warning {
+  color: var(--clay);
+}
 
 @media (max-width: 900px) {
   .masthead,
@@ -560,6 +599,9 @@ select {
   }
   .detail-panel {
     margin: -1px 0 0;
+  }
+  .contradiction-claims {
+    grid-template-columns: 1fr;
   }
 }
 

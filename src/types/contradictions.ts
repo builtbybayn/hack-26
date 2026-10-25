@@ -1,33 +1,34 @@
 import type { ApiResponse, CommonErrorCode } from "./api";
 import type { ParsedDocument } from "./ingestion";
-import type { IntelligenceErrorCode } from "./intelligence";
+import type { DocumentAnalysis, IntelligenceErrorCode, SourceReference } from "./intelligence";
 
-export interface ReviewClaim {
+export interface Claim {
   documentId: string;
   text: string;
   conditions: string;
-  pageNumber: number;
-  quote: string;
+  source: SourceReference & { quote: string };
 }
 
-export type ReviewVerdict = "contradiction" | "compatible" | "unclear";
+export type Verdict = "contradiction" | "compatible" | "unclear";
 
-export interface ReviewFinding {
+export interface ContradictionFinding {
+  id: string;
   topic: string;
-  claims: [ReviewClaim, ReviewClaim];
+  claims: [Claim, Claim];
   explanation: string;
   alternativeExplanations: string[];
-  verdict: ReviewVerdict;
-  review: { gemini: ReviewVerdict; grok: ReviewVerdict | "not_run" };
+  review: { gemini: Verdict; grok: Verdict | "not_run" };
 }
 
 export interface ContradictionRequest {
-  documents: [ParsedDocument, ParsedDocument];
+  documents: ParsedDocument[];
+  analyses?: DocumentAnalysis[];
 }
 
 export interface ContradictionReport {
-  documentIds: [string, string];
-  findings: ReviewFinding[];
+  documentIds: string[];
+  findings: ContradictionFinding[];
+  comparedClaimCount: number;
   warnings: string[];
 }
 

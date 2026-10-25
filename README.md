@@ -31,7 +31,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis and tutoring.
+Open `http://localhost:3000`. Standard PDF extraction works without provider keys. Gemini is required for concept analysis, tutoring, and cross-paper comparison. Grok provides an optional independent contradiction review.
 
 ## Environment configuration
 
@@ -39,12 +39,17 @@ Open `http://localhost:3000`. Standard PDF extraction works without provider key
 | ------------------------------------ | ------------------------------------------------------------- |
 | `GEMINI_API_KEY`                     | Server-only Google AI Studio API key                          |
 | `GEMINI_MODEL`                       | Supported Gemini model; defaults to `gemini-flash-latest`     |
+| `XAI_API_KEY`                        | Optional server-only Grok key for second-opinion review       |
+| `XAI_MODEL`                          | Grok model; defaults to `grok-4.7`                            |
+| `OPENALEX_API_KEY`                   | Optional key for a dedicated OpenAlex search budget           |
 | `MISTRAL_API_KEY`                    | Server-only Mistral OCR key                                   |
 | `MISTRAL_OCR_MODEL`                  | Optional OCR model override; defaults to `mistral-ocr-latest` |
 | `MATHPIX_APP_ID` / `MATHPIX_APP_KEY` | Server-only Mathpix credentials                               |
 | `XAI_API_KEY` / `XAI_MODEL`          | Optional Grok check of candidate cross-paper conflicts        |
 | `PDF_PARSER`                         | Deployment default (`auto` is recommended)                    |
 | `OCR_PROVIDER`                       | Deployment default (`mistral` or `mathpix`)                   |
+| `ELEVENLABS_API_KEY`                 | Server-only ElevenLabs key for read-aloud and Listen          |
+| `ELEVENLABS_MODEL_FAST` / `_HIGH`    | Optional model overrides for Fast and High quality            |
 
 Never prefix these with `NEXT_PUBLIC_`. They must not enter the browser bundle, extension storage, or API responses.
 
@@ -70,22 +75,42 @@ Set both `MATHPIX_APP_ID` and `MATHPIX_APP_KEY`. Mathpix is intended for STEM-he
 6. Manual mastery changes and passed assessments persist in IndexedDB. Opening an explanation does not change mastery.
 7. Add analyzed documents to a research project, synthesize two to four of them, and create an editable Research Brief with a print view.
 8. Explore possible gaps from that synthesis and inspect a graph linking project papers by verified findings or topic overlap.
+9. After analyzing another paper, compare two to four saved documents for possible conflicts with quotes from both sources.
 
 ## Chrome extension development
 
-The repository includes a small Manifest V3 companion launcher in `extension/`; it contains no secrets and opens the locally running KnowBefore application.
+`extension/` is a Manifest V3 side panel. It holds no secrets and almost no UI: the panel is the
+app's `/panel` page in an iframe, so it shares the app's code, API, and browser storage (papers,
+analyses, cached audio, reading positions). `extension/sidepanel.js` only bridges what needs
+Chrome APIs: the active tab, the selection on it, and the paper it shows. The panel's flow is
+in place; its visual design is provisional (**barebones build**).
 
-1. Run `npm run dev`.
+1. Run `npm run dev` (the extension expects `http://localhost:3000`).
 2. Open `chrome://extensions`, enable Developer mode, and choose **Load unpacked**.
-3. Select the repository’s `extension` directory.
-4. Pin KnowBefore and choose **Open KnowBefore**.
+3. Select the repository's `extension` directory. Chrome 114 or newer is required.
+4. Pin KnowBefore and click its icon to open the side panel.
 
-The full upload/analysis workspace runs in the app tab so large PDFs are not constrained by popup lifetime.
+The flow:
+
+1. Open a paper: a PDF (for example an arXiv PDF) or an article page.
+2. The panel shows **This tab** with **Use this PDF** or **Use this page**. Chrome asks once per
+   site for access. PDFs are downloaded and parsed; pages are parsed from their main text.
+3. The paper opens in five views: **Overview** (analyze with Gemini), **Prerequisites** (concepts
+   to know first, mastery, explanations), **Explain** (bring over text selected on the page and
+   hear it; the AI explanation of a passage is Track A's, shown as a placeholder), **Related**
+   (Track B's recommendations), and **Listen** (read-aloud).
+4. Switching tabs follows along: a paper used before reopens automatically.
+
+Chrome's built-in PDF viewer doesn't share text selections with extensions; use the
+Listen view or the paper's text instead. After changing files in `extension/`, click the reload
+icon on the extension's card in `chrome://extensions`. Changes to `/panel` only need a panel reload.
 
 ## API
 
 - `POST /api/documents/parse` — multipart PDF/text input and parser settings
 - `POST /api/documents/analyze` — Gemini analysis plus graph/path generation
+- `POST /api/contradictions` — page-verified claims compared across two to four papers
+- `POST /api/recommendations` — background and related papers from OpenAlex
 - `POST /api/explain` — contextual concept tutoring
 - `POST /api/quiz` — short assessment generation
 - `POST /api/evaluate` — deterministic scoring and mastery recommendation
@@ -94,8 +119,10 @@ The full upload/analysis workspace runs in the app tab so large PDFs are not con
 - `POST /api/papers/citations` — refresh OpenAlex references for saved-paper citation links
 - `GET /api/health` — service and provider configuration status
 - `POST /api/ingest` — backwards-compatible generic ingestion endpoint
+- `GET /api/voice/voices` — preset and ElevenLabs account voices
+- `POST /api/voice/speak` — text to streamed MP3 (errors use the JSON envelope)
 
-Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`.
+Every route returns `{ ok: true, data }` or `{ ok: false, error: { code, message } }`, except that `/api/voice/speak` returns audio on success.
 
 ## Testing and production checks
 

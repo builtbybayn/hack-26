@@ -19,6 +19,10 @@ const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
 const PROJECT_STORE = "projects";
 const EVIDENCE_FEEDBACK_STORE = "evidence-feedback";
+const AUDIO_STORE = "audio";
+const READING_STORE = "readingPositions";
+/** Generated speech kept for replay. Oldest entries are evicted beyond this count. */
+const MAX_CACHED_AUDIO = 400;
 
 export interface ResearchProject {
   id: string;
@@ -130,6 +134,66 @@ export async function loadLatestDocument(): Promise<DocumentRecord | null> {
   return (await listDocumentRecords())[0] ?? null;
 }
 
+interface AudioRecord {
+  key: string;
+  audio: Blob;
+  createdAt: string;
+}
+
+/** Cached speech for a voice + text key, so replays never spend voice credits twice. */
+export async function getCachedAudio(key: string): Promise<Blob | null> {
+  const record = await request<AudioRecord | undefined>(AUDIO_STORE, "readonly", (store) =>
+    store.get(key),
+  );
+  return record?.audio ?? null;
+}
+
+export async function cacheAudio(key: string, audio: Blob): Promise<void> {
+  await request(AUDIO_STORE, "readwrite", (store) =>
+    store.put({ key, audio, createdAt: new Date().toISOString() } satisfies AudioRecord),
+  );
+  await evictOldestAudio();
+}
+
+/** Where the reader stopped in a document (segment index), for resuming later. */
+export async function getReadingPosition(documentId: string): Promise<number | null> {
+  const record = await request<{ segmentIndex: number } | undefined>(
+    READING_STORE,
+    "readonly",
+    (store) => store.get(documentId),
+  );
+  return record?.segmentIndex ?? null;
+}
+
+export async function saveReadingPosition(documentId: string, segmentIndex: number): Promise<void> {
+  await request(READING_STORE, "readwrite", (store) =>
+    store.put({ documentId, segmentIndex, updatedAt: new Date().toISOString() }),
+  );
+}
+
+async function evictOldestAudio(): Promise<void> {
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(AUDIO_STORE, "readwrite");
+    const store = transaction.objectStore(AUDIO_STORE);
+    const count = store.count();
+    count.onsuccess = () => {
+      let excess = count.result - MAX_CACHED_AUDIO;
+      if (excess <= 0) return;
+      // Walk keys oldest-first via the createdAt index, deleting until under the limit.
+      store.index("createdAt").openKeyCursor().onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursor | null>).result;
+        if (!cursor || excess <= 0) return;
+        store.delete(cursor.primaryKey);
+        excess -= 1;
+        cursor.continue();
+      };
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
 async function request<T>(
   storeName: string,
   mode: IDBTransactionMode,
@@ -159,6 +223,11 @@ function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore(EVIDENCE_FEEDBACK_STORE, { keyPath: "id" });
       // Version 2 kept a single "latest" session; documents now live in DOCUMENT_STORE.
       if (db.objectStoreNames.contains("sessions")) db.deleteObjectStore("sessions");
+      if (!db.objectStoreNames.contains(AUDIO_STORE)) {
+        db.createObjectStore(AUDIO_STORE, { keyPath: "key" }).createIndex("createdAt", "createdAt");
+      }
+      if (!db.objectStoreNames.contains(READING_STORE))
+        db.createObjectStore(READING_STORE, { keyPath: "documentId" });
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error);

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>KnowBefore</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <!--
+      The panel UI is the app's /panel page in this iframe, so it shares the app's code, API, and
+      browser storage (the host permission for localhost:3000 gives the iframe the app's own
+      storage partition). sidepanel.js only bridges the extension APIs the page can't use.
+    -->
+    <div id="offline" hidden>
+      <strong>KnowBefore isn't running</strong>
+      <p>Start the app with <code>npm run dev</code> (port 3000), then reopen this panel.</p>
+    </div>
+    <iframe id="app" title="KnowBefore" src="http://localhost:3000/panel"></iframe>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
