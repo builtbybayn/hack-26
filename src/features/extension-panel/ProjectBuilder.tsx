@@ -113,7 +113,17 @@ export function ProjectBuilder({
     }
     const { roadmap, reply, warnings } = result.data;
     try {
-      const entries = await listVaultEntries();
+      const allEntries = await listVaultEntries(true);
+      if (
+        allEntries.some(
+          (entry) =>
+            entry.trashedAt && (entry.id === current.projectId || entry.id === current.noteId),
+        )
+      ) {
+        setError("Restore this project and roadmap from Trash before revising it.");
+        return;
+      }
+      const entries = allEntries.filter((entry) => !entry.trashedAt);
       const note = entries.find(
         (entry): entry is VaultNote => entry.id === current.noteId && entry.kind === "note",
       );

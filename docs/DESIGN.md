@@ -25,6 +25,11 @@ Do not add an outer reader card, fixed viewport height, or a repeated document h
 
 ## Goals
 
+Explorer items support right-click Open and Delete actions. Notes and sources move directly to
+Trash; projects and folders ask for confirmation before moving their contents. The status bar
+offers Undo delete, and explorer Trash supports restoration after a reload. Errors stay visible
+inside dialogs; menus support keyboard navigation and Escape.
+
 - Look and behave like Obsidian, so the vault feels familiar: restrained, dense, dark by default.
 - Our features fit Obsidian's patterns rather than adding new chrome: papers, notes, and chats
   are files in the tree; analysis lives in the right sidebar; AI chats are tabs.

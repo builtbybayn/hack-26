@@ -229,6 +229,7 @@ export default function Workspace() {
   const [confirmTrash, setConfirmTrash] = useState<ExplorerTarget | null>(null);
   const [trashOpen, setTrashOpen] = useState(false);
   const [trashBusy, setTrashBusy] = useState(false);
+  const [trashError, setTrashError] = useState("");
   const [undoItem, setUndoItem] = useState<{ id: string; name: string } | null>(null);
   const contextTarget = useRef<HTMLElement | null>(null);
 
@@ -282,6 +283,7 @@ export default function Workspace() {
   }
   async function moveToTrash(target: ExplorerTarget) {
     setTrashBusy(true);
+    setTrashError("");
     try {
       await flushNoteEdits();
       const id = await service.trashItem(target.id, target.kind);
@@ -297,19 +299,24 @@ export default function Workspace() {
       setUndoItem({ id, name: target.name });
       setNotice(`“${target.name}” moved to Trash.`);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Couldn't move this item to Trash.");
+      const message = error instanceof Error ? error.message : "Couldn't move this item to Trash.";
+      setTrashError(message);
+      setNotice(message);
     } finally {
       setTrashBusy(false);
     }
   }
   async function restoreItem(id: string) {
     setTrashBusy(true);
+    setTrashError("");
     try {
       await service.restoreItem(id);
       setUndoItem((current) => (current?.id === id ? null : current));
       setNotice("Item restored.");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Couldn't restore this item.");
+      const message = error instanceof Error ? error.message : "Couldn't restore this item.";
+      setTrashError(message);
+      setNotice(message);
     } finally {
       setTrashBusy(false);
     }
@@ -659,7 +666,13 @@ export default function Workspace() {
           </div>
           <div className="explorer-footer">
             <span>{project?.name}</span>
-            <button className="explorer-trash-button" onClick={() => setTrashOpen(true)}>
+            <button
+              className="explorer-trash-button"
+              onClick={() => {
+                setTrashError("");
+                setTrashOpen(true);
+              }}
+            >
               <Trash2 size={13} /> Trash{data.trash?.length ? ` (${data.trash.length})` : ""}
             </button>
           </div>
@@ -1066,6 +1079,7 @@ export default function Workspace() {
             onDelete={() => {
               const target = explorerMenu.target;
               setExplorerMenu(null);
+              setTrashError("");
               if (target.kind === "project" || target.kind === "folder") setConfirmTrash(target);
               else void moveToTrash(target);
             }}
@@ -1075,6 +1089,7 @@ export default function Workspace() {
           <ConfirmTrash
             target={confirmTrash}
             busy={trashBusy}
+            error={trashError}
             onClose={() => setConfirmTrash(null)}
             onConfirm={() => void moveToTrash(confirmTrash)}
           />
@@ -1083,6 +1098,7 @@ export default function Workspace() {
           <TrashDialog
             items={data.trash ?? []}
             busy={trashBusy}
+            error={trashError}
             onClose={() => setTrashOpen(false)}
             onRestore={(id) => void restoreItem(id)}
           />

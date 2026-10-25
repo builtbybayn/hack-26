@@ -3,6 +3,7 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import { ExternalLink, RotateCcw, Trash2, X } from "lucide-react";
 import type { TrashItem } from "../lib/models";
+import "./explorer-menu.css";
 
 export interface ExplorerTarget {
   id: string;
@@ -68,7 +69,7 @@ export function ExplorerContextMenu({
           top: Math.max(8, Math.min(menu.y, window.innerHeight - 150)),
         }}
         onKeyDown={(event) => {
-          if (event.key === "Escape") {
+          if (event.key === "Escape" || event.key === "Tab") {
             event.preventDefault();
             onClose();
           }
@@ -104,11 +105,13 @@ export function ExplorerContextMenu({
 export function ConfirmTrash({
   target,
   busy,
+  error,
   onClose,
   onConfirm,
 }: {
   target: ExplorerTarget;
   busy: boolean;
+  error?: string;
   onClose: () => void;
   onConfirm: () => void;
 }) {
@@ -134,6 +137,11 @@ export function ConfirmTrash({
         <p>
           Its folders, notes, and sources will be moved with it. You can restore them from Trash.
         </p>
+        {error && (
+          <p className="trash-dialog-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="trash-dialog-actions">
           <button className="btn" autoFocus disabled={busy} onClick={onClose}>
             Cancel
@@ -151,11 +159,13 @@ export function ConfirmTrash({
 export function TrashDialog({
   items,
   busy,
+  error,
   onRestore,
   onClose,
 }: {
   items: TrashItem[];
   busy: boolean;
+  error?: string;
   onRestore: (id: string) => void;
   onClose: () => void;
 }) {
@@ -182,6 +192,11 @@ export function TrashDialog({
         <p>
           Restore deleted items and their contents. Saved PDF files and annotations are preserved.
         </p>
+        {error && (
+          <p className="trash-dialog-error" role="alert">
+            {error}
+          </p>
+        )}
         <div className="trash-item-list">
           {items.length ? (
             items.map((item) => (

@@ -33,6 +33,13 @@ flowchart LR
 
 ## Layers
 
+Vault deletion is recoverable: optional `trashedAt` and `trashRootId` fields mark an entire
+subtree in one IndexedDB transaction. Active lists exclude these records; Trash restores the
+original IDs and hierarchy. Canonical PDFs, annotations, and drafts remain stored. Document
+lists exclude papers with only trashed placements so automatic filing cannot recreate them.
+Writes reject stale autosaves targeting trashed records or parents. Workspace deletion flushes
+dirty editors first. Derived saved links use persisted workspace `sourceTrash` metadata.
+
 | Layer               | Location              | Runs in          | Responsibility                                                           |
 | ------------------- | --------------------- | ---------------- | ------------------------------------------------------------------------ |
 | Pages and layouts   | `src/app`             | Server or client | Composition and routing. Keep thin: arrange features and components.     |
