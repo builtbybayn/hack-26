@@ -273,6 +273,10 @@ The browser uses `src/lib/api/research-client.ts`. `RecommendationsPanel` search
 from a typed interest or the current document and displays results, abstracts, citation counts, access links, and the query
 trail. Users can save papers into browser projects from these cards. OpenAlex reference IDs are
 included when available, so newly saved papers can form citation links without a second request.
+Each card also groups verbatim abstract sentences under methods, sample or data, measures,
+results, and limitations when clear keyword matches exist. Every excerpt links to its OpenAlex
+record and is labeled as abstract evidence. Unmatched fields say no clear excerpt was found;
+they do not claim the full paper omits that information. The full abstract remains expandable.
 Successful topic searches in a selected project also save the query, timestamp, provider trail,
 warnings, and returned paper snapshot in that project's IndexedDB record. The newest 20 searches
 can be reopened without another provider request. Older projects simply have no history until a

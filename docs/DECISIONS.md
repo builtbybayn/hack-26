@@ -115,3 +115,11 @@ fallback when no key is configured.
 provider trail, and returned records on that project in IndexedDB. Reopening a search uses the
 snapshot, so the result is reproducible even when OpenAlex changes or is unavailable. Keep the
 newest 20 searches per project to bound browser storage; older project records need no migration.
+
+### 19. Preview only what the provider abstract supports
+
+**Provisional.** Study-at-a-glance cards use verbatim OpenAlex abstract sentences for methods,
+sample or data, measures, results, and limitations. The client groups clear keyword matches
+without generating claims or downloading PDFs. Missing matches are labeled as absent from the
+preview, and each excerpt links to the provider record. Full-paper fields can be added after a
+source-aware analysis path is available for each recommended paper.

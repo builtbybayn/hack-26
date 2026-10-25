@@ -10,6 +10,7 @@ import type {
   SavedTopicSearch,
 } from "@/types/research";
 import type { PaperRecord } from "@/types/research";
+import { studyPreview } from "./study-preview";
 import styles from "./recommendations.module.css";
 
 export function RecommendationsPanel({
@@ -209,10 +210,12 @@ export function RecommendationsPanel({
                             </p>
                           )}
                           {reason && <p>{reason}</p>}
-                          {paper.abstract ? (
-                            <p className={styles.abstract}>{paper.abstract}</p>
-                          ) : (
-                            <p className={styles.metadata}>Abstract not available.</p>
+                          <StudyPreview paper={paper} />
+                          {paper.abstract && (
+                            <details className={styles.abstractDetails}>
+                              <summary>Full abstract</summary>
+                              <p className={styles.abstract}>{paper.abstract}</p>
+                            </details>
                           )}
                           <button
                             className="secondary"
@@ -259,6 +262,36 @@ export function RecommendationsPanel({
           </details>
         </>
       )}
+    </section>
+  );
+}
+
+function StudyPreview({ paper }: { paper: PaperRecord }) {
+  return (
+    <section className={styles.preview} aria-label={`Study at a glance: ${paper.title}`}>
+      <h5>Study at a glance</h5>
+      <p className={styles.metadata}>Verbatim abstract excerpts; full paper not analyzed.</p>
+      <dl>
+        {studyPreview(paper.abstract).map(({ label, quote }) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              {quote ? (
+                <>
+                  <span>“{quote}”</span>{" "}
+                  <a href={paper.url} target="_blank" rel="noopener noreferrer">
+                    Source abstract
+                  </a>
+                </>
+              ) : paper.abstract ? (
+                "No clear excerpt found in abstract."
+              ) : (
+                "Abstract unavailable."
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }
