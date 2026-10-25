@@ -146,3 +146,13 @@ note says which parts are AI-suggested.
 **Confirmed.** The default model is pinned (`gemini-3.5-flash`) rather than an alias, because
 `gemini-flash-latest` began hanging for new keys. Gemini returns 503 during demand spikes, so
 temporary errors are retried and then routed to a fallback model before failing.
+
+### 24. Research Core UI over the existing browser and API contracts
+
+**Confirmed by the requested UI integration.** The new main workspace uses the supplied Research
+Core interface and its Three.js blob effects. Its service adapter reuses existing vault records,
+the shared paper reader, browser persistence, and typed API clients. It does not create a second
+parser or server data store. Existing literature collections and extension chats remain accessible
+from Overview. Classic route styling remains separate. The workspace and extension now share the
+other UI's blob through the agent feature, per the user's direction to align both surfaces.
+The earlier silk-loop sprite remains available in `/sprite`.

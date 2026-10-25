@@ -1,10 +1,9 @@
-/* Matches the app's Obsidian theme, so nothing flashes before the panel loads. */
+/* Matches Research Core so nothing flashes before the app panel loads. */
 :root {
-  color: #dadada;
-  background: #262626;
+  color: #d4d4d4;
+  background: #1e1e1e;
   color-scheme: dark;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", sans-serif;
+  font-family: Georgia, "Times New Roman", serif;
 }
 html,
 body {
@@ -40,8 +39,8 @@ iframe {
   padding: 0 14px;
   border: 0;
   border-radius: 4px;
-  background: #7f6df2;
-  color: #fff;
+  background: #383838;
+  color: #d4d4d4;
   font: inherit;
   font-size: 13px;
   font-weight: 500;

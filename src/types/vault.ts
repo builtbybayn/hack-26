@@ -25,6 +25,14 @@ export interface VaultNote extends VaultEntryBase {
   kind: "note";
   /** Markdown. `[[Name]]` links to another note, paper, or chat by name. */
   body: string;
+  /** Research context set by the workspace: a question to resolve, or a link to its source. */
+  meta?: {
+    question?: boolean;
+    resolved?: boolean;
+    location?: { documentId: string; page?: number; passageId?: string; quote?: string };
+    conceptId?: string;
+    findingId?: string;
+  };
 }
 
 /** A saved paper placed in the tree. The paper itself is the `DocumentRecord` it points to. */

@@ -6,8 +6,15 @@
 }
 
 .agent-sprite-stage {
-  width: 104px;
-  height: 104px;
+  width: 160px;
+  height: 160px;
+}
+.agent-glass-canvas {
+  width: 100%;
+  height: 100%;
+}
+.agent-glass-canvas canvas {
+  display: block;
 }
 
 /* One reflective material, derived from the host theme. No ground plane in zero gravity. */

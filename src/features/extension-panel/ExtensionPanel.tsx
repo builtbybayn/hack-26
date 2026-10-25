@@ -3,13 +3,13 @@
 /**
  * The extension side panel, loaded at /panel inside the extension. It follows the active tab:
  * on a PDF it offers "Analyze this paper" and "Open in vault" (at the page you're reading);
- * anywhere else it starts a research project (a roadmap filed in the vault) or chats. Same Obsidian theme as the vault.
+ * anywhere else it starts a research project (a roadmap filed in the workspace) or chats.
+ * Uses the workspace's liquid blob and visual conventions through scoped panel tokens.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, FileText, Globe, LoaderCircle, SquarePen } from "lucide-react";
+import { ExternalLink, FilePenLine, FileText, Globe, LoaderCircle, SquarePen } from "lucide-react";
 import { AgentSprite } from "@/features/agent/AgentSprite";
 import { ChatView } from "@/features/vault/ChatView";
-import { useSettings } from "@/features/vault/use-settings";
 import { CHATS_FOLDER, ensureFolder, newId, uniqueName } from "@/features/vault/vault-tree";
 import { parseDocument } from "@/lib/api/intelligence-client";
 import {
@@ -62,7 +62,6 @@ function emptyChat(): VaultChat {
 }
 
 export function ExtensionPanel() {
-  const settings = useSettings();
   const [records, setRecords] = useState<DocumentRecord[]>([]);
   const [runningId, setRunningId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -254,13 +253,64 @@ export function ExtensionPanel() {
   const pendingPaper = bridge.pending === "kb:get-paper";
   const status = error ?? busy ?? (pendingPaper ? "Getting the paper from this tab…" : null);
   const chatting = !onPdf && mode === "ask";
-  const openEntry = (entryId: string) =>
-    tab ? bridge.openEntry(entryId) : window.open(`/?entry=${entryId}`, "_blank");
+  async function openEntry(entryId: string, projectId?: string) {
+    const standaloneWindow = !tab ? window.open("about:blank", "_blank") : null;
+    try {
+      if (projectId) {
+        const { workspaceService } = await import("@/features/workspace/lib/service-instance");
+        await workspaceService.refresh();
+        await workspaceService.setActiveProject(projectId);
+      }
+      if (tab) bridge.openEntry(entryId);
+      else if (standaloneWindow)
+        standaloneWindow.location.href = `/notes?note=${encodeURIComponent(entryId)}`;
+      else setError("Open the workspace to view your saved roadmap.");
+    } catch (cause) {
+      standaloneWindow?.close();
+      setError(cause instanceof Error ? cause.message : "Couldn't open the workspace.");
+    }
+  }
+
+  async function newNote() {
+    setError(null);
+    setBusy("Creating a note…");
+    const standaloneWindow = !tab ? window.open("about:blank", "_blank") : null;
+    try {
+      const { workspaceService } = await import("@/features/workspace/lib/service-instance");
+      await workspaceService.refresh();
+      const note = await workspaceService.saveNote({
+        projectId: workspaceService.snapshot().activeProjectId,
+        title: "Untitled",
+        body: "",
+        question: false,
+        resolved: false,
+      });
+      if (tab) bridge.openEntry(note.id);
+      else if (standaloneWindow)
+        standaloneWindow.location.href = `/notes?note=${encodeURIComponent(note.id)}`;
+      else setError("Your note was saved. Open the workspace to continue writing.");
+    } catch (cause) {
+      standaloneWindow?.close();
+      setError(cause instanceof Error ? cause.message : "Couldn't create a note.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
-    <main className="ext theme-obsidian" data-theme={settings.theme}>
+    <main className="ext theme-obsidian" data-theme="dark">
       <header className="ext-topbar">
-        <span className="ext-vault-name">{settings.vaultName}</span>
+        <span className="ext-vault-name">Research Core</span>
+        <button
+          type="button"
+          className="clickable-icon"
+          aria-label="New note"
+          title="New note"
+          onClick={() => void newNote()}
+          disabled={Boolean(busy)}
+        >
+          <FilePenLine size={16} />
+        </button>
         {chatting && (
           <button
             type="button"
@@ -275,8 +325,8 @@ export function ExtensionPanel() {
         <button
           type="button"
           className="clickable-icon"
-          aria-label="Open vault"
-          title="Open vault"
+          aria-label="Open workspace"
+          title="Open workspace"
           onClick={() => (tab ? bridge.openApp() : window.open("/", "_blank"))}
         >
           <ExternalLink size={16} />
@@ -346,8 +396,8 @@ export function ExtensionPanel() {
                 Analyze this paper
               </button>
               <p className="ext-hint">
-                Saves it to your vault, then finds what to know first, related papers, and conflicts
-                with the published literature and papers you&apos;ve saved.
+                Saves it to your workspace, then finds what to know first, related papers, and
+                conflicts with the published literature and papers you&apos;ve saved.
               </p>
             </>
           ) : (
@@ -406,12 +456,12 @@ export function ExtensionPanel() {
               onClick={openInVault}
               disabled={Boolean(busy) || pendingPaper}
             >
-              <ExternalLink size={14} aria-hidden /> Open in vault
+              <ExternalLink size={14} aria-hidden /> Open in workspace
             </button>
           </div>
           <p className="ext-hint">
-            Opens the paper in your vault at this page. Chrome&apos;s PDF viewer doesn&apos;t tell
-            extensions where you are, so set the page you&apos;re on.
+            Opens the paper in your workspace at this page. Chrome&apos;s PDF viewer doesn&apos;t
+            tell extensions where you are, so set the page you&apos;re on.
           </p>
         </section>
       ) : mode === "project" ? (

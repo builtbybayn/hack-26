@@ -1,0 +1,70 @@
+/* The reader occupies the pane itself; pages scroll inside it rather than inside a card. */
+.workspace-panels > .workspace-content:has(.reader-workspace) {
+  padding: 0;
+  overflow: hidden;
+}
+.reader-workspace {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.reader-layout {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.reader-surface {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--background-primary);
+  font-family: var(--font-interface);
+}
+.reader-surface > .paper-view {
+  width: 100%;
+}
+.reader-surface .paper-toolbar {
+  height: auto;
+  min-height: var(--header-height);
+  flex-wrap: wrap;
+  padding-block: 4px;
+}
+.workspace-content .reader-surface .view-header-title {
+  min-width: 80px;
+  font-size: 14px;
+}
+.reader-context {
+  flex: 0 0 300px;
+  width: 300px;
+  overflow-y: auto;
+  padding: 16px;
+  border-left: 1px solid var(--color-line);
+  background: var(--color-ink);
+}
+.reader-context-heading,
+.reader-link-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.reader-link-toolbar {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-line);
+}
+@container research-pane (max-width: 760px) {
+  .reader-context {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 8;
+    width: min(300px, 100%);
+  }
+}

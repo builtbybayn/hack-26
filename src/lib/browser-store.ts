@@ -17,8 +17,8 @@ import type { SynthesisReport } from "@/types/synthesis";
 import type { Annotation, VaultEntry } from "@/types/vault";
 
 const DB_NAME = "knowbefore";
-/** 7 merges two version-5 lines (files; projects) and version 6 (vault); upgrades add what's missing. */
-const DB_VERSION = 7;
+/** Upgrades only add missing stores, so every earlier version (5–7) upgrades without data loss. */
+const DB_VERSION = 8;
 const MASTERY_STORE = "mastery";
 const DOCUMENT_STORE = "documents";
 const PROJECT_STORE = "projects";
@@ -28,6 +28,8 @@ const READING_STORE = "readingPositions";
 const FILE_STORE = "files";
 const VAULT_STORE = "vault";
 const ANNOTATION_STORE = "annotations";
+const WORKSPACE_STORE = "workspace";
+const WORKSPACE_KEY = "state";
 /** Generated speech kept for replay. Oldest entries are evicted beyond this count. */
 const MAX_CACHED_AUDIO = 400;
 
@@ -220,6 +222,57 @@ export async function deleteVaultEntries(ids: string[]): Promise<void> {
 }
 
 /** Highlights and comments on one paper. */
+/** Every highlight and comment, across all papers. */
+export async function listAllAnnotations(): Promise<Annotation[]> {
+  return request<Annotation[]>(ANNOTATION_STORE, "readonly", (store) => store.getAll());
+}
+
+/**
+ * The research workspace's own state (active project, drafts, conversations, reading status):
+ * one JSON record, typed by the workspace feature.
+ */
+export async function getWorkspaceState<T>(key = WORKSPACE_KEY): Promise<T | null> {
+  const record = await request<{ key: string; value: T } | undefined>(
+    WORKSPACE_STORE,
+    "readonly",
+    (store) => store.get(key),
+  );
+  return record?.value ?? null;
+}
+
+export async function putWorkspaceState(value: unknown, key = WORKSPACE_KEY): Promise<void> {
+  await request(WORKSPACE_STORE, "readwrite", (store) => store.put({ key, value }));
+  notifyChange("workspace");
+}
+
+/** Read and modify together, so overlapping tabs cannot overwrite unrelated workspace edits. */
+export async function updateWorkspaceState<T>(
+  update: (current: T | null) => T,
+  key = WORKSPACE_KEY,
+): Promise<T> {
+  const db = await openDatabase();
+  const value = await new Promise<T>((resolve, reject) => {
+    const transaction = db.transaction(WORKSPACE_STORE, "readwrite");
+    const store = transaction.objectStore(WORKSPACE_STORE);
+    const read = store.get(key);
+    let next: T;
+    read.onsuccess = () => {
+      try {
+        next = update(read.result?.value ?? null);
+        store.put({ key, value: next });
+      } catch (error) {
+        transaction.abort();
+        reject(error);
+      }
+    };
+    transaction.oncomplete = () => resolve(next);
+    transaction.onerror = transaction.onabort = () =>
+      reject(transaction.error ?? new Error("Workspace update was cancelled."));
+  });
+  notifyChange("workspace");
+  return value;
+}
+
 export async function listAnnotations(documentId: string): Promise<Annotation[]> {
   return request<Annotation[]>(ANNOTATION_STORE, "readonly", (store) =>
     store.index("documentId").getAll(documentId),
@@ -236,7 +289,7 @@ export async function deleteAnnotation(id: string): Promise<void> {
   notifyChange("annotations");
 }
 
-export type StoreChange = "documents" | "vault" | "annotations";
+export type StoreChange = "documents" | "vault" | "annotations" | "workspace";
 
 const CHANNEL_NAME = "knowbefore-store";
 let channel: BroadcastChannel | null = null;
@@ -367,6 +420,8 @@ function openDatabase(): Promise<IDBDatabase> {
         db.createObjectStore(FILE_STORE, { keyPath: "documentId" });
       if (!db.objectStoreNames.contains(VAULT_STORE))
         db.createObjectStore(VAULT_STORE, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(WORKSPACE_STORE))
+        db.createObjectStore(WORKSPACE_STORE, { keyPath: "key" });
       if (!db.objectStoreNames.contains(ANNOTATION_STORE)) {
         db.createObjectStore(ANNOTATION_STORE, { keyPath: "id" }).createIndex(
           "documentId",

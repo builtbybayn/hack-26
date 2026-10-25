@@ -24,6 +24,14 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
+/** Notified whenever this page adds, edits, or removes an annotation. */
+export function subscribeAnnotations(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 async function load(documentId: string) {
   if (loading.has(documentId)) return;
   loading.add(documentId);
@@ -54,23 +62,23 @@ export function useAnnotations(documentId: string | null): Annotation[] | null {
 }
 
 export async function saveAnnotation(annotation: Annotation): Promise<void> {
+  await putAnnotation(annotation);
   const current = cache.get(annotation.documentId) ?? [];
   cache.set(
     annotation.documentId,
     sortAnnotations([...current.filter((entry) => entry.id !== annotation.id), annotation]),
   );
   emit();
-  await putAnnotation(annotation);
 }
 
 export async function removeAnnotation(annotation: Annotation): Promise<void> {
+  await deleteAnnotation(annotation.id);
   const current = cache.get(annotation.documentId) ?? [];
   cache.set(
     annotation.documentId,
     current.filter((entry) => entry.id !== annotation.id),
   );
   emit();
-  await deleteAnnotation(annotation.id);
 }
 
 // Another page (e.g. a second vault tab) changed annotations: reload what we have cached.

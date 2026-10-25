@@ -323,7 +323,7 @@ clients report their own work through `track()`, so features get states without 
 
 When several things run at once, the highest-priority state shows (see `AGENT_STATES`).
 React code uses `useAgentActivity()`; other code can listen for the `knowbefore:agent` window
-event. `AgentSprite.tsx` in the extension panel and `AgentStatus.tsx` in the vault both use
+event. The `/sprite` preview uses
 `src/features/agent/FluidMatter.tsx`. Its native WebGL renderer blends nine mathematical surface
 fields through one continuous clock and reflective liquid material. Idle uses the silk loop;
 the activity forms retain slow deformation and rounded edges. State transitions blend from the
@@ -332,6 +332,12 @@ offscreen, respects reduced motion, and shows a static fallback when WebGL is un
 `/sprite` provides a local preview of every form, including the panel and compact sizes.
 New features call `track(state, detail, work)`. Synthesis and evidence checks report comparing or
 analyzing; citation lookup reports searching.
+
+The workspace and extension use the supplied UI's Three.js glass/liquid blob in
+`src/features/agent/glass-sprite`, hosted by `src/features/agent/GlassAssistant.tsx`. Their activity adapters
+subscribes to this same canonical activity store: idle and error remain distinct, while active
+operations map to researching. Pointer deformation, reflective material, and the supplied morph
+effects remain intact. The wrapper dynamically loads the renderer and disposes it on unmount.
 
 ### "Analyze this paper" pipeline
 
@@ -345,37 +351,58 @@ step's status (`src/types/pipeline.ts`) and result is saved on the paper's recor
 can read `recommendations`, `contradictions`, and `pipeline` directly, and re-running resumes
 rather than repeating finished work.
 
-### The research vault (`/`)
+### The research workspace (`/`)
 
-`src/features/vault` is the main UI: an Obsidian-style workspace with a file tree of folders,
-notes, papers, and AI chats; tabs that can split into two panes; a PDF reader with highlights,
-margin comments, and an "Ask AI" selection toolbar; and a right sidebar with the open paper's
-analysis, related papers, contradiction check, read-aloud, and backlinks.
+`src/features/workspace` is the main UI. The imported Research Core interface is backed by
+`VaultResearchService`, which reads existing browser records and calls the app's typed API
+clients. Top-level vault folders are workspace projects; papers, notes, annotations, and mastery
+retain their existing IDs and stores. Uploads use the existing parser and paper pipeline.
 
-| Part                         | Where                                   |
-| ---------------------------- | --------------------------------------- |
-| Tree, notes, chats (types)   | `src/types/vault.ts`                    |
-| Tree logic (pure, tested)    | `src/features/vault/vault-tree.ts`      |
-| Tabs and split panes         | `src/features/vault/workspace-state.ts` |
-| Vault data and imports       | `src/features/vault/use-vault.ts`       |
-| PDF reader and annotations   | `src/features/vault/reader/*`           |
-| Highlight and margin layout  | `src/features/vault/reader/geometry.ts` |
-| Markdown (notes, AI replies) | `src/features/vault/Markdown.tsx`       |
+| Part                         | Where                                             |
+| ---------------------------- | ------------------------------------------------- |
+| Tree, notes, chats (types)   | `src/types/vault.ts`                              |
+| Tree logic (pure, tested)    | `src/features/vault/vault-tree.ts`                |
+| Tabs and split panes         | `src/features/workspace/lib/workspace-panels.ts`  |
+| Workspace data and imports   | `src/features/workspace/lib/vault-service.ts`     |
+| URL and legacy deep links    | `src/features/workspace/lib/workspace-routing.ts` |
+| PDF reader and annotations   | `src/features/paper-reader/*`                     |
+| Highlight and margin layout  | `src/features/paper-reader/geometry.ts`           |
+| Markdown (notes, AI replies) | `src/features/vault/Markdown.tsx`                 |
 
 The reader renders the stored PDF with PDF.js in the browser (canvas plus PDF.js's selectable text
 layer); papers saved from web pages show their extracted text on fixed-width sheets instead.
 Highlights are stored as rectangles in fractions of the unrotated page, so they stay in place at
 any zoom or rotation. Papers saved by the extension are filed in the first project's
 "Papers" folder (`defaultPaperFolder` in `vault-tree.ts`) and appear live. The extension's "Open in
-vault" opens `/?paper=<document id>&page=<n>`, reusing an open vault tab; the reader also
-remembers where you were in each paper (per browser). The original single-page
+vault" opens `/?paper=<document id>&page=<n>`; the adapter also accepts
+`/reader?doc=<id>&passage=p<n>` and legacy note links. Explicit missing sources show an error
+instead of opening an unrelated paper. Internal section navigation updates the browser URL.
+The original single-page
 workspace (concept map, quizzes) remains at `/classic`.
 
 Research projects (`src/features/projects`: topic search, synthesis, brief, gaps, paper graph) open
-as a built-in workspace tab (`RESEARCH_VIEW_ID` in `workspace-state.ts`), receiving the paper in
-view as context. Their projects are stored separately from vault folders for now (`projects`
-store). The assistant sprite is `src/features/agent/FluidMatter.tsx`; `/sprite` previews every
-state.
+in the Overview's expandable saved literature collections section, receiving the current paper
+as context. These projects remain separate from vault folders (`projects` store), preserving
+existing synthesis, briefs, gap ideas, and topic searches. A second section restores saved
+extension/vault chats through the shared `ChatView`.
+
+`src/app/(workspace)` supplies the new layout and known section routes. Route children always
+render, while the client shell gates browser storage hydration separately; dynamic section
+validation and URL hooks sit beneath Suspense for Next's instant navigation rules.
+`src/app/(classic)` isolates the earlier global styles for `/classic`, `/brief`, and `/sprite`.
+
+Prompt-based creation waits for the existing roadmap API's `projectName` and plan, then writes
+the named project and Roadmap note together through `newProjectEntries`. It does not save a
+truncated prompt as a provisional folder name. The active project changes only after this write;
+failed planning leaves the description available to retry without creating an empty project.
+
+Drafts, per-project conversations, reading flags, saved links, and active project live in the
+`workspace` IndexedDB store. `updateWorkspaceState` performs read/modify/write atomically within
+one transaction; service mutations are serialized and refreshes requested during a load are
+queued. Draft editors preserve dirty text across unrelated refreshes and debounce saves.
+Graph decisions use a separate keyed record in the same store. Explicit graph relationships
+work locally; optional semantic discovery requires an external configured backend and is not an
+implemented API route in this app. No new database, auth service, or AI SDK was added.
 
 ### Research roadmaps
 
@@ -395,8 +422,12 @@ sees "Gemini is busy right now". Provider reasons are logged on the server, neve
 
 ### The extension panel (`/panel`)
 
-`src/features/extension-panel` uses the same Obsidian theme (`src/components/theme`) and the
-vault's `ChatView`. On a PDF tab it runs the analyze pipeline and sends the paper to the vault at a
+`src/features/extension-panel` uses scoped Research Core tokens over the shared controls
+(`src/components/theme`) and the vault's `ChatView`. The dark surfaces, serif headings, compact
+controls, readable Markdown, and shared Three.js blob match the workspace. A New note action
+lazily loads the same browser service adapter, creates an untitled note in the active project,
+and opens its autosaving editor. The adapter singleton lives in `workspace/lib/service-instance.ts`.
+On a PDF tab it runs the analyze pipeline and sends the paper to the workspace at a
 page; elsewhere it is a chat whose conversations are filed in the vault's "Chats" folder. The
 fluid sprite is `src/features/agent/AgentSprite.tsx`.
 

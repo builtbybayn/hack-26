@@ -1,4 +1,4 @@
-/* The extension side panel. Colors and controls come from the Obsidian theme. */
+/* Compact Research Core companion. Shared controls consume the scoped tokens below. */
 
 html:has(.ext),
 body:has(.ext) {
@@ -545,5 +545,196 @@ body:has(.ext) {
 @keyframes ext-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* Match the workspace without importing its full desktop layout or global resets. */
+.ext.theme-obsidian {
+  --background-primary: #1e1e1e;
+  --background-primary-alt: #232323;
+  --background-secondary: #262626;
+  --background-modifier-form-field: #202020;
+  --background-modifier-border: #363636;
+  --text-normal: #d4d4d4;
+  --text-muted: #999;
+  --text-faint: #858585;
+  --text-accent: #d5bd91;
+  --interactive-accent: #c6aa73;
+  --interactive-accent-hover: #dcc390;
+  --text-on-accent: #1e1e1e;
+  --icon-color: #c6aa73;
+  --icon-color-hover: #dcc390;
+  --font-interface: Georgia, "Times New Roman", serif;
+  --radius-m: 4px;
+  --shadow-s: none;
+  height: 100dvh;
+  background: var(--background-primary);
+}
+.ext *,
+.ext *::before,
+.ext *::after {
+  box-sizing: border-box;
+}
+.ext button,
+.ext textarea,
+.ext input {
+  font-family: inherit;
+}
+.ext button:not(:disabled) {
+  cursor: pointer;
+}
+.ext :focus-visible {
+  outline: 1px solid var(--interactive-accent);
+  outline-offset: 3px;
+}
+.ext-topbar {
+  min-height: 44px;
+  background: var(--background-secondary);
+}
+.ext-vault-name {
+  font-size: 14px;
+  font-weight: 400;
+}
+.ext-hero {
+  padding: 20px 16px 24px;
+}
+.ext .agent-sprite-label {
+  margin-top: 8px;
+  font-size: 21px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.ext-hero[data-compact] .agent-sprite-stage {
+  width: 76px;
+  height: 76px;
+}
+.ext .agent-sprite-detail,
+.ext .ext-hint,
+.ext .ext-summary,
+.ext .ext-papers,
+.ext .ext-conflicts,
+.ext .chat-message,
+.ext .ext-roadmap-head p {
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+.ext .ext-hint {
+  line-height: 1.7;
+}
+.ext-modes {
+  margin-inline: 14px;
+  padding: 3px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.ext-modes button {
+  height: 32px;
+  border-radius: 3px;
+  font-weight: 400;
+}
+.ext-modes button[aria-selected="true"] {
+  background: #383838;
+}
+.ext .mod-cta,
+.ext .mod-muted {
+  min-height: 34px;
+  border: 1px solid var(--background-modifier-border);
+  background: #383838;
+  color: var(--text-normal);
+  box-shadow: none;
+  font-weight: 400;
+}
+.ext .mod-cta:hover:not(:disabled),
+.ext .mod-muted:hover:not(:disabled) {
+  border-color: #777;
+  background: #333;
+}
+.ext-project-start {
+  padding: 8px 14px 20px;
+  gap: 12px;
+}
+.ext-project-start label {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.ext-project-start textarea {
+  min-height: 120px;
+  background: var(--background-modifier-form-field);
+  line-height: 1.75;
+}
+.ext-tab,
+.ext-roadmap,
+.ext-steps,
+.ext-conflicts li {
+  border-radius: 4px;
+}
+.ext .ext-tags span {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
+}
+.ext-roadmap {
+  padding: 16px;
+}
+.ext-roadmap h2 {
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.ext-roadmap-head p {
+  margin-bottom: 18px;
+  line-height: 1.75;
+}
+.ext-roadmap-stages {
+  list-style: none;
+  padding: 0;
+  counter-reset: roadmap-stage;
+}
+.ext-roadmap-stages li {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.ext-roadmap-stages li::before {
+  counter-increment: roadmap-stage;
+  content: counter(roadmap-stage, decimal-leading-zero);
+  grid-row: span 2;
+  color: var(--text-accent);
+  font-size: 12px;
+  padding-top: 2px;
+}
+.ext-roadmap-stages strong {
+  font-weight: 400;
+  line-height: 1.5;
+}
+.ext-roadmap-stages small {
+  grid-column: 2;
+}
+.ext .composer-box {
+  border-radius: 4px;
+  background: var(--background-modifier-form-field);
+}
+.ext .chat-message.is-user {
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+}
+.ext .markdown-rendered {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.ext .markdown-rendered .md-task {
+  padding-block: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ext-spin {
+    animation: none;
   }
 }

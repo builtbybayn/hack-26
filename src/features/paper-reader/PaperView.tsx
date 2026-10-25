@@ -22,9 +22,9 @@ import {
   Undo2,
 } from "lucide-react";
 import { getPaperFile, type DocumentRecord } from "@/lib/browser-store";
-import type { Annotation, ChatPassage, HighlightColor, PageRect, VaultPaper } from "@/types/vault";
-import { loadLocal, saveLocal } from "../use-settings";
-import { newId } from "../vault-tree";
+import type { Annotation, ChatPassage, HighlightColor, PageRect } from "@/types/vault";
+import { loadLocal, saveLocal } from "@/features/vault/use-settings";
+import { newId } from "@/features/vault/vault-tree";
 import { removeAnnotation, saveAnnotation, useAnnotations } from "./annotations-store";
 import {
   layoutMargin,
@@ -37,21 +37,26 @@ import { MarginComment } from "./MarginComment";
 import { PdfPageCanvas, PdfThumbnail, TEXT_PAGE_WIDTH, TextSheet } from "./pages";
 import { openPdf, readPageSizes } from "./pdf";
 import { SelectionToolbar } from "./SelectionToolbar";
+import "./reader.css";
 
 /** Ask the reader to show a page or an annotation (from search, chat, or the sidebar). */
 export interface PaperFocus {
   documentId: string;
   pageNumber: number;
   annotationId?: string;
-  nonce: number;
+  /** Unique per request (a timestamp, or a string key). */
+  nonce: number | string;
 }
 
 interface PaperViewProps {
-  entry: VaultPaper;
+  documentId: string;
+  /** Shown while the paper's parsed record loads. */
+  title: string;
   record: DocumentRecord | null;
   author: string;
   focus: PaperFocus | null;
   onAskAi: (passage: ChatPassage) => void;
+  toolbarActions?: ReactNode;
 }
 
 type Source =
@@ -80,7 +85,7 @@ interface AnnotationChange {
 }
 
 /** Focus requests already shown, so reopening a paper later doesn't jump back to an old one. */
-const shownFocus = new Set<number>();
+const shownFocus = new Set<number | string>();
 
 const PAGE_GAP = 16;
 const PAD_TOP = 24;
@@ -93,8 +98,15 @@ const THUMBS_WIDTH = 169;
 const SCROLLBAR_WIDTH = 16;
 const ESTIMATED_TEXT_PAGE_HEIGHT = 1056;
 
-export function PaperView({ entry, record, author, focus, onAskAi }: PaperViewProps) {
-  const documentId = entry.documentId;
+export function PaperView({
+  documentId,
+  title: fallbackTitle,
+  record,
+  author,
+  focus,
+  onAskAi,
+  toolbarActions,
+}: PaperViewProps) {
   const document = record?.document ?? null;
   const [source, setSource] = useState<Source>({ kind: "loading" });
   const [baseSizes, setBaseSizes] = useState<Size[]>([]);
@@ -558,7 +570,7 @@ export function PaperView({ entry, record, author, focus, onAskAi }: PaperViewPr
   // ---- Render -------------------------------------------------------------------------------
 
   const pageCount = source.kind === "pdf" ? source.pdf.numPages : textPages.length;
-  const title = document?.title ?? entry.name;
+  const title = document?.title ?? fallbackTitle;
 
   return (
     <div className="paper-view" ref={rootRef} tabIndex={-1}>
@@ -666,6 +678,7 @@ export function PaperView({ entry, record, author, focus, onAskAi }: PaperViewPr
         >
           <Redo2 size={18} />
         </button>
+        {toolbarActions}
       </header>
 
       <div className="paper-body" ref={bodyRef}>

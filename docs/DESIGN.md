@@ -1,8 +1,27 @@
 # Design
 
-**Status: implemented.** The research vault (`/`) follows Obsidian's default theme and layout
-([decision 19](DECISIONS.md)). The classic workspace (`/classic`) keeps the earlier editorial style
-until it is retired.
+**Status: migrated.** The main research workspace (`/`) now uses the supplied Research Core UI:
+dark charcoal surfaces, restrained gold accents, serif display text, a project explorer, tabbed
+split views, and an expandable assistant. Its stylesheet is scoped under `.research-workspace`.
+Reused research tools retain the Obsidian controls from decision 19; `/classic`,
+`/brief`, and `/sprite` retain isolated classic styles. See decision 24.
+
+The workspace assistant uses the supplied UI's glass/liquid blob effects in
+`src/features/agent/glass-sprite`, shared with the extension. Its idle, researching, and error forms respond to
+the canonical API activity store. Keep this renderer's reflective material and pointer fluid
+interaction; the separate silk-loop renderer remains available in `/sprite`.
+
+The sections below describe the retained Obsidian components and extension conventions.
+
+Notes open as documents with an editable title, Markdown body, automatic browser saves, and a
+reading-view toggle. New note is available directly in the explorer and through Alt+N (also
+Ctrl/Cmd+N where the browser allows it); Ctrl/Cmd+E toggles reading view and Ctrl/Cmd+S saves.
+Roadmaps open in reading view with a highlighted goal, stage dividers, spaced concept checklists,
+and underlined paper links. Long roadmap notes occupy the full note grid width.
+
+The document reader fills its workspace pane edge to edge, beneath the existing tabs. Keep one
+compact PDF toolbar, with source details and reading status in the optional context sidebar.
+Do not add an outer reader card, fixed viewport height, or a repeated document heading.
 
 ## Goals
 
@@ -27,7 +46,7 @@ highlighter, undo/redo), comments in the right margin beside their highlights.
 
 ## Extension panel
 
-Same theme, one column: the vault name and icons on top, the fluid assistant sprite, the
+Same Research Core visual conventions, one column: the name and quick note/workspace actions on top, the fluid assistant sprite, the
 current tab, then either the analyze flow (on a PDF) or a chat (anywhere else). The sprite shrinks
 once a conversation starts.
 

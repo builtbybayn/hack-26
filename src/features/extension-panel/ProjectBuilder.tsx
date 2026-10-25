@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ExternalLink, FolderPlus } from "lucide-react";
 import { loadLocal, saveLocal } from "@/features/vault/use-settings";
-import { newProjectEntries } from "@/features/vault/vault-tree";
+import { newProjectEntries, uniqueName } from "@/features/vault/vault-tree";
 import { requestRoadmap } from "@/lib/api/roadmap-client";
 import { listVaultEntries, putVaultEntries } from "@/lib/browser-store";
 import { roadmapToMarkdown } from "@/lib/research/roadmap-markdown";
@@ -30,7 +30,7 @@ export function ProjectBuilder({
   onOpenEntry,
   onActiveChange,
 }: {
-  onOpenEntry: (entryId: string) => void;
+  onOpenEntry: (entryId: string, projectId?: string) => void;
   /** Whether a project is being shaped, so the panel can give it more room. */
   onActiveChange?: (active: boolean) => void;
 }) {
@@ -79,7 +79,7 @@ export function ProjectBuilder({
       await putVaultEntries(created);
       remember({
         idea,
-        roadmap,
+        roadmap: { ...roadmap, projectName: folder.name },
         projectId: folder.id,
         noteId: note.id,
         conversation: [{ role: "assistant", content: withWarnings(reply, warnings) }],
@@ -118,20 +118,26 @@ export function ProjectBuilder({
         (entry): entry is VaultNote => entry.id === current.noteId && entry.kind === "note",
       );
       let { projectId, noteId } = current;
+      let projectName = roadmap.projectName;
       if (note) {
+        const folder = entries.find((entry) => entry.id === projectId && entry.kind === "folder");
+        const at = new Date().toISOString();
+        if (folder) projectName = uniqueName(entries, null, roadmap.projectName, folder.id);
         await putVaultEntries([
-          { ...note, body: roadmapToMarkdown(roadmap), updatedAt: new Date().toISOString() },
+          { ...note, body: roadmapToMarkdown(roadmap), updatedAt: at },
+          ...(folder ? [{ ...folder, name: projectName, updatedAt: at }] : []),
         ]);
       } else {
         // The note (or project) was deleted in the vault: file the revision as a new project.
         const fresh = newProjectEntries(entries, roadmap.projectName, roadmapToMarkdown(roadmap));
         await putVaultEntries(fresh.created);
         projectId = fresh.project.id;
+        projectName = fresh.project.name;
         noteId = fresh.roadmap.id;
       }
       remember({
         ...current,
-        roadmap,
+        roadmap: { ...roadmap, projectName },
         projectId,
         noteId,
         conversation: [
@@ -179,8 +185,8 @@ export function ProjectBuilder({
             {working ? "Planning your roadmap…" : "Create project and roadmap"}
           </button>
           <p className="ext-hint">
-            Creates a project in your vault with a Roadmap note: the concepts and papers to work
-            through, in order, from foundations to the research frontier. You can reshape it after.
+            Your description becomes a named research project with a Roadmap note: the concepts and
+            papers to work through, from foundations to the research frontier.
           </p>
         </form>
       ) : (
@@ -204,8 +210,12 @@ export function ProjectBuilder({
               ))}
             </ol>
             <div className="ext-roadmap-actions">
-              <button type="button" className="mod-cta" onClick={() => onOpenEntry(project.noteId)}>
-                <ExternalLink size={14} aria-hidden /> Open roadmap in vault
+              <button
+                type="button"
+                className="mod-cta"
+                onClick={() => onOpenEntry(project.noteId, project.projectId)}
+              >
+                <ExternalLink size={14} aria-hidden /> Open roadmap in workspace
               </button>
               <button
                 type="button"
