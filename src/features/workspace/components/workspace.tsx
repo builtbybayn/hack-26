@@ -12,10 +12,15 @@ import {
   PanelLeftOpen,
   Plus,
   X,
+  Trash2,
 } from "lucide-react";
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
-import type { Section } from "@/features/workspace/lib/models";
+import type {
+  PointerEvent as ReactPointerEvent,
+  MouseEvent as ReactMouseEvent,
+  ReactNode,
+} from "react";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { Section, WorkspaceData } from "@/features/workspace/lib/models";
 import {
   clampPanelRatio,
   mergePanels,
@@ -31,6 +36,14 @@ import { KnowledgeGraph } from "./knowledge-graph";
 import GlassAssistant from "@/features/agent/GlassAssistant";
 import { NewTab } from "./new-tab";
 import { AssistantPanel } from "./workspace-assistant";
+import {
+  ConfirmTrash,
+  ExplorerContextMenu,
+  TrashDialog,
+  type ExplorerMenuState,
+  type ExplorerTarget,
+} from "./explorer-menu";
+import { flushNoteEdits } from "../lib/note-flush";
 import {
   Overview,
   LibraryView,
@@ -212,6 +225,95 @@ export default function Workspace() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [projectName, setProjectName] = useState("");
+  const [explorerMenu, setExplorerMenu] = useState<ExplorerMenuState | null>(null);
+  const [confirmTrash, setConfirmTrash] = useState<ExplorerTarget | null>(null);
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [trashBusy, setTrashBusy] = useState(false);
+  const [undoItem, setUndoItem] = useState<{ id: string; name: string } | null>(null);
+  const contextTarget = useRef<HTMLElement | null>(null);
+
+  function showExplorerMenu(event: ReactMouseEvent<HTMLElement>, target: ExplorerTarget) {
+    event.preventDefault();
+    event.stopPropagation();
+    contextTarget.current = event.currentTarget;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setExplorerMenu({
+      target,
+      x: event.clientX || rect.left + 16,
+      y: event.clientY || rect.bottom,
+    });
+  }
+  function closeExplorerMenu() {
+    setExplorerMenu(null);
+    contextTarget.current?.focus({ preventScroll: true });
+  }
+  async function openExplorerItem(target: ExplorerTarget) {
+    closeExplorerMenu();
+    try {
+      if (target.projectId) await service.setActiveProject(target.projectId);
+      router.push(
+        target.kind === "note"
+          ? `/notes?note=${encodeURIComponent(target.id)}`
+          : target.kind === "source"
+            ? `/reader?doc=${encodeURIComponent(target.id)}`
+            : target.kind === "folder" && target.name.toLowerCase().startsWith("notes")
+              ? "/notes"
+              : target.kind === "folder" && target.name.toLowerCase().startsWith("papers")
+                ? "/library"
+                : "/overview",
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Couldn't open this item.");
+    }
+  }
+  function validTab(tab: Tab, snapshot: WorkspaceData) {
+    return (
+      snapshot.projects.some((item) => item.id === tab.projectId) &&
+      (!tab.contentProjectId ||
+        snapshot.projects.some((item) => item.id === tab.contentProjectId)) &&
+      (!tab.noteId || snapshot.notes.some((item) => item.id === tab.noteId)) &&
+      (!tab.documentId ||
+        snapshot.documents.some(
+          (item) =>
+            item.id === tab.documentId &&
+            item.projectId === (tab.contentProjectId || tab.projectId),
+        ))
+    );
+  }
+  async function moveToTrash(target: ExplorerTarget) {
+    setTrashBusy(true);
+    try {
+      await flushNoteEdits();
+      const id = await service.trashItem(target.id, target.kind);
+      const snapshot = service.snapshot();
+      const kept = new Set(tabs.filter((tab) => validTab(tab, snapshot)).map((tab) => tab.id));
+      setTabs((current) => current.filter((tab) => validTab(tab, snapshot)));
+      setActiveTabs((current) => current.map((id) => (kept.has(id) ? id : "")));
+      if (currentTab && !validTab(currentTab, snapshot))
+        router.replace(
+          target.kind === "source" ? "/library" : target.kind === "note" ? "/notes" : "/overview",
+        );
+      setConfirmTrash(null);
+      setUndoItem({ id, name: target.name });
+      setNotice(`“${target.name}” moved to Trash.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Couldn't move this item to Trash.");
+    } finally {
+      setTrashBusy(false);
+    }
+  }
+  async function restoreItem(id: string) {
+    setTrashBusy(true);
+    try {
+      await service.restoreItem(id);
+      setUndoItem((current) => (current?.id === id ? null : current));
+      setNotice("Item restored.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Couldn't restore this item.");
+    } finally {
+      setTrashBusy(false);
+    }
+  }
   const activity = useAIActivity();
   const [contrastBackdrop, setContrastBackdrop] = useState(false);
   const [testAnimation, setTestAnimation] = useState<"idle" | "researching" | "error" | null>(null);
@@ -354,7 +456,16 @@ export default function Workspace() {
                   className="project-folder"
                   open={item.id === data.activeProjectId}
                 >
-                  <summary>
+                  <summary
+                    onContextMenu={(event) =>
+                      showExplorerMenu(event, {
+                        id: item.id,
+                        name: item.name,
+                        kind: "project",
+                        projectId: item.id,
+                      })
+                    }
+                  >
                     <Folder size={14} />
                     <button
                       className={item.id === data.activeProjectId ? "selected-project" : ""}
@@ -379,18 +490,67 @@ export default function Workspace() {
                     <FileText size={13} />
                     <span>Project overview</span>
                   </Link>
+                  {(data.folders ?? [])
+                    .filter((folder) => folder.parentId === item.id)
+                    .map((folder) => (
+                      <Link
+                        key={folder.id}
+                        className="explorer-item project-child"
+                        href={
+                          folder.name.toLowerCase().startsWith("notes")
+                            ? "/notes"
+                            : folder.name.toLowerCase().startsWith("papers")
+                              ? "/library"
+                              : "/overview"
+                        }
+                        onClick={() =>
+                          void service
+                            .setActiveProject(item.id)
+                            .catch((error) => setNotice(error.message))
+                        }
+                        onContextMenu={(event) =>
+                          showExplorerMenu(event, {
+                            id: folder.id,
+                            name: folder.name,
+                            kind: "folder",
+                            projectId: item.id,
+                          })
+                        }
+                      >
+                        <Folder size={13} />
+                        <span>{folder.name}</span>
+                      </Link>
+                    ))}
                 </details>
               ))}
               <button className="explorer-new" onClick={() => setCreating(true)}>
                 <Plus size={13} /> New project
               </button>
             </ExplorerGroup>
-            <ExplorerGroup title="Sources" count={documents.length}>
+            <ExplorerGroup
+              title="Sources"
+              count={documents.length}
+              onContextMenu={(event) => {
+                const folder = data.folders?.find(
+                  (item) =>
+                    item.parentId === data.activeProjectId && item.name.toLowerCase() === "papers",
+                );
+                if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
+              }}
+            >
               {documents.map((doc) => (
                 <Link
                   key={doc.id}
                   href={`/reader?doc=${encodeURIComponent(doc.id)}`}
                   title={doc.title}
+                  onContextMenu={(event) =>
+                    showExplorerMenu(event, {
+                      id: doc.id,
+                      name: doc.title,
+                      kind: "source",
+                      projectId: doc.projectId,
+                    })
+                  }
                   onClick={() => {
                     setActiveDocumentId(doc.id);
                     setMenuOpen(false);
@@ -409,6 +569,13 @@ export default function Workspace() {
             <ExplorerGroup
               title="Notes"
               count={data.notes.filter((note) => note.projectId === data.activeProjectId).length}
+              onContextMenu={(event) => {
+                const folder = data.folders?.find(
+                  (item) =>
+                    item.parentId === data.activeProjectId && item.name.toLowerCase() === "notes",
+                );
+                if (folder) showExplorerMenu(event, { ...folder, kind: "folder" });
+              }}
             >
               {data.notes
                 .filter((note) => note.projectId === data.activeProjectId)
@@ -417,6 +584,14 @@ export default function Workspace() {
                     key={note.id}
                     href={`/notes?note=${encodeURIComponent(note.id)}`}
                     title={note.title}
+                    onContextMenu={(event) =>
+                      showExplorerMenu(event, {
+                        id: note.id,
+                        name: note.title,
+                        kind: "note",
+                        projectId: note.projectId,
+                      })
+                    }
                     onClick={() => setMenuOpen(false)}
                     className={`explorer-item source-item ${currentTab?.noteId === note.id ? "is-active" : ""}`}
                   >
@@ -482,7 +657,12 @@ export default function Workspace() {
               </details>
             )}
           </div>
-          <div className="explorer-footer">{project?.name}</div>
+          <div className="explorer-footer">
+            <span>{project?.name}</span>
+            <button className="explorer-trash-button" onClick={() => setTrashOpen(true)}>
+              <Trash2 size={13} /> Trash{data.trash?.length ? ` (${data.trash.length})` : ""}
+            </button>
+          </div>
           <div
             className="explorer-resizer"
             role="separator"
@@ -841,6 +1021,15 @@ export default function Workspace() {
               ))}
           </main>
           <footer className="workspace-status no-print">
+            {undoItem && (
+              <button
+                className="status-undo"
+                disabled={trashBusy}
+                onClick={() => void restoreItem(undoItem.id)}
+              >
+                Undo delete
+              </button>
+            )}
             <span>
               <span className="status-dot" />
               {project?.name}
@@ -868,6 +1057,35 @@ export default function Workspace() {
               <X size={14} />
             </button>
           </div>
+        )}
+        {explorerMenu && (
+          <ExplorerContextMenu
+            menu={explorerMenu}
+            onClose={closeExplorerMenu}
+            onOpen={() => void openExplorerItem(explorerMenu.target)}
+            onDelete={() => {
+              const target = explorerMenu.target;
+              setExplorerMenu(null);
+              if (target.kind === "project" || target.kind === "folder") setConfirmTrash(target);
+              else void moveToTrash(target);
+            }}
+          />
+        )}
+        {confirmTrash && (
+          <ConfirmTrash
+            target={confirmTrash}
+            busy={trashBusy}
+            onClose={() => setConfirmTrash(null)}
+            onConfirm={() => void moveToTrash(confirmTrash)}
+          />
+        )}
+        {trashOpen && (
+          <TrashDialog
+            items={data.trash ?? []}
+            busy={trashBusy}
+            onClose={() => setTrashOpen(false)}
+            onRestore={(id) => void restoreItem(id)}
+          />
         )}
         {creating && (
           <div

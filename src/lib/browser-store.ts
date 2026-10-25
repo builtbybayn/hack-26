@@ -15,6 +15,12 @@ import type { PaperPipeline } from "@/types/pipeline";
 import type { PaperRecord, RecommendationsResult, SavedTopicSearch } from "@/types/research";
 import type { SynthesisReport } from "@/types/synthesis";
 import type { Annotation, VaultEntry } from "@/types/vault";
+import {
+  entriesToRestore,
+  entriesToTrash,
+  validateVaultWrite,
+  visibleDocumentRecords,
+} from "./vault-trash";
 
 const DB_NAME = "knowbefore";
 /** Upgrades only add missing stores, so every earlier version (5–7) upgrades without data loss. */
@@ -174,10 +180,13 @@ export async function getDocumentRecord(documentId: string): Promise<DocumentRec
 
 /** All stored documents, most recently updated first. */
 export async function listDocumentRecords(): Promise<DocumentRecord[]> {
-  const records = await request<DocumentRecord[]>(DOCUMENT_STORE, "readonly", (store) =>
-    store.getAll(),
+  const [records, entries] = await Promise.all([
+    request<DocumentRecord[]>(DOCUMENT_STORE, "readonly", (store) => store.getAll()),
+    listVaultEntries(true),
+  ]);
+  return visibleDocumentRecords(records, entries).sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
   );
-  return records.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 export async function loadLatestDocument(): Promise<DocumentRecord | null> {
@@ -205,14 +214,52 @@ export async function deleteDocumentRecord(documentId: string): Promise<void> {
 }
 
 /** Every folder, note, paper placement, and chat in the vault. */
-export async function listVaultEntries(): Promise<VaultEntry[]> {
-  return request<VaultEntry[]>(VAULT_STORE, "readonly", (store) => store.getAll());
+export async function listVaultEntries(includeTrashed = false): Promise<VaultEntry[]> {
+  const entries = await request<VaultEntry[]>(VAULT_STORE, "readonly", (store) => store.getAll());
+  return includeTrashed ? entries : entries.filter((entry) => !entry.trashedAt);
 }
 
 export async function putVaultEntries(entries: VaultEntry[]): Promise<void> {
   if (!entries.length) return;
-  await requestAll(VAULT_STORE, (store) => entries.forEach((entry) => store.put(entry)));
+  await changeVault((existing) => {
+    validateVaultWrite(existing, entries);
+    return entries;
+  });
   notifyChange("vault");
+}
+
+export async function trashVaultEntry(id: string): Promise<void> {
+  await changeVault((entries) => entriesToTrash(entries, id, new Date().toISOString()));
+  notifyChange("vault");
+  notifyChange("documents");
+}
+
+export async function restoreVaultEntry(id: string): Promise<void> {
+  await changeVault((entries) => entriesToRestore(entries, id));
+  notifyChange("vault");
+  notifyChange("documents");
+}
+
+/** Read and update the tree in one transaction, including concurrent editor/trash writes. */
+async function changeVault(change: (entries: VaultEntry[]) => VaultEntry[]): Promise<void> {
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(VAULT_STORE, "readwrite");
+    const store = transaction.objectStore(VAULT_STORE);
+    const read = store.getAll();
+    let failure: unknown;
+    read.onsuccess = () => {
+      try {
+        change(read.result as VaultEntry[]).forEach((entry) => store.put(entry));
+      } catch (error) {
+        failure = error;
+        transaction.abort();
+      }
+    };
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = transaction.onabort = () =>
+      reject(failure ?? transaction.error ?? new Error("The workspace could not be updated."));
+  });
 }
 
 export async function deleteVaultEntries(ids: string[]): Promise<void> {

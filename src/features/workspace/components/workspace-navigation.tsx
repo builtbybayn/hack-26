@@ -9,7 +9,7 @@ import {
   PanelsTopLeft,
   ShieldCheck,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, MouseEventHandler } from "react";
 
 export const navigation = [
   { id: "graph", label: "Knowledge Graph", icon: Waypoints },
@@ -27,14 +27,16 @@ export function ExplorerGroup({
   title,
   count,
   children,
+  onContextMenu,
 }: {
   title: string;
   count?: number;
   children: ReactNode;
+  onContextMenu?: MouseEventHandler<HTMLElement>;
 }) {
   return (
     <details className="explorer-group" open>
-      <summary>
+      <summary onContextMenu={onContextMenu}>
         {title}
         {count !== undefined && <span>{count}</span>}
       </summary>

@@ -148,6 +148,8 @@ export interface UploadJob {
 }
 export interface WorkspaceData {
   loadError?: string;
+  folders?: { id: ID; name: string; parentId: ID | null; projectId: ID }[];
+  trash?: TrashItem[];
   projects: Project[];
   documents: Document[];
   annotations: Annotation[];
@@ -161,4 +163,11 @@ export interface WorkspaceData {
   conversations: Record<ID, Conversation>;
   uploads: UploadJob[];
   activeProjectId: ID;
+}
+
+export interface TrashItem {
+  id: ID;
+  name: string;
+  kind: "project" | "folder" | "note" | "source" | "chat";
+  trashedAt: string;
 }
