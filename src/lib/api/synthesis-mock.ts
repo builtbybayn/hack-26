@@ -1,4 +1,4 @@
-import type { SynthesisResponse } from "@/types/synthesis";
+import type { SynthesisCheckResponse, SynthesisResponse } from "@/types/synthesis";
 
 export const MOCK_SYNTHESIS = {
   ok: true,
@@ -30,3 +30,8 @@ export const MOCK_SYNTHESIS = {
     createdAt: "2026-10-24T00:00:00.000Z",
   },
 } satisfies SynthesisResponse;
+
+export const MOCK_SYNTHESIS_CHECK = {
+  ok: true,
+  data: { findings: MOCK_SYNTHESIS.data.findings, warnings: [] },
+} satisfies SynthesisCheckResponse;

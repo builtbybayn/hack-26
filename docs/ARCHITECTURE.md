@@ -165,6 +165,7 @@ real output.
 | `POST /api/explain`           | JSON `{ document, concept, style, question? }`; returns short explanation sections with verified page quotes or an explicit background label. |
 | `POST /api/contradictions`    | JSON `{ documents: [first, second] }`; returns page-verified claim comparisons and independent Grok verdicts when configured.                 |
 | `POST /api/synthesis`         | JSON `{ documents }` with two to four parsed documents; returns evidence-linked agreements, differences, and open questions.                  |
+| `POST /api/synthesis/check`   | JSON `{ documents, findings }`; rechecks one to twelve saved synthesis findings against their cited pages without regenerating text.          |
 | `POST /api/brief/check`       | JSON `{ documents, finding }`; checks a revised brief finding against its cited source pages and returns refreshed interpretation labels.     |
 | `POST /api/papers/citations`  | JSON `{ paperIds }` with one to twenty OpenAlex IDs; returns provider reference IDs for saved-paper citation links.                           |
 | `POST /api/quiz`              | JSON `{ concept }`; returns a bounded quiz including its answer key.                                                                          |
@@ -200,7 +201,10 @@ agreements and differences. A separate batched AI check assesses each paper's co
 the combined finding. A finding is labeled supported only when every cited contribution is
 supported; malformed or unavailable checks are labeled unclear. The browser saves the report
 within its research project; the server remains stateless. Older saved reports display "not
-checked" until regenerated.
+checked" until regenerated or rechecked.
+Saved findings can also be rechecked without generating new text. The browser preserves the
+findings and coverage warnings, replaces their assessments, and updates the synthesis timestamp
+so dependent briefs show that their source synthesis changed.
 
 The Research Brief is assembled in the browser from a project's saved synthesis and reading list.
 Its question, notes, included findings, and finding summaries can be edited. Evidence stays attached

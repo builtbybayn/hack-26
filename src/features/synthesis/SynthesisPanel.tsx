@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { requestSynthesis } from "@/lib/api/synthesis-client";
+import { requestSynthesis, requestSynthesisCheck } from "@/lib/api/synthesis-client";
 import {
   listDocumentRecords,
   type DocumentRecord,
   type ResearchProject,
 } from "@/lib/browser-store";
 import type { SynthesisReport } from "@/types/synthesis";
+import { refreshReport } from "./refresh-report";
 import styles from "./synthesis.module.css";
 
 export function SynthesisPanel({
@@ -22,6 +23,7 @@ export function SynthesisPanel({
   const [report, setReport] = useState<SynthesisReport | null>(project.synthesis ?? null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
   const requestId = useRef(0);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export function SynthesisPanel({
   function toggle(id: string) {
     requestId.current += 1;
     setLoading(false);
+    setChecking(false);
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
     );
@@ -62,6 +65,37 @@ export function SynthesisPanel({
         setError("The synthesis was generated but could not be saved in this browser.");
     } catch {
       setError("The synthesis was generated but could not be saved in this browser.");
+    }
+  }
+
+  async function recheck() {
+    if (!report?.findings.length) return;
+    const documents = report.documentIds.map(
+      (id) => records.find((item) => item.id === id)?.document,
+    );
+    if (documents.some((item) => !item)) {
+      setError("A source document used by this synthesis is missing from the project.");
+      return;
+    }
+    const current = ++requestId.current;
+    setLoading(true);
+    setChecking(true);
+    setError("");
+    const response = await requestSynthesisCheck({
+      documents: documents.filter((item) => item !== undefined),
+      findings: report.findings,
+    });
+    if (current !== requestId.current) return;
+    setLoading(false);
+    setChecking(false);
+    if (!response.ok) return setError(response.error.message);
+    const updated = refreshReport(report, response.data);
+    setReport(updated);
+    try {
+      if (!(await onSave(updated)))
+        setError("The findings were checked but could not be saved in this browser.");
+    } catch {
+      setError("The findings were checked but could not be saved in this browser.");
     }
   }
 
@@ -94,8 +128,17 @@ export function SynthesisPanel({
         disabled={loading || selectedIds.length < 2 || selectedIds.length > 4}
         onClick={synthesize}
       >
-        {loading ? "Synthesizing…" : report ? "Regenerate synthesis" : "Synthesize papers"}
+        {loading && !checking
+          ? "Synthesizing…"
+          : report
+            ? "Regenerate synthesis"
+            : "Synthesize papers"}
       </button>
+      {!!report?.findings.length && (
+        <button className="secondary" disabled={loading} onClick={() => void recheck()}>
+          {checking ? "Checking saved findings…" : "Recheck saved findings"}
+        </button>
+      )}
       {error && (
         <p className="error" role="alert">
           {error}

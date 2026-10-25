@@ -7,7 +7,7 @@ research data belongs in the browser unless a recorded decision changes that rul
 Core versions of the listed features are implemented. Gap suggestions are limited to a project's
 reviewed corpus. The paper graph includes citation edges where OpenAlex supplies reference IDs for
 saved papers. Gap suggestions and synthesis-based graph relationships now require supported
-claim and source checks; older syntheses need regeneration before they contribute those links.
+claim and source checks; older syntheses can be rechecked in place before they contribute those links.
 Live provider and print behavior still need validation with configured credentials
 and real documents.
 

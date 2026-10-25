@@ -7,7 +7,7 @@ import { evidencePassage, quoteAppearsOnPage } from "@/lib/intelligence/source-e
 import type { ParsedDocument } from "@/types/ingestion";
 import type { SynthesisFinding, SynthesisReport } from "@/types/synthesis";
 
-const findingSchema = z.object({
+export const findingSchema = z.object({
   kind: z.enum(["agreement", "difference", "open_question"]),
   theme: z.string().min(1).max(200),
   summary: z.string().min(1).max(1500),

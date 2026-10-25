@@ -33,6 +33,15 @@ export interface SynthesisRequest {
   documents: ParsedDocument[];
 }
 
+export interface SynthesisCheckRequest extends SynthesisRequest {
+  findings: SynthesisFinding[];
+}
+
+export type SynthesisCheckResponse = ApiResponse<
+  { findings: SynthesisFinding[]; warnings: string[] },
+  IntelligenceErrorCode | CommonErrorCode
+>;
+
 export type SynthesisResponse = ApiResponse<
   SynthesisReport,
   IntelligenceErrorCode | CommonErrorCode
