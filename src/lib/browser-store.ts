@@ -8,7 +8,7 @@
  */
 import type { DocumentAnalysis, EvidenceFeedback, MasteryLevel } from "@/types/intelligence";
 import type { ParsedDocument } from "@/types/ingestion";
-import type { PaperRecord } from "@/types/research";
+import type { PaperRecord, SavedTopicSearch } from "@/types/research";
 import type { SynthesisReport } from "@/types/synthesis";
 import type { ResearchBrief } from "@/types/brief";
 import type { ResearchGap } from "@/types/gaps";
@@ -29,6 +29,7 @@ export interface ResearchProject {
   name: string;
   notes: string;
   papers: PaperRecord[];
+  searchHistory?: SavedTopicSearch[];
   documentIds: string[];
   synthesis?: SynthesisReport;
   brief?: ResearchBrief;

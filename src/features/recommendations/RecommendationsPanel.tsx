@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { requestRecommendations } from "@/lib/api/research-client";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { DocumentAnalysis } from "@/types/intelligence";
-import type { RecommendationsRequest, RecommendationsResult } from "@/types/research";
+import type {
+  RecommendationsRequest,
+  RecommendationsResult,
+  SavedTopicSearch,
+} from "@/types/research";
 import type { PaperRecord } from "@/types/research";
 import styles from "./recommendations.module.css";
 
@@ -12,16 +16,21 @@ export function RecommendationsPanel({
   document,
   analysis,
   onSavePaper,
+  onSaveSearch,
+  history = [],
   savedPaperIds = [],
 }: {
   document?: ParsedDocument;
   analysis?: DocumentAnalysis;
   onSavePaper?: (paper: PaperRecord) => Promise<void>;
+  onSaveSearch?: (topic: string, result: RecommendationsResult) => Promise<boolean>;
+  history?: SavedTopicSearch[];
   savedPaperIds?: string[];
 }) {
   const [result, setResult] = useState<RecommendationsResult | null>(null);
   const [topic, setTopic] = useState("");
   const [topicResult, setTopicResult] = useState(false);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
@@ -34,12 +43,18 @@ export function RecommendationsPanel({
     setLoading(true);
     setError(null);
     setResult(null);
+    setSavedAt(null);
     try {
       const response = await requestRecommendations(input, current.signal);
       if (current.signal.aborted) return;
       if (response.ok) {
         setResult(response.data);
         setTopicResult("topic" in input);
+        if ("topic" in input && onSaveSearch) {
+          const saved = await onSaveSearch(input.topic, response.data);
+          if (!saved && !current.signal.aborted)
+            setError("Results loaded, but this search could not be saved to the project.");
+        }
       } else setError(response.error.message);
     } catch {
       if (!current.signal.aborted) setError("The paper search failed. Please retry.");
@@ -56,7 +71,9 @@ export function RecommendationsPanel({
           <h2 id="recommendations-heading">Find papers</h2>
           <p>
             Search real OpenAlex records by topic.
-            {onSavePaper ? " Save useful papers to your project." : " Open results to read more."}
+            {onSavePaper
+              ? " Searches and selected papers are saved to your project."
+              : " Select a project to save searches and papers."}
           </p>
         </div>
       </div>
@@ -90,6 +107,36 @@ export function RecommendationsPanel({
           Find papers related to current document
         </button>
       )}
+      {history.length > 0 && (
+        <details className={styles.searches}>
+          <summary>Saved searches ({history.length})</summary>
+          <ol>
+            {history.map((entry) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    controller.current?.abort();
+                    setLoading(false);
+                    setError(null);
+                    setTopic(entry.topic);
+                    setResult(entry.result);
+                    setTopicResult(true);
+                    setSavedAt(entry.createdAt);
+                  }}
+                >
+                  {entry.topic}
+                </button>{" "}
+                <span>
+                  {new Date(entry.createdAt).toLocaleString()} ·{" "}
+                  {entry.result.recommendations.length} papers
+                </span>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
       {loading && <p role="status">Searching scholarly records…</p>}
       {error && (
         <p className="error" role="alert">
@@ -98,6 +145,7 @@ export function RecommendationsPanel({
       )}
       {result && (
         <>
+          {savedAt && <p role="status">Saved results from {new Date(savedAt).toLocaleString()}.</p>}
           <div role="status">
             {result.warnings.map((warning) => (
               <p key={warning}>{warning}</p>

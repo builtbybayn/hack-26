@@ -52,6 +52,13 @@ export interface RecommendationsResult {
   warnings: string[];
 }
 
+export interface SavedTopicSearch {
+  id: string;
+  topic: string;
+  createdAt: string;
+  result: RecommendationsResult;
+}
+
 export type ResearchErrorCode = "SEARCH_PROVIDER_ERROR" | "SEARCH_RATE_LIMITED";
 export type RecommendationsResponse = ApiResponse<
   RecommendationsResult,

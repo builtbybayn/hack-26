@@ -108,3 +108,10 @@ credits are billed per character and a full paper is roughly 50,000 characters. 
 default model (fastest, cheapest); Multilingual v2 is the high-quality option. Equations and code
 are not read; the reader is pointed to the PDF page instead. The browser's built-in voice is the
 fallback when no key is configured.
+
+### 18. Save topic search snapshots with browser projects
+
+**Provisional.** Each successful topic search made with a selected project stores its query,
+provider trail, and returned records on that project in IndexedDB. Reopening a search uses the
+snapshot, so the result is reproducible even when OpenAlex changes or is unavailable. Keep the
+newest 20 searches per project to bound browser storage; older project records need no migration.

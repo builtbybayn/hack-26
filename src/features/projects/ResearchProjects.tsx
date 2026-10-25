@@ -10,7 +10,7 @@ import {
 } from "@/lib/browser-store";
 import type { ParsedDocument } from "@/types/ingestion";
 import type { DocumentAnalysis } from "@/types/intelligence";
-import type { PaperRecord } from "@/types/research";
+import type { PaperRecord, RecommendationsResult } from "@/types/research";
 import { RecommendationsPanel } from "@/features/recommendations/RecommendationsPanel";
 import { SynthesisPanel } from "@/features/synthesis/SynthesisPanel";
 import type { SynthesisReport } from "@/types/synthesis";
@@ -18,6 +18,7 @@ import { BriefPanel } from "@/features/brief/BriefPanel";
 import type { ResearchBrief } from "@/types/brief";
 import { GapExplorer } from "@/features/gaps/GapExplorer";
 import { PaperGraph } from "@/features/paper-graph/PaperGraph";
+import { addTopicSearch } from "./search-history";
 import styles from "./projects.module.css";
 
 export function ResearchProjects({
@@ -66,6 +67,7 @@ export function ResearchProjects({
       name: trimmed,
       notes: "",
       papers: [],
+      searchHistory: [],
       documentIds: [],
       updatedAt: new Date().toISOString(),
     };
@@ -98,16 +100,43 @@ export function ResearchProjects({
   }
 
   async function savePaper(paper: PaperRecord) {
-    if (
-      !selected ||
-      selected.papers.some((item) => item.id === paper.id || (item.doi && item.doi === paper.doi))
-    )
-      return;
-    await persist({
-      ...selected,
-      papers: [...selected.papers, paper],
-      updatedAt: new Date().toISOString(),
-    });
+    if (!selected) return;
+    try {
+      const latest = await getProject(selected.id);
+      if (!latest) return;
+      if (
+        latest.papers.some((item) => item.id === paper.id || (item.doi && item.doi === paper.doi))
+      )
+        return;
+      await persist({
+        ...latest,
+        papers: [...latest.papers, paper],
+        updatedAt: new Date().toISOString(),
+      });
+    } catch {
+      setError("This paper could not be saved in this browser.");
+    }
+  }
+
+  async function saveSearch(projectId: string, topic: string, result: RecommendationsResult) {
+    try {
+      const latest = await getProject(projectId);
+      if (!latest) {
+        setError("The selected project no longer exists.");
+        return false;
+      }
+      return persist(
+        addTopicSearch(latest, {
+          id: crypto.randomUUID(),
+          topic,
+          createdAt: new Date().toISOString(),
+          result,
+        }),
+      );
+    } catch {
+      setError("This search could not be saved in this browser.");
+      return false;
+    }
   }
 
   return (
@@ -256,9 +285,14 @@ export function ResearchProjects({
         )}
       </section>
       <RecommendationsPanel
+        key={selected?.id ?? "no-project"}
         document={document ?? undefined}
         analysis={analysis ?? undefined}
         onSavePaper={selected ? savePaper : undefined}
+        onSaveSearch={
+          selected ? (topic, result) => saveSearch(selected.id, topic, result) : undefined
+        }
+        history={selected?.searchHistory ?? []}
         savedPaperIds={selected?.papers.map((paper) => paper.id) ?? []}
       />
       {selected && (
